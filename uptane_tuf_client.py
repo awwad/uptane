@@ -25,8 +25,8 @@ CLEAN_CLIENT_PATH = ROOT_PATH + '/clean_tufclient'
 CLIENT_PATH = ROOT_PATH + '/temp_tufclient'
 #CLIENT_REPO_PATH = CLIENT_PATH + '/client_repo_copy'
 CLIENT_KEYS_PATH = CLIENT_PATH + '/keystore'
-CLIENT_CURRENT_METADATA_PATH = CLIENT_REPO_PATH + '/metadata/current'
-CLIENT_PREVIOUS_METADATA_PATH = CLIENT_REPO_PATH + '/metadata/previous'
+CLIENT_CURRENT_METADATA_PATH = CLIENT_PATH + '/metadata/current'
+CLIENT_PREVIOUS_METADATA_PATH = CLIENT_PATH + '/metadata/previous'
 
 
 def set_up_client():

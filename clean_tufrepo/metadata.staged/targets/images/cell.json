@@ -1,0 +1,26 @@
+{
+ "signatures": [
+  {
+   "keyid": "1651ab75c2958e37afcc4ff738d8ead499c60bf533af1ab24a8e582806f9a33b",
+   "method": "RSASSA-PSS",
+   "sig": "30ee0e6b71f108fd1b89e96caf8a0aad4258c8fff376e668b8015b2a8c976f9af6e55e917e417efc13d73d49b6cc9cde0c07413fe2c63e844c540803f973e6386864018b655af321387055f59262451d6f21ecdde589dcf978be21d7f2e8373c796e6bd65453a2b9e29a4e1950e151f324f548b2bdd67996b0e3e98f03bcf8843cd972aa725376dd7009b51748f45959e99b0dbba669eaad98b29de6f3091d5f5d4423730d5f668d3937a4be41baa80e14f9a38af7a6c71469e8a7d60c6a28ed0b2c15f18ca39fb240d8ffb6691152d1da3182fafe49809197d94f6b1bcc00db51bf5c9100fffb12b5b096a5bef199ba641fcd582e50d923683e0b2f98f001c267b6486cb0b2e7dc62e90dda6889d9f585ee765aab6cdaab8769dc46effc992860257dff04c92dfcca46c70f0d897e826155c5c4bd3af7169ef65cc6c6f1515f2b77626eb5a7346510edd7d5f82772566cccbe48bad93049174ec5de58379c4e1ad01d9201dbe040374554490f40c638d08fd9935739afc2fed1babaaa71b10d"
+  }
+ ],
+ "signed": {
+  "_type": "Targets",
+  "delegations": {
+   "keys": {},
+   "roles": []
+  },
+  "expires": "2017-08-15T00:00:00Z",
+  "targets": {
+   "/images/cellfw/infotainment_adjacent_fw.zip": {
+    "hashes": {
+     "sha256": "515e6bea64bda3723e76d3a07af9d2abf4eed70b6df34d7d187a9b22b0351f2d"
+    },
+    "length": 28
+   }
+  },
+  "version": 1
+ }
+}

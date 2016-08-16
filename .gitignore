@@ -1,0 +1,8 @@
+*~
+.DS_Store
+*.json.gz
+_old_*
+v3/*
+_temp_*
+__pycache__/*
+tuf.log

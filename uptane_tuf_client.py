@@ -29,9 +29,10 @@ CLIENT_CURRENT_METADATA_PATH = CLIENT_PATH + '/metadata/current'
 CLIENT_PREVIOUS_METADATA_PATH = CLIENT_PATH + '/metadata/previous'
 
 
-def set_up_client():
-  # "Install" a fresh client: copy the original repository files appropriately.
-
+def clean_slate():
+  """
+  "Install" a fresh client: copy the original repository files appropriately.
+  """
   # The original repository, keystore, and client directories will be copied.
 
   # Remove existing client, if any.
@@ -58,6 +59,7 @@ def set_up_client():
 
 
 def update_client():
+  """Perform a simple update cycle on the current client."""
 
   # Does the tuf server url we're about to use have the correct format?
   try:
@@ -127,8 +129,8 @@ def update_client():
 
 
 def main():
-  # Set up a new installation and update it, then exit.
-  set_up_client()
+  """Set up a new installation and update it, then exit."""
+  clean_slate()
   update_client()
 
 

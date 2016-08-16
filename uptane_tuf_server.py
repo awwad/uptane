@@ -3,46 +3,21 @@
   uptane_tuf_server.py
 
 <Purpose>
-  Create or load Uptane's TUF repo, including key generation, etc.
-  Running this as a script creates a fresh repo with name REPO_NAME at
-  directory ROOT_PATH. You should perform the shell setup listed below this
-  docstring first.
+  Create, load, manipulate, and host Uptane's TUF repo.
+
+  Running this as a script creates a repo with name REPO_NAME at directory
+  REPO_PATH.
 
   In order to load a repository with name REPO_NAME at path ROOT_PATH, import
   this module and run load_repo().
 
   Sample use:
 
-  import creating_the_uptane_tuf_repo as ctutr
-  repo = ctutr.load_repo()
+  import uptane_tuf_server as uts
+  uts.clean_slate()
+  uts.host_repo()
 
 """
-
-# COMMENTED OUT IMMEDIATELY BELOW IS A SHELL SCRIPT FOR INITIAL REQUIRED SETUP
-# FOR REPOSITORY CREATION. 
-# From shell, create directories for targets, keys, etc., and create targets
-# files, in the repository directory.
-
-# mkdir -p tufrepo/keys
-# mkdir -p tufrepo/targets
-# mkdir -p tufrepo/metadata
-# cd tufrepo/targets
-# mkdir -p images/brakes/config
-# mkdir -p images/cellfw
-# mkdir -p images/flobinator/acme
-# echo "pborih2098gawidopg" > images/brakes/E859A50_9613.zip
-# echo "0902gj" > images/brakes/config/someconfig.cfg
-# echo "10t9813u103934035351513515" > images/flobinator/acme/1111111.zip
-# echo "09103t9" > images/flobinator/acme/b20.zip
-# echo "00909909104156309135609ifva" > images/cellfw/infotainment_adjacent_fw.zip
-# cd ../..
-
-# This amounts to this list:
-# ['.../repository/tufrepo/targets/images/brakes/E859A50_9613.zip',
-#  '.../repository/tufrepo/targets/images/brakes/config/someconfig.cfg',
-#  '.../repository/tufrepo/targets/images/cellfw/infotainment_adjacent_fw.zip',
-#  '.../repository/tufrepo/targets/images/flobinator/acme/1111111.zip',
-#  '.../repository/tufrepo/targets/images/flobinator/acme/b20.zip']
 
 import tuf
 import tuf.repository_tool as repotool
@@ -98,7 +73,13 @@ private_cell_key = None
 
 
 def host_repo():
+  """
+  Loads the current repository at REPO_PATH and hosts it via http on port
+  SERVER_PORT for 10,000 seconds, or until any exception is raised.
 
+  Uses python's standard simple http server, and should be Python 2/3
+  compatible.
+  """
   global repo
   global url
 
@@ -146,16 +127,17 @@ def host_repo():
 
 
 def clean_slate():
-  
-  # Delete current repo and replace with copy of the clean original repo.
-
+  """
+  Delete current repository at REPO_PATH and replace it with a fresh copy of
+  the clean original repository.
+  """
   if os.path.exists(REPO_PATH):
     shutil.rmtree(REPO_PATH)
 
   shutil.copytree(CLEAN_REPO_PATH, REPO_PATH)
 
+  # Unload any repository currently loaded.
   global repo
-
   repo = None
 
 
@@ -163,7 +145,9 @@ def clean_slate():
 
 
 def load_repo():
-
+  """
+  Loads the repo last written to REPO_PATH.
+  """
   global repo
 
   os.chdir(ROOT_PATH)
@@ -181,7 +165,11 @@ def load_repo():
 
 
 def create_new_repo():
-
+"""
+Creates a fresh TUF repo for uptane, with new keys for all roles, using the
+role structure defined below, and with targets files copied from the clean
+repo.
+"""
   global repo
 
   # Delete current repo if it exists.
@@ -370,10 +358,8 @@ def main():
 
   os.chdir(ROOT_PATH)
 
-  repo = create_new_repo()
-
-  repo.write() # Write to metadata.staging
-
+  clean_slate()
+  host_repo()
 
 
 

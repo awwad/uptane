@@ -16,7 +16,9 @@
 # mkdir -p images/flobinator/acme
 # echo "pborih2098gawidopg" > images/brakes/E859A50_9613.zip
 # echo "0902gj" > images/brakes/config/someconfig.cfg
-# echo "10t9813u103934035351513515" > images/flobinator/acme/1111111.zip
+# echo "10t9813u103934035351513515" > images/flobinator/acme/1111111.txt
+# echo "# Some code." >> images/flobinator/acme/firmware.py
+# echo "print('Functional firmware.')"" >> images/flobinator/acme/firmware.py
 # echo "09103t9" > images/flobinator/acme/b20.zip
 # echo "00909909104156309135609ifva" > images/cellfw/infotainment_adjacent_fw.zip
 # cd ../..
@@ -25,6 +27,7 @@
 # ['.../clean_tufrepo/targets/images/brakes/E859A50_9613.zip',
 #  '.../clean_tufrepo/targets/images/brakes/config/someconfig.cfg',
 #  '.../clean_tufrepo/targets/images/cellfw/infotainment_adjacent_fw.zip',
-#  '.../clean_tufrepo/targets/images/flobinator/acme/1111111.zip',
+#  '.../clean_tufrepo/targets/images/flobinator/acme/1111111.txt',
+#  '.../clean_tufrepo/targets/images/flobinator/acme/firmware.py',
 #  '.../clean_tufrepo/targets/images/flobinator/acme/b20.zip']
 

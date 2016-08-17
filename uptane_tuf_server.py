@@ -17,6 +17,9 @@
   uts.clean_slate()
   uts.host_repo()
 
+
+  The file is dividied into REPOSITORY CORE FUNCTIONALITY and ATTACK CODE.
+
 """
 
 import tuf
@@ -28,6 +31,7 @@ import subprocess # for hosting
 import time # for sleep
 import sys # for python version
 import datetime # for metadata expiration times
+
 
 # Constants
 ROOT_PATH = '/Users/s/w/uptanedemo'
@@ -44,6 +48,8 @@ CLEAN_REPO_PATH = ROOT_PATH + '/' + CLEAN_REPO_NAME
 CLEAN_METADATA_PATH = CLEAN_REPO_PATH + '/metadata'
 CLEAN_KEYS_DIR = CLEAN_REPO_PATH + '/keys/'
 CLEAN_IMAGES_DIR = CLEAN_REPO_PATH + '/targets/images/'
+
+ATTACK_DIR = ROOT_PATH + '/attack_data'
 
 
 # Globals
@@ -70,7 +76,9 @@ private_cell_key = None
 
 
 
-
+#########################################
+##### REPOSITORY CORE FUNCTIONALITY #####
+#########################################
 
 def host_repo():
   """
@@ -165,12 +173,13 @@ def load_repo():
 
 
 def create_new_repo():
-"""
-Creates a fresh TUF repo for uptane, with new keys for all roles, using the
-role structure defined below, and with targets files copied from the clean
-repo.
-"""
+  """
+  Creates a fresh TUF repo for uptane, with new keys for all roles, using the
+  role structure defined below, and with targets files copied from the clean
+  repo.
+  """
   global repo
+  repo = None
 
   # Delete current repo if it exists.
   if os.path.exists(REPO_PATH):
@@ -225,13 +234,14 @@ repo.
   repo.targets('images')('cell').add_targets([
       IMAGES_DIR + 'cellfw/infotainment_adjacent_fw.zip'])
   repo.targets('images')('acme').add_targets([
-      IMAGES_DIR + 'flobinator/acme/1111111.zip',
+      IMAGES_DIR + 'flobinator/acme/1111111.txt',
+      IMAGES_DIR + 'flobinator/acme/firmware.py',
       IMAGES_DIR + 'flobinator/acme/b20.zip'])
 
   # Add two of those targets to the director role as well.
   repo.targets('director').add_targets([
       IMAGES_DIR + 'brakes/E859A50_9613.zip',
-      IMAGES_DIR + 'flobinator/acme/1111111.zip'])
+      IMAGES_DIR + 'flobinator/acme/firmware.py'])
 
   # For demo and github convenience (only!), have all metadata expire in a year.
   expiry = datetime.datetime(2017, 8, 15, 0, 0, 0)
@@ -346,6 +356,35 @@ def add_delegated_keys_to_repo():
   repo.targets('images')('brakes').load_signing_key(private_brakes_key)
   repo.targets('images')('acme').load_signing_key(private_acme_key)
   repo.targets('images')('cell').load_signing_key(private_cell_key)
+
+
+
+
+
+#########################################
+############## ATTACK CODE ##############
+#########################################
+
+def attack_invalid_target():
+  """
+  Attacker compromises server and simply replaces a target file.
+
+  'flobinator/acme/firmware.py' is replaced with an exploit-carrying version.
+  """
+
+  # Replace a target with a modified vesion.
+  shutil.copyfile(ATTACK_DIR + '/invalid_target_firmware.py',
+      IMAGES_DIR + '/flobinator/acme/firmware.py')
+
+
+
+
+
+
+
+
+
+
 
 
 

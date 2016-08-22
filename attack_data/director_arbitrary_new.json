@@ -1,0 +1,38 @@
+{
+ "signatures": [
+  {
+   "keyid": "68d8ae3014e9269e9e0e8b654831f63e09794e8261e58b10a9648fc62baaeebf",
+   "method": "RSASSA-PSS",
+   "sig": "55192f7239220f69d4fb13f284769df1cfffcf39475f307c733cc1370f035898d91d83ab2c0a2f182e82d80b82a1a1d612db1db5251bf2a293551049e34ebb98c19e95005ac77cf126483a4594417773d39dbe0021840f8d6cf4689eefe0727c35bf996a0a1965119ad2849429dba6389743d05b60e90ee4c9a64c3f5dd78186e5db38a121b73e4d0800bfbe816d8981d96253579c1a86c1500e7e64a0246906f650ed2b2bc3df98f44597cd44def61b939e396339aca694436e50aee2ed31ab69cf2dc29ed6038200ef2e16450b57cd5fac43c75c29bcb3bf5d68f17bf9c4a47ad7397011b56e2fc492d6a1a3be62c49440b903d2b20dc49b82b907bf2215846ffa5585b4fa9d7685342f22310c2af873072d1e376b7b4541e4b3c41706457cc3773218093bcfe395d7c857cf88488da724c4363d60b57f9f0d3aaef1bf020d57cd8fd2cdadbe843c1425196001142adbfe3440df27d602a4b3b739784a7afad017b1042237afaa6d0ec64d1e295224f77329aa539442ef8569481c3aed585f"
+  }
+ ],
+ "signed": {
+  "_type": "Targets",
+  "delegations": {
+   "keys": {},
+   "roles": []
+  },
+  "expires": "2017-08-15T00:00:00Z",
+  "targets": {
+   "/images/brakes/E859A50_9613.zip": {
+    "hashes": {
+     "sha256": "cb9671e7ae889a7b61ef6eeda0a8d254d96353b9a58ee4569d372b83ce910210"
+    },
+    "length": 19
+   },
+   "/images/flobinator/acme/firmware.py": {
+    "hashes": {
+     "sha256": "c14a28acc4360d033024b397df8210004e56be5a8881bbe7f7a77f8ef5e55a21"
+    },
+    "length": 42
+   },
+   "/images/flobinator/acme/firmware_arbitrary_new.py": {
+    "hashes": {
+     "sha256": "a6db9773511695b42fe2559b209602077218f1e9051da9845845361a97b331fe"
+    },
+    "length": 56
+   }
+  },
+  "version": 4
+ }
+}

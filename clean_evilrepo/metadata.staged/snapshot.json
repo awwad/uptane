@@ -1,0 +1,37 @@
+{
+ "signatures": [
+  {
+   "keyid": "34c6cc0b5bd1dde4de378f4f41434a8512499199b0db4b83a21379da231e61a8",
+   "method": "RSASSA-PSS",
+   "sig": "469a7548262c64d78eeff80506fdce3536d0be35d34a0b139beb990537d438c6f838db3128b37c5f34dc520a0e91de490615d0be22f44be14d42cb0255e0d1272cca6dd627010096bed7ad011179f2cada9733be4c4db29f55dc2d14fac58d7d83fe09dd33af0e64b8bd88183cad34e5b55f87b8e1619b4bcd7706661a71aab6f3853fdf98b52ebaf2a7f01c392cde8772576af1a203ec82a14ea86c563fd70330d6b6e442d7f06d606187289d02b4a17deb1ce455904945e5a119b656c3d63fa2cf8bd00437a0fca944e85f42018855dc4eef882981a2039dd651cab6afd4e20ce659f987fae747c5150e48830a3c5e65c06fdd47c15e04a26d714ed5738fab212a57b32110838fa1be8e80f07913f5633c88a2539ca327b18a86baf881ce8c5527083b885383e032c17d88e4ed7ff549c6519ea4bfc5adf8c58f782d3165d75e32a90839f50f0df952791ff2005bd9ad5b6230a30f5df0e135baf7efc6db8067f6a062519f9903bb42acc7e9f4a81983d40841fc41c25d0a41072b5bdcd341"
+  }
+ ],
+ "signed": {
+  "_type": "Snapshot",
+  "expires": "2017-08-15T00:00:00Z",
+  "meta": {
+   "root.json": {
+    "version": 1
+   },
+   "targets.json": {
+    "version": 1
+   },
+   "targets/director.json": {
+    "version": 1
+   },
+   "targets/images.json": {
+    "version": 1
+   },
+   "targets/images/acme.json": {
+    "version": 1
+   },
+   "targets/images/brakes.json": {
+    "version": 1
+   },
+   "targets/images/cell.json": {
+    "version": 1
+   }
+  },
+  "version": 1
+ }
+}

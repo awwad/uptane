@@ -1,0 +1,56 @@
+######################################
+Commands for Scenario 0:
+
+# Window #1: Server console:
+import uptane_tuf_server as uts
+uts.clean_slate()
+uts.host_repo()
+
+# Window #2: Client console:
+import uptane_tuf_client as utc
+utc.clean_slate()
+
+# (Explain)
+utc.update_client()
+
+
+######################################
+Commands for Scenario 1: Mirror Compromise
+
+# Window #1: Server console:
+    # import uptane_tuf_server as uts
+    # uts.clean_slate()
+    # uts.host_repo()
+
+    # # Window #2: Client console:
+    # import uptane_tuf_client as utc
+    # utc.clean_slate()
+
+# Mirror compromise!
+emacs /Users/s/w/uptanedemo/temp_tufrepo/targets/images/brakes/firmware.py
+
+# (Explain)
+utc.update_client()
+
+
+######################################
+Commands for Scenario 2: Director Compromise
+
+# Window #2: Server console
+import uptane_tuf_server as uts
+uts.clean_slate()
+uts.host_repo()
+
+# Window #3: attacker console:
+
+import uptane_tuf_attacker as uta
+uta.clean_slate()
+uta.load_repo()
+uta.repo.targets('director').add_target('/Users/s/w/uptanedemo/temp_evilrepo/targets/images/brakes/firmware_backdoor.py')
+uta.repo.write(write_partial=True, do_not_increment_version=True)
+uta.attack_director_arbitrary_new()
+
+  # Window #1, client console:
+import uptane_tuf_client as utc
+utc.clean_slate()
+utc.update_client()

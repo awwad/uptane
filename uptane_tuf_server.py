@@ -24,7 +24,6 @@
 
 import tuf
 import tuf.repository_tool as repotool
-import tuf.client.updater as updater
 import os # for chdir
 import shutil # for copying
 import subprocess # for hosting
@@ -39,7 +38,9 @@ REPO_NAME = 'temp_tufrepo'
 REPO_PATH = ROOT_PATH + '/' + REPO_NAME
 METADATA_STAGED_PATH = REPO_PATH + '/metadata.staged'
 METADATA_LIVE_PATH = REPO_PATH + '/metadata'
-KEYS_DIR = REPO_PATH + '/keys/'
+KEYS_DIR = REPO_PATH + '/keys/' # Online keys
+#KEYS_ONLINE_DIR = REPO_PATH + '/keys/''
+KEYS_OFFLINE_DIR = REPO_PATH + '/offline_keys/'
 IMAGES_DIR = REPO_PATH + '/targets/images/'
 SERVER_PORT = 33331
 
@@ -47,9 +48,8 @@ CLEAN_REPO_NAME = 'clean_tufrepo'
 CLEAN_REPO_PATH = ROOT_PATH + '/' + CLEAN_REPO_NAME
 CLEAN_METADATA_PATH = CLEAN_REPO_PATH + '/metadata'
 CLEAN_KEYS_DIR = CLEAN_REPO_PATH + '/keys/'
+CLEAN_KEYS_OFFLINE_DIR = CLEAN_REPO_PATH + '/offline_keys/'
 CLEAN_IMAGES_DIR = CLEAN_REPO_PATH + '/targets/images/'
-
-ATTACK_DIR = ROOT_PATH + '/attack_data'
 
 
 # Globals
@@ -190,15 +190,28 @@ def create_new_repo():
   repo = repotool.create_new_repository(REPO_NAME)
 
   # Create key pairs for all roles.
-  repotool.generate_and_write_rsa_keypair(KEYS_DIR + 'root', password="pw")
-  repotool.generate_and_write_rsa_keypair(KEYS_DIR + 'time', password="pw")
-  repotool.generate_and_write_rsa_keypair(KEYS_DIR + 'snap', password="pw")
-  repotool.generate_and_write_rsa_keypair(KEYS_DIR + 'targets', password="pw")
-  repotool.generate_and_write_rsa_keypair(KEYS_DIR + 'images', password="pw")
-  repotool.generate_and_write_rsa_keypair(KEYS_DIR + 'director', password="pw")
-  repotool.generate_and_write_rsa_keypair(KEYS_DIR + 'brakes', password="pw")
-  repotool.generate_and_write_rsa_keypair(KEYS_DIR + 'acme', password="pw")
-  repotool.generate_and_write_rsa_keypair(KEYS_DIR + 'cell', password="pw")
+  # repotool.generate_and_write_rsa_keypair(KEYS_DIR + 'root', password="pw")
+  # repotool.generate_and_write_rsa_keypair(KEYS_DIR + 'time', password="pw")
+  # repotool.generate_and_write_rsa_keypair(KEYS_DIR + 'snap', password="pw")
+  # repotool.generate_and_write_rsa_keypair(KEYS_DIR + 'targets', password="pw")
+  # repotool.generate_and_write_rsa_keypair(KEYS_DIR + 'images', password="pw")
+  # repotool.generate_and_write_rsa_keypair(KEYS_DIR + 'director', password="pw")
+  # repotool.generate_and_write_rsa_keypair(KEYS_DIR + 'brakes', password="pw")
+  # repotool.generate_and_write_rsa_keypair(KEYS_DIR + 'acme', password="pw")
+  # repotool.generate_and_write_rsa_keypair(KEYS_DIR + 'cell', password="pw")
+
+  # Move the offline private keys to the offline folder.
+  #shutil.move(KEYS_DIR + 'root', KEYS_OFFLINE_DIR + 'root')
+  #shutil.move(KEYS_DIR + 'targets', KEYS_OFFLINE_DIR + 'targets')
+  #shutil.move(KEYS_DIR + 'images', KEYS_OFFLINE_DIR + 'images')
+  #shutil.move(KEYS_DIR + 'brakes', KEYS_OFFLINE_DIR + 'brakes')
+  #shutil.move(KEYS_DIR + 'acme', KEYS_OFFLINE_DIR + 'acme')
+  #shutil.move(KEYS_DIR + 'cell', KEYS_OFFLINE_DIR + 'cell')
+
+  # Instead of creating new keys, just copy them from the clean repo.
+  shutil.copytree(CLEAN_KEYS_DIR, KEYS_DIR)
+  shutil.copytree(CLEAN_KEYS_OFFLINE_DIR, KEYS_OFFLINE_DIR)
+
 
   import_all_keys()
 
@@ -230,7 +243,10 @@ def create_new_repo():
   shutil.copytree(CLEAN_IMAGES_DIR, IMAGES_DIR)
   repo.targets('images')('brakes').add_targets([
       IMAGES_DIR + 'brakes/E859A50_9613.zip',
-      IMAGES_DIR + 'brakes/config/someconfig.cfg'])
+      IMAGES_DIR + 'brakes/config/someconfig.cfg',
+      IMAGES_DIR + 'brakes/firmware.py',
+      IMAGES_DIR + 'brakes/firmware_legacy.py',
+      IMAGES_DIR + 'brakes/firmware_alternative.py'])
   repo.targets('images')('cell').add_targets([
       IMAGES_DIR + 'cellfw/infotainment_adjacent_fw.zip'])
   repo.targets('images')('acme').add_targets([
@@ -241,7 +257,7 @@ def create_new_repo():
   # Add two of those targets to the director role as well.
   repo.targets('director').add_targets([
       IMAGES_DIR + 'brakes/E859A50_9613.zip',
-      IMAGES_DIR + 'flobinator/acme/firmware.py'])
+      IMAGES_DIR + 'brakes/firmware.py'])
 
   # For demo and github convenience (only!), have all metadata expire in a year.
   expiry = datetime.datetime(2017, 8, 15, 0, 0, 0)
@@ -260,7 +276,7 @@ def create_new_repo():
 
 
 
-def import_all_keys():
+def import_all_keys(online_only=False):
 
   global public_root_key
   global public_time_key
@@ -290,14 +306,15 @@ def import_all_keys():
       'snap.pub')
   public_targets_key = repotool.import_rsa_publickey_from_file(KEYS_DIR +
       'targets.pub')
-  private_root_key = repotool.import_rsa_privatekey_from_file(KEYS_DIR +
-      'root', password='pw')
   private_time_key = repotool.import_rsa_privatekey_from_file(KEYS_DIR +
       'time', password='pw')
   private_snap_key = repotool.import_rsa_privatekey_from_file(KEYS_DIR +
       'snap', password='pw')
-  private_targets_key = repotool.import_rsa_privatekey_from_file(KEYS_DIR +
-      'targets', password='pw')
+  if not online_only:
+    private_root_key = repotool.import_rsa_privatekey_from_file(
+        KEYS_OFFLINE_DIR + 'root', password='pw')
+    private_targets_key = repotool.import_rsa_privatekey_from_file(
+        KEYS_OFFLINE_DIR + 'targets', password='pw')
 
   # Import delegated keys.
   public_images_key = repotool.import_rsa_publickey_from_file(KEYS_DIR +
@@ -310,16 +327,17 @@ def import_all_keys():
       'acme.pub')
   public_cell_key = repotool.import_rsa_publickey_from_file(KEYS_DIR +
       'cell.pub')
-  private_images_key = repotool.import_rsa_privatekey_from_file(KEYS_DIR +
-      'images', password='pw')
   private_director_key = repotool.import_rsa_privatekey_from_file(KEYS_DIR +
       'director', password='pw')
-  private_brakes_key = repotool.import_rsa_privatekey_from_file(KEYS_DIR +
-      'brakes', password='pw')
-  private_acme_key = repotool.import_rsa_privatekey_from_file(KEYS_DIR +
-      'acme', password='pw')
-  private_cell_key = repotool.import_rsa_privatekey_from_file(KEYS_DIR +
-      'cell', password='pw')
+  if not online_only:
+    private_images_key = repotool.import_rsa_privatekey_from_file(
+        KEYS_OFFLINE_DIR + 'images', password='pw')
+    private_brakes_key = repotool.import_rsa_privatekey_from_file(
+        KEYS_OFFLINE_DIR + 'brakes', password='pw')
+    private_acme_key = repotool.import_rsa_privatekey_from_file(
+        KEYS_OFFLINE_DIR + 'acme', password='pw')
+    private_cell_key = repotool.import_rsa_privatekey_from_file(
+        KEYS_OFFLINE_DIR + 'cell', password='pw')
 
 
 
@@ -356,29 +374,6 @@ def add_delegated_keys_to_repo():
   repo.targets('images')('brakes').load_signing_key(private_brakes_key)
   repo.targets('images')('acme').load_signing_key(private_acme_key)
   repo.targets('images')('cell').load_signing_key(private_cell_key)
-
-
-
-
-
-#########################################
-############## ATTACK CODE ##############
-#########################################
-
-def attack_invalid_target():
-  """
-  Attacker compromises server and simply replaces a target file.
-
-  'flobinator/acme/firmware.py' is replaced with an exploit-carrying version.
-  """
-
-  # Replace a target with a modified vesion.
-  shutil.copyfile(ATTACK_DIR + '/invalid_target_firmware.py',
-      IMAGES_DIR + '/flobinator/acme/firmware.py')
-
-
-
-
 
 
 

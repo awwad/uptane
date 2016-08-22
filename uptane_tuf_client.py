@@ -28,8 +28,16 @@ CLIENT_CURRENT_METADATA_PATH = CLIENT_PATH + '/metadata/current'
 CLIENT_PREVIOUS_METADATA_PATH = CLIENT_PATH + '/metadata/previous'
 CLIENT_TARGETS_PATH = CLIENT_PATH + '/targets'
 
+# COLORS FOR PRINTING
+#RED_ON_BLACK = '\033[91m'
+#GREEN_ON_BLACK = '\033[92m'
+#YELLOW_ON_BLACK = '\033[93m'
+RED = '\033[41m\033[30m' # black on red
+GREEN = '\033[42m\033[30m' # black on green
+END = '\033[0m'
+
 # GLOBALS
-updater_instance = None
+updater = None
 
 
 def clean_slate():
@@ -54,6 +62,11 @@ def clean_slate():
 
 def update_client():
   """Perform a simple update cycle on the current client."""
+  global updater
+
+  # TODO: Make sure this doesn't hide exceptions - or, if it does, be OK with
+  # that.
+  #tuf.log.remove_console_handler()
 
   # Does the tuf server url we're about to use have the correct format?
   try:
@@ -86,6 +99,8 @@ def update_client():
   trustworthy_directed_target_info = []
   trustworthy_directed_filepaths = []
 
+  failed_targets = False
+
   # Update each of these targets.
   # I think I see a vulnerability in using the trusted order from above. I
   # think that a compromised delegate can reorder targets by declaring targets
@@ -97,6 +112,19 @@ def update_client():
 
     try:
       fileinfo = updater.target(filepath) # raises exception; catch it and deal
+
+    except tuf.UnknownTargetError as e:
+      print()
+      print(RED + 'Error: Missing file.\a')
+      print('Director has listed a file that cannot be validated on the '
+          'repository:\n   ' + filepath)
+      print('This file will be skipped.' + END)
+      print('If this continues to occur, it may be that one or the other of\n'
+        'the director or the repository been compromised.')
+      print()
+      failed_targets = True
+      show_stop_sign()
+
 
     except: #TODO: handle TUF errors here.
       print('Caught unhandled exception from updater.target. Re-raising:')
@@ -114,10 +142,14 @@ def update_client():
       updater.download_target(target_info, CLIENT_TARGETS_PATH)
 
     except tuf.NoWorkingMirrorError as e:
-      
       analyze_noworkingmirror_and_report(e, target_info)
+      failed_targets = True
 
+    else:
+      report_success(target_info)
 
+  if not failed_targets:
+    report_all_successes()
 
 
 
@@ -140,8 +172,7 @@ def analyze_noworkingmirror_and_report(nwm_error, target_info):
 
   if isinstance(mirror_error, tuf.BadHashError):
     print()
-    print('----------\a')
-    print('Error: ☠ Untrustworthy File ☠')
+    print(RED + 'Error: ☠ Untrustworthy File: ' + target_info['filepath'] + END)
     print()
     print('The mirror hosting ' + mirror)
     print('is providing an untrustworthy file. The file obtained from the')
@@ -154,15 +185,14 @@ def analyze_noworkingmirror_and_report(nwm_error, target_info):
     print('The mismatched file has been discarded. If retrying continues to')
     print('fail, it may be that the mirror has been compromised, or that')
     print('there is a man-in-the-middle attack along your network route.')
-    print('----------\a')
     print()
-    play_sound_lose_horn()
+    show_stop_sign()
+    play_sound_womp_womp()
 
 
   elif isinstance(mirror_error, tuf.DownloadLengthMismatchError):
     print()
-    print('----------\a')
-    print('Error: ☠ Untrustworthy File - Length mismatch ☠')
+    print(RED + 'Error: ☠ Untrustworthy File - Length mismatch ☠\a' + END)
     print()
     print('The mirror hosting ' + mirror)
     print('is providing an untrustworthy file. The file obtained from the')
@@ -175,7 +205,8 @@ def analyze_noworkingmirror_and_report(nwm_error, target_info):
     print('The mismatched file has been discarded. If retrying continues to')
     print('fail, it may be that the mirror has been compromised, or that')
     print('there is a man-in-the-middle attack along your network route.')
-    print('----------\a')
+    show_stop_sign()
+    play_sound_womp_womp()
 
 
   elif isinstance(mirror_error, tuf.ContradictionInMultiRoleDelegation):
@@ -184,8 +215,7 @@ def analyze_noworkingmirror_and_report(nwm_error, target_info):
     # delegation in the system at all, but for the purpose of this demo, it
     # will be. The errors are distinguishable with some work, in any event.
     print()
-    print('----------\a')
-    print('Error: Director and mirror do not agree on file info.')
+    print(RED + 'Error: ☠ Director and mirror do not agree on file info. ☠\a' + END)
     print()
     print('The mirror hosting ' + mirror)
     print('is providing a file that does not match what the Director has')
@@ -195,8 +225,9 @@ def analyze_noworkingmirror_and_report(nwm_error, target_info):
     print('unusually out of date, or that one or the other has been')
     print('compromised or that there is a man-in-the-middle attack along your')
     print('network route.')
-    print('----------\a')
     print()
+    show_stop_sign()
+    play_sound_womp_womp()
 
 
   elif isinstance(mirror_error, tuf.ExpiredMetadataError):
@@ -204,18 +235,15 @@ def analyze_noworkingmirror_and_report(nwm_error, target_info):
     # TODO: Could be local or remote metadata, though. Need more info.
     #!
     print()
-    print('----------\a')
-    print('Error: Expired metadata error.')
+    print(RED + 'Error: Expired metadata error.\a' + END)
     print()
     print('The metadata in use for ' + mirror)
     print(' is expired.')
-    print('----------\a')
 
 
   elif isinstance(mirror_error, tuf.ReplayedMetadataError):
     print()
-    print('----------\a')
-    print('Error: Replay Attack Detected.')
+    print(RED + 'Error: Replay Attack Detected.\a' + END)
     print()
     print('The mirror for ' + mirror)
     print('provided an old version of the metadata for a role.')
@@ -226,17 +254,14 @@ def analyze_noworkingmirror_and_report(nwm_error, target_info):
     print('  Version of metadata we already have:        ' +
         str(mirror_error.current_version))
     print('')
-    print('----------\a')
 
 
   # Unsure if this would occur here or if it would be caught deeper in the
   # stack and raised as a replay error here. TODO: Check.
   elif isinstance(mirror_error, tuf.BadVersionNumberError):
     print()
-    print('----------')
-    print('Error: Encountered incorrect version number.')
+    print(RED + 'Error: Encountered incorrect version number.\a')
     print()
-    print('----------')
     raise
 
   # I don't know if this one would occur for the client request. This might be
@@ -244,19 +269,15 @@ def analyze_noworkingmirror_and_report(nwm_error, target_info):
   # TODO: Should check.
   elif isinstance(mirror_error, tuf.UnsignedMetadataError):
     print()
-    print('----------\a')
-    print('Error: Encountered unsigned metadata.')
+    print(RED + 'Error: Encountered unsigned metadata.' + END)
     print()
-    print('----------\a')
     raise
 
 
   else:
     print()
-    print('----------\a')
-    print('UNEXPECTED error: Type of error was: ' + str(type(mirror_error)))
+    print(RED + 'UNEXPECTED error: Type of error was: ' + str(type(mirror_error)) + END)
     print()
-    print('----------\a')
     play_sound_lose_horn()
     raise
 
@@ -265,12 +286,34 @@ def analyze_noworkingmirror_and_report(nwm_error, target_info):
 
 
 
+def report_success(target_info):
+  print()
+  print(GREEN + 'Successfully validated target: ' + target_info['filepath'] + END)
+  print()
+  
+def report_all_successes():
+  print()
+  print(GREEN + 'Successfully validated all targets.' + END)
+  show_check_ok()
+
+
+
+
 def play_sound_lose_horn():
   subprocess.call(['afplay',
-      '/Users/s/w/uptanedemo/sounds/price-is-right-losing-horn.mp3'])
+      ROOT_PATH + '/sounds/price-is-right-losing-horn.mp3'])
 
+def play_sound_womp_womp():
+  #subprocess.call(['afplay',
+  #    ROOT_PATH + '/sounds/womp-womp.mp3'])
+  pass
 
-
+def show_stop_sign():
+  subprocess.call(['open', ROOT_PATH + '/sounds/stop_sign.png'])
+  
+def show_check_ok():
+  subprocess.call(['open', ROOT_PATH + '/sounds/check_ok.png'])
+  
 
 
 

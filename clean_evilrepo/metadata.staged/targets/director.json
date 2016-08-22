@@ -1,0 +1,32 @@
+{
+ "signatures": [
+  {
+   "keyid": "68d8ae3014e9269e9e0e8b654831f63e09794e8261e58b10a9648fc62baaeebf",
+   "method": "RSASSA-PSS",
+   "sig": "aca564d4206ea2084fcbcdd2d159a2740cc5f9e6a46c8c4c5f62f57e0a5b9fccb2d75ba81539861284ba4c2166ad2e2ee4a97d0751c9fac02664dc26185cad7c33ba4d2df15c7a97c09d8986baf21ee854c2f655b8c9bbc7a2f96fe6c7ec7ed00744f4eb7f6a5c84f45ff57e796d71e8812940dc51b52c09220e33ca52c95f62a87387cc37c49ea606204c5ba9cbfea040a724718d6bb03789e5e13b9b9fe47858cb582f4c0aba048b80c93481d1ae32b686f7c6bd8132700f301d9be0be14ebb387537eca1894ba47935d76ed3cda806b33a56ee59bc779e62b806a8d11fed78989f6c2dcc1e81dd403e75e137035ee582fdc81320e83ef429b7070ff0728320b02758e457afe96d0838fd98915a105c1fd66416a2363a0219318ecd3ed86d599bdf3d2d754fb412288da665d284e2c4ff42c8ce89943a81838a30b344302d925dff1dc1806d5f81e399cd1cb66b9e522eea62602fc73e88f3fa4faaca5fa2195eed5c72728e17b3ca06579fc9f9f73d675222239f2114bd590f71d75290a5c"
+  }
+ ],
+ "signed": {
+  "_type": "Targets",
+  "delegations": {
+   "keys": {},
+   "roles": []
+  },
+  "expires": "2017-08-15T00:00:00Z",
+  "targets": {
+   "/images/brakes/E859A50_9613.zip": {
+    "hashes": {
+     "sha256": "cb9671e7ae889a7b61ef6eeda0a8d254d96353b9a58ee4569d372b83ce910210"
+    },
+    "length": 19
+   },
+   "/images/flobinator/acme/firmware.py": {
+    "hashes": {
+     "sha256": "c14a28acc4360d033024b397df8210004e56be5a8881bbe7f7a77f8ef5e55a21"
+    },
+    "length": 42
+   }
+  },
+  "version": 1
+ }
+}

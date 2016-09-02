@@ -18,7 +18,7 @@
 # echo "0902gj" > images/brakes/config/someconfig.cfg
 # echo "10t9813u103934035351513515" > images/flobinator/acme/1111111.txt
 # echo "# Some code." >> images/flobinator/acme/firmware.py
-# echo "print('Functional firmware.')"" >> images/flobinator/acme/firmware.py
+# echo "print('Functional firmware.')" >> images/flobinator/acme/firmware.py
 # echo "09103t9" > images/flobinator/acme/b20.zip
 # echo "00909909104156309135609ifva" > images/cellfw/infotainment_adjacent_fw.zip
 # cd ../..

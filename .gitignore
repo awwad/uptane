@@ -6,3 +6,7 @@ v3/*
 temp_*
 __pycache__/*
 tuf.log
+clean_*/*
+temp_*/*
+*.egg-info
+__pycache__

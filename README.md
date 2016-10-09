@@ -1,40 +1,36 @@
 # uptanedemo
-Early demonstration code for UPTANE.
+Early demonstration code for UPTANE. Python 3 is preferred during development.
 
 
 ## Instructions on use of the uptane demo code
 ### Installation
+(As usual, virtual environments are recommended for development and testing, but not necessary.)
+
+Run the following:
 ```
-git clone https://github.com/awwad/uptanedemo
-cd uptanedemo
-virtualenv -p python3 —no-site-packages v3
-source v3/bin/activate
-cd ..
-git clone -b multiroledelegation https://github.com/awwad/tuf.git tuf_for_uptane
-cd tuf_for_uptane
-pip install -r dev-requirements.txt
-cd ../uptanedemo
+pip install cffi==1.7.0 pycrypto==2.6.1 pynacl==1.0.1 cryptography
+pip install git+git://github.com/awwad/tuf.git@pinning
 ```
+
+If you're going to be running the ASN.1 encoding scripts (not involved here), you'll also need to `pip install pyasn1`
 
 ### Running
-Open two terminals, one for the server and one for the client.
+Open three python shells, one for the supplier (main repository), one for the director, and one for a full verification client.
 
-*In the server terminal*:
+*In the Supplier (main repository) Python shell*:
 ```
-cd uptanedemo
-source v3/bin/activate
-python
-import uptane_tuf_server as uts
-uts.clean_slate()
-uts.host_repo()
+import uptane_test_instructions as u
+u.mainrepo()
 ```
 
-*In the client terminal*:
+*In the Director Python shell*:
 ```
-cd uptanedemo
-source v3/bin/activate
-python
-import uptane_tuf_client as utc
-utc.clean_slate()
-utc.update_client()
+import uptane_test_instructions as u
+u.director()
+```
+
+*In the client Python shell*:
+```
+import uptane_test_instructions as u
+u.client()
 ```

@@ -1,0 +1,3 @@
+Please just go straight to uptane_test_instructions.py.
+
+This is currently a mess.

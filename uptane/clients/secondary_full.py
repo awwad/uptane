@@ -16,7 +16,7 @@ import time # for sleep
 
 
 
-class SecondaryECUClient():
+class SecondaryECUClient:
 
 
   def __init__(self, ecu_info, firmware_fileinfo):

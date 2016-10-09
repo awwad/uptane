@@ -1,3 +1,7 @@
+#
+# ! THIS FILE IS OUTDATED
+
+
 """
 <Program Name>
   uptane_tuf_server.py
@@ -33,7 +37,7 @@ import datetime # for metadata expiration times
 
 
 # Constants
-ROOT_PATH = '/Users/s/w/uptanedemo'
+ROOT_PATH = '/Users/s/w/uptane'
 REPO_NAME = 'temp_tufrepo'
 REPO_PATH = ROOT_PATH + '/' + REPO_NAME
 METADATA_STAGED_PATH = REPO_PATH + '/metadata.staged'
@@ -76,14 +80,12 @@ private_cell_key = None
 
 
 
-#########################################
-##### REPOSITORY CORE FUNCTIONALITY #####
-#########################################
+
 
 def host_repo():
   """
   Loads the current repository at REPO_PATH and hosts it via http on port
-  SERVER_PORT for 10,000 seconds, or until any exception is raised.
+  SERVER_PORT for 10,000 seconds, ending early if any exception is raised.
 
   Uses python's standard simple http server, and should be Python 2/3
   compatible.
@@ -93,7 +95,10 @@ def host_repo():
 
   os.chdir(ROOT_PATH)
 
-  repo = load_repo()
+  # Loading repositories in TUF 1.0 is currently broken.
+  # A fresh repository has to be created every time.
+  if repo is None:
+    repo = load_repo()
 
   # Copy staging metadata to live metadata path, where it will be used as a TUF
   # repo. Clear any old live metadata.
@@ -112,9 +117,9 @@ def host_repo():
 
   server_process = subprocess.Popen(command, stderr=subprocess.PIPE)
   print('Server process started.')
-  print('Server process id: '+str(server_process.pid))
-  print('Serving on port: '+str(SERVER_PORT))
-  url = 'http://localhost:'+str(SERVER_PORT) + '/'
+  print('Server process id: ' + str(server_process.pid))
+  print('Serving on port: ' + str(SERVER_PORT))
+  url = 'http://localhost:' + str(SERVER_PORT) + '/'
   print('Repo URL is: ' + url)
 
   # Host and wait.
@@ -127,7 +132,7 @@ def host_repo():
 
   finally:
     if server_process.returncode is None:
-      print('Terminating server process '+str(server_process.pid))
+      print('Terminating server process ' + str(server_process.pid))
       server_process.kill()
 
 
@@ -223,15 +228,15 @@ def create_new_repo():
   repo.targets.delegate('director', [public_director_key],
       [], restricted_paths=[])
   repo.targets('images').delegate('brakes', [public_brakes_key],
-      [], restricted_paths=[IMAGES_DIR + 'brakes/'])
+      [], restricted_paths=[IMAGES_DIR + 'brakes/*'])
   repo.targets('images').delegate('acme', [public_acme_key],
-      [], restricted_paths=[IMAGES_DIR + 'flobinator/acme/'])
+      [], restricted_paths=[IMAGES_DIR + 'flobinator/acme/*'])
   repo.targets('images').delegate('cell', [public_cell_key],
-      [], restricted_paths=[IMAGES_DIR + 'cellfw/'])
+      [], restricted_paths=[IMAGES_DIR + 'cellfw/*'])
 
   # Perform the multi-role delegation giving Director + Images control of images.
   restricted_paths = [IMAGES_DIR]
-  required_roles = ['targets/images', 'targets/director']
+  required_roles = ['images', 'director']
   repo.targets.multi_role_delegate(restricted_paths, required_roles)
 
   add_delegated_keys_to_repo()
@@ -241,15 +246,16 @@ def create_new_repo():
   if os.path.exists(IMAGES_DIR):
     shutil.rmtree(IMAGES_DIR)
   shutil.copytree(CLEAN_IMAGES_DIR, IMAGES_DIR)
-  repo.targets('images')('brakes').add_targets([
+  time.sleep(0.1) # For the shutil copy....?
+  repo.targets('brakes').add_targets([
       IMAGES_DIR + 'brakes/E859A50_9613.zip',
       IMAGES_DIR + 'brakes/config/someconfig.cfg',
       IMAGES_DIR + 'brakes/firmware.py',
       IMAGES_DIR + 'brakes/firmware_legacy.py',
       IMAGES_DIR + 'brakes/firmware_alternative.py'])
-  repo.targets('images')('cell').add_targets([
+  repo.targets('cell').add_targets([
       IMAGES_DIR + 'cellfw/infotainment_adjacent_fw.zip'])
-  repo.targets('images')('acme').add_targets([
+  repo.targets('acme').add_targets([
       IMAGES_DIR + 'flobinator/acme/1111111.txt',
       IMAGES_DIR + 'flobinator/acme/firmware.py',
       IMAGES_DIR + 'flobinator/acme/b20.zip'])
@@ -263,8 +269,8 @@ def create_new_repo():
   expiry = datetime.datetime(2017, 8, 15, 0, 0, 0)
   for role in [repo.timestamp, repo.snapshot, repo.root, repo.targets,
       repo.targets('director'), repo.targets('images'),
-      repo.targets('images')('cell'), repo.targets('images')('brakes'),
-      repo.targets('images')('acme')]:
+      repo.targets('cell'), repo.targets('brakes'),
+      repo.targets('acme')]:
     role.expiration = expiry
 
   # Save the repo's metadata to files.
@@ -371,9 +377,12 @@ def add_delegated_keys_to_repo():
   # to add their private keys.
   repo.targets('images').load_signing_key(private_images_key)
   repo.targets('director').load_signing_key(private_director_key)
-  repo.targets('images')('brakes').load_signing_key(private_brakes_key)
-  repo.targets('images')('acme').load_signing_key(private_acme_key)
-  repo.targets('images')('cell').load_signing_key(private_cell_key)
+  repo.targets('brakes').load_signing_key(private_brakes_key)
+  repo.targets('acme').load_signing_key(private_acme_key)
+  repo.targets('cell').load_signing_key(private_cell_key)
+  # repo.targets('images')('brakes').load_signing_key(private_brakes_key)
+  # repo.targets('images')('acme').load_signing_key(private_acme_key)
+  # repo.targets('images')('cell').load_signing_key(private_cell_key)
 
 
 

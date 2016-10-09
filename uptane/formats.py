@@ -33,7 +33,9 @@ ECU_SERIAL_SCHEMA = SCHEMA.AnyString() # Instead, for now, we'll go with an ecu 
 
 
 # Information specifying the target(s) installed on a given ECU.
-ECU_SOFTWARE_ATTESTATION_SCHEMA = SCHEMA.Object(
+# This object corresponds to not "ECUVersionManifest" in the Uptane
+# Implementation Specification, but the signed contents of that object.
+ECU_VERSION_MANIFEST_SCHEMA = SCHEMA.Object(
     #ecu_serial = ECU_SERIAL_SCHEMA, # Will include in parallel instead.
     current_bootloader_images = SCHEMA.ListOf(TARGETFILE_SCHEMA), # multiple targets per ECU possible
     current_application_images = SCHEMA.ListOf(TARGETFILE_SCHEMA),
@@ -41,25 +43,49 @@ ECU_SOFTWARE_ATTESTATION_SCHEMA = SCHEMA.Object(
     previous_timeserver_time = ISO8601_DATETIME_SCHEMA,
     freeze_attack_detected = BOOLEAN_SCHEMA) # was expired metadata previously detected?
 
+# This object corresponds to "ECUVersionManifest" in ASN.1 in the Uptane
+# Implementation Specification.
+SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA = SCHEMA.Object(
+    object_name = 'SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA',
+    signed = ECU_VERSION_MANIFEST_SCHEMA,
+    signatures = SCHEMA.ListOf(SIGNATURE_SCHEMA))
+
+
 # Manifest detailing the targets installed on all ECUs in a vehicle for which
 # Uptane is responsible.
-VEHICLE_SOFTWARE_MANIFEST_SCHEMA = SCHEMA.DictOf(
-    key_schema = ECU_SERIAL_SCHEMA,
-    value_schema = ECU_SOFTWARE_ATTESTATION_SCHEMA)
+# This object corresponds to not "VehicleVersionManifest" in the Uptane
+# Implementation Specification, but the signed contents of that object.
+VEHICLE_VERSION_MANIFEST_SCHEMA = SCHEMA.Object(
+    vin = VIN_SCHEMA, # Spec: vehicleIdentifier
+    primary_ecu_serial = ECU_SERIAL_SCHEMA, # Spec: primaryIdentifier
+    ecu_version_manifests = SCHEMA.DictOf(
+        key_schema = ECU_SERIAL_SCHEMA,
+        value_schema = SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA))
+
+# This object corresponds to "VehicleVersionManifest" in ASN.1 in the Uptane
+# Implementation Specification.
+SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA = SCHEMA.Object(
+    object_name = 'SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA',
+    signed = ECU_VERSION_MANIFEST_SCHEMA,
+    signatures = SCHEMA.ListOf(SIGNATURE_SCHEMA))
+
 
 # Information sent to the director by the primary.
 # There probably will be additional fields here.
 VEHICLE_REPORT_TO_DIRECTOR_SCHEMA = SCHEMA.Object(
     vin = VIN_SCHEMA,
-    software_manifest = VEHICLE_SOFTWARE_MANIFEST_SCHEMA)
+    software_manifest = VEHICLE_VERSION_MANIFEST_SCHEMA)
 
 
 # This is the format for a single assignment given to an ECU by the Director.
 ECU_SOFTWARE_ASSIGNMENT_SCHEMA = SCHEMA.Object(
     ecu_serial = ECU_SERIAL_SCHEMA,
-    image_type = SCHEMA.OneOf('bootloader', 'application', 'other'),
-    image = SCHEMA.TARGETFILE_SCHEMA
-    load_order = SCHEMA.Integer(lo=0, hi=2147483647))
+    previous_time = tuf.formats.ISO8601_DATETIME_SCHEMA, #UTC_DATETIME_SCHEMA,
+    current_time = tuf.formats.ISO8601_DATETIME_SCHEMA,
+    security_attack = SCHEMA.Optional(SCHEMA.AnyString()), # TODO: Clear this up
+    #image_type = SCHEMA.OneOf('bootloader', 'application', 'other'), # removed from spec
+    installed_image = tuf.formats.TARGETFILE_SCHEMA)
+    #load_order = SCHEMA.Integer(lo=0, hi=2147483647)) # not in spec
 
 # A list of ECU_SOFTWARE_ASSIGNMENT_SCHEMA should be everything that is
 # required for the director metadata to be written.

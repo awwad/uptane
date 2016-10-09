@@ -14,13 +14,12 @@
 
 import tuf
 import time # for sleep
-import uptane.director.inventorydb
+import uptane.director.inventorydb as inventorydb
 import uptane.formats
 import json
-import xmlrpc.server
-from xmlrpc.server import SimpleXMLRPCServer
-from xmlrpc.server import SimpleXMLRPCRequestHandler
-#import tuf.repository_tool as repotool
+#import asn1_conversion as asn1
+
+import tuf.repository_tool as rt
 #import tuf.client.updater
 #import uptane_tuf_server
 #import os # for chdir
@@ -32,18 +31,15 @@ from xmlrpc.server import SimpleXMLRPCRequestHandler
 #from uptane_tuf_server import CLEAN_REPO_NAME, CLEAN_REPO_PATH, CLEAN_KEYS_DIR
 #from uptane_tuf_server import CLEAN_METADATA_PATH, CLEAN_IMAGES_DIR
 
-# CONSTANTS
-DIRECTOR_SERVER_HOST = 'localhost'
-DIRECTOR_SERVER_PORT = 30101
-
-
-# Restrict director requests to a particular path.
-# Must specify RPC2 here for the XML-RPC interface to work.
-class RequestHandler(SimpleXMLRPCRequestHandler):
-    rpc_paths = ('/RPC2',)
 
 
 
+
+
+
+
+
+#receive
 
 
 class DirectorCore:
@@ -89,51 +85,160 @@ class Director:
   """
 
 
-
   def __init__(self, inventorydb = None):
     # if inventorydb is None:
     #   inventorydb = json.load()
     # self.inventorydb = {}
+
+    self.load_keys()
+
     pass
 
 
 
 
-  def listen(self):
+
+  def load_keys(self):
     """
-    Listens on DIRECTOR_SERVER_PORT for xml-rpc calls to functions:
-      - get_test_value
-      - submit_vehicle_manifest
+    """
+    self.key_dirroot_pub = rt.import_rsa_publickey_from_file('directorroot.pub')
+    self.key_dirroot_pri = rt.import_rsa_privatekey_from_file('directorroot', password='pw')
+    self.key_dirtime_pub = rt.import_rsa_publickey_from_file('directortimestamp.pub')
+    self.key_dirtime_pri = rt.import_rsa_privatekey_from_file('directortimestamp', password='pw')
+    self.key_dirsnap_pub = rt.import_rsa_publickey_from_file('directorsnapshot.pub')
+    self.key_dirsnap_pri = rt.import_rsa_privatekey_from_file('directorsnapshot', password='pw')
+    self.key_dirtarg_pub = rt.import_rsa_publickey_from_file('director.pub')
+    self.key_dirtarg_pri = rt.import_rsa_privatekey_from_file('director', password='pw')
+
+
+
+
+
+  def validate_ecu_version_manifest(self, ecuid, ecu_manifest):
+    """
+    Arguments:
+      ecuid: uptane.formats.ECU_SERIAL_SCHEMA
+      manifest: uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA
+    """
+    uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
+        ecu_manifest)
+
+    # Process ECU signature here.
+    #   - Get public (or symmetric) key from inventorydb
+
+    #   - Employ modded bits of TUF code to validate the signature.
+
+
+
+  def validate_vehicle_version_manifest(self, vin, manifest):
+    """
+    Arguments:
+      vin: uptane.formats.VIN
+      manifest: uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA
+    """
+    uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(manifest)
+
+    # Process Primary's signature here.
+    return manifest
+
+
+
+
+
+  # JSON
+  def register_vehicle_manifest(self, vin, manifest):
+
+    # Check argument format.
+    uptane.formats.VIN_SCHEMA.check_match(vin)
+    uptane.formats.VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(manifest_dict)
+
+    # Validate the manifest:
+    # Validate Primary signature on full manifest?
+
+    # Validate individual ECU signatures on their version attestations.
+
+
+    inventorydb.save_vehicle_manifest(vin, manifest)
+
+
+
+
+
+  def choose_targets_for_vehicle(self, vin):
+    """
+    Returns a dictionary of target lists, indexed by ECU IDs.
+
+      targets = {
+        "ECUID2": [<target_21>],
+        "ECUID5": [<target_51>, <target53>],
+        ...
+      }
+      where <target*> is an object conforming to tuf.formats.TARGETFILE_SCHEMA
+      and ECUIDs conform to uptane.formats.ECU_SERIAL_SCHEMA.
     """
 
-    # Create server
-    server = SimpleXMLRPCServer((DIRECTOR_SERVER_HOST, DIRECTOR_SERVER_PORT),
-        requestHandler=RequestHandler)
-    server.register_introspection_functions()
+    # Check the vehicle manifest(s) / data for anything alarming.
+    # analyze_vehicle(self, vin)
 
-    # Add a function to the Director's xml-rpc interface.
-    # This is just for debugging for now. We are not the timeserver.
-    def get_test_value():
-      return 'one million'
-    server.register_function(get_test_value)
-
-    # Register function that can be called via XML-RPC, allowing 
-    server.register_function(uptane.director.inventorydb.save_vehicle_manifest,
-        'submit_vehicle_manifest')
-
-    print('Director will now listen on port ' + str(DIRECTOR_SERVER_PORT))
-    server.serve_forever()
+    # Load the vehicle's repository.
 
 
 
+    # ELECT TARGETS HERE.
 
-  def register_vehicle_manifest(self, manifest):
-    raise NotImplementedError('Not yet written.')
+
+
+    
+    # Update the targets in the vehicle's repository
+    # vehiclerepo.targets.add_target(...)
+
+    # Write the metadata for this vehicle.
+    # vehiclerepo.write()
+
+    # Move the new metadata to the live repo...?
+    # Or send straightaway?
+
+
+
+  def create_director_repo_for_vehicle(self, vin):
+    """
+    """
+    WORKING_DIR = os.getcwd()
+    MAIN_REPO_DIR = os.path.join(WORKING_DIR, 'repomain')
+    DIRECTOR_REPO_DIR = os.path.join(WORKING_DIR, 'repodirector')
+    TARGETS_DIR = os.path.join(MAIN_REPO_DIR, 'targets')
+    # DIRECTOR_REPO_HOST = 'http://localhost'
+    # DIRECTOR_REPO_PORT = 30301
+
+    vin = inventorydb.scrub_filename(vin, WORKING_DIR)
+
+    self.repositories[vin] = rt.create_new_repository('repodirector_' + 'vin')
+
+    repodirector.root.add_verification_key(self.key_dirroot_pub)
+    repodirector.timestamp.add_verification_key(self.key_dirtime_pub)
+    repodirector.snapshot.add_verification_key(self.key_dirsnap_pub)
+    repodirector.targets.add_verification_key(self.key_dirtarg_pub)
+    repodirector.root.load_signing_key(self.key_dirroot_pri)
+    repodirector.timestamp.load_signing_key(self.key_dirtime_pri)
+    repodirector.snapshot.load_signing_key(self.key_dirsnap_pri)
+    repodirector.targets.load_signing_key(self.key_dirtarg_pri)
+
+
+
+
+
+  def analyze_vehicle(self, vin):
+    """
+    Make note of any unusual properties of the vehicle data and manifests.
+    For example, try to detect freeze attacks and mix-and-match attacks.
+    """
+    pass
+
 
   def write_metadata(self):
     raise NotImplementedError('Not yet written.')
-    # Create a repo and partial write?
-    # Has to be a more sensible way to do this, no.
+    # Perform repo.write() on repo for the vehicle.
+
 
   def create_keypair(self):
     raise NotImplementedError('Not yet written.')

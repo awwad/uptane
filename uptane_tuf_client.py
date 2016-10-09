@@ -1,3 +1,7 @@
+#
+# THIS FILE IS OUTDATED
+
+
 """
 <Program Name>
   uptane_tuf_client.py
@@ -93,7 +97,7 @@ def update_client():
   # (Note that this info is not final; it's simply what the director
   # specifies. When we call updater.target() on each file path, that is when
   # all delegation is validated.)
-  directed_target_info = updater.targets_of_role('targets/director')
+  directed_target_info = updater.targets_of_role('director')
   directed_filepaths = [f['filepath'] for f in directed_target_info]
 
   trustworthy_directed_target_info = []

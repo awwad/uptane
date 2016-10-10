@@ -36,7 +36,7 @@ ECU_SERIAL_SCHEMA = SCHEMA.AnyString() # Instead, for now, we'll go with an ecu 
 # This object corresponds to not "ECUVersionManifest" in the Uptane
 # Implementation Specification, but the signed contents of that object.
 ECU_VERSION_MANIFEST_SCHEMA = SCHEMA.Object(
-    #ecu_serial = ECU_SERIAL_SCHEMA, # Will include in parallel instead.
+    ecu_serial = ECU_SERIAL_SCHEMA,
     #current_bootloader_images = SCHEMA.ListOf(TARGETFILE_SCHEMA), # multiple targets per ECU possible
     #current_application_images = SCHEMA.ListOf(TARGETFILE_SCHEMA),
     installed_image = TARGETFILE_SCHEMA,

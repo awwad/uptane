@@ -416,71 +416,107 @@ def client(use_new_keys=False):
   # fields.
   installed_firmware_targetinfo = file2_trustworthy_info
 
-  # We'll construct a signed SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA from the
-  # targetinfo.
-  # First, construct and check an ECU_VERSION_MANIFEST_SCHEMA.
-  ecu_manifest = {
-      'installed_image': installed_firmware_targetinfo,
-      'timeserver_time': '2016-10-10T11:37:30Z',
-      'previous_timeserver_time': '2016-10-10T11:37:30Z',
-      'attacks_detected': ''
-  }
-  uptane.formats.ECU_VERSION_MANIFEST_SCHEMA.check_match(ecu_manifest)
-
-  # Now we'll convert it into a signable object and sign it with a key we
-  # generate.
-
-  if use_new_keys:
-    rt.generate_and_write_ed25519_keypair('secondary', password='pw')
-
-  # Load in from the generated files.
-  key_pub = rt.import_ed25519_publickey_from_file('secondary.pub')
-  key_pri = rt.import_ed25519_privatekey_from_file('secondary', password='pw')
-
-  # Turn this into a canonical key matching tuf.formats.ANYKEY_SCHEMA
-  key = {
-      'keytype': key_pub['keytype'],
-      'keyid': key_pub['keyid'],
-      'keyval': {'public': key_pub['public'], 'private': key_pri['private']}}
-  tuf.formats.ANYKEY_SCHEMA.check_match(key)
-
-  # Now sign with that key.
-  signed_ecu_manifest = sign_ecu_manifest(ecu_manifest, [key])
 
 
-  #installed_firmware_targetinfo.
-
-  #tuf.keys.create_signature(key_secondary_pri, )
+  signed_ecu_manifest = generate_signed_ecu_manifest(
+      installed_firmware_targetinfo)
 
 
 
-def sign_ecu_manifest(ecu_manifest, keys_to_sign_with):
+  def generate_signed_ecu_manifest(installed_firmware_targetinfo):
+    """
+    Takes a tuf.formats.TARGETFILE_SCHEMA (the target info for the firmware on
+    an ECU) and returns a signed ECU manifest indicating that target file info,
+    encoded in BER (requires code added to two ber_* functions below).
+    """
+
+    # We'll construct a signed signable_ecu_manifest_SCHEMA from the
+    # targetinfo.
+    # First, construct and check an ECU_VERSION_MANIFEST_SCHEMA.
+    ecu_manifest = {
+        'installed_image': installed_firmware_targetinfo,
+        'timeserver_time': '2016-10-10T11:37:30Z',
+        'previous_timeserver_time': '2016-10-10T11:37:30Z',
+        'attacks_detected': ''
+    }
+    uptane.formats.ECU_VERSION_MANIFEST_SCHEMA.check_match(ecu_manifest)
+
+    # Now we'll convert it into a signable object and sign it with a key we
+    # generate.
+
+    if use_new_keys:
+      rt.generate_and_write_ed25519_keypair('secondary', password='pw')
+
+    # Load in from the generated files.
+    key_pub = rt.import_ed25519_publickey_from_file('secondary.pub')
+    key_pri = rt.import_ed25519_privatekey_from_file('secondary', password='pw')
+
+    # Turn this into a canonical key matching tuf.formats.ANYKEY_SCHEMA
+    key = {
+        'keytype': key_pub['keytype'],
+        'keyid': key_pub['keyid'],
+        'keyval': {'public': key_pub['public'], 'private': key_pri['private']}}
+    tuf.formats.ANYKEY_SCHEMA.check_match(key)
+
+    # TODO: Once the ber encoder functions are done, do this:
+    original_ecu_manifest = ecu_manifest
+    ecu_manifest = ber_encode_ecu_manifest(ecu_manifest)
+
+    # Wrap the ECU version manifest object into an
+    # uptane.formats.signable_ecu_manifest and check the format.
+    # {
+    #     'signed': ecu_version_manifest,
+    #     'signatures': []
+    # }
+    signable_ecu_manifest = tuf.formats.make_signable(
+        ecu_manifest)
+    uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
+        signable_ecu_manifest)
+
+    # Now sign with that key. (Also do ber encoding of the signed portion.)
+    signed_ecu_manifest = sign_signable(ecu_manifest, [key])
+    tuf.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
+        signed_ecu_manifest)
+
+    # TODO: Once the ber encoder functions are done, do this:
+    original_signed_ecu_manifest = signed_ecu_manifest
+    ber_encoded_signed_ecu_manifest = ber_encode_signable_content(signed_ecu_manifest)
+
+    return ber_encoded_signed_ecu_manifest
+
+
+
+def ber_encode_signable_content(signable):
+  print('SKIPPING BER ENCODING OF SIGNABLE!!!')
+  return signable
+
+def ber_encode_ecu_manifest(ecu_manifest):
+  print('SKIPPING BER ENCODING OF ECU MANIFEST!!!')
+  return ecu_manifest
+
+
+
+def sign_signable(signable, keys_to_sign_with):
   """
-  Signs the given ECU manifest with all the given keys.
+  Signs the given signable (e.g. an ECU manifest) with all the given keys.
 
   Arguments:
-    ecu_manifest:
-      An object conforming to ECU_VERSION_MANIFEST_SCHEMA.
+
+    signable:
+      An object with a 'signed' dictionary and a 'signatures' list:
+      conforms to tuf.formats.SIGNABLE_SCHEMA
+
     keys_to_sign_with:
       A list whose elements must conform to tuf.formats.ANYKEY_SCHEMA.
 
   Returns:
-    An object conforming to uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST (with
-    signatures included).
+
+    A signable object (tuf.formats.SIGNABLE_SCHEMA), but with the signatures
+    added to its 'signatures' list.
 
   """
 
-  # Wrap the ECU version manifest object into an
-  # uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST and check the format.
-  # {
-  #     'signed': ecu_version_manifest,
-  #     'signatures': []
-  # }
   # The below was partially modeled after tuf.repository_lib.sign_metadata()
-  signable_ecu_version_manifest = tuf.formats.make_signable(
-      ecu_manifest)
-  uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
-      signable_ecu_version_manifest)
 
   signatures = []
 
@@ -506,12 +542,10 @@ def sign_ecu_manifest(ecu_manifest, keys_to_sign_with):
           'unsupported key type, but we do: ' + repr(signing_key['keytype'])
 
 
-    # Else, all is well. Sign the ecu manifest with the given key, adding that
-    # signature to the signatures list in the signable_ecu_version_manifest.
-    signable_ecu_version_manifest['signatures'].append(
-        tuf.keys.create_signature(
-        signing_key,
-        signable_ecu_version_manifest['signed']))
+    # Else, all is well. Sign the signable with the given key, adding that
+    # signature to the signatures list in the signable.
+    signable['signatures'].append(
+        tuf.keys.create_signature(signing_key, signable['signed']))
 
 
   # Confirm that the formats match what is expected post-signing, including a
@@ -519,10 +553,8 @@ def sign_ecu_manifest(ecu_manifest, keys_to_sign_with):
   # 'tuf.FormatError' if the format is wrong.
 
   tuf.formats.check_signable_object_format(signable)
-  tuf.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
-      signable_ecu_version_manifest)
 
-  return signable_ecu_version_manifest # Fully signed
+  return signable # Fully signed
 
 
 

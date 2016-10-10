@@ -31,7 +31,7 @@
 # Main repo window
 # ----------------
 
-def mainrepo():
+def mainrepo(use_new_keys=False):
 
   import os
   import sys, subprocess, time # For hosting and arguments
@@ -49,7 +49,7 @@ def mainrepo():
   # (If you just copy-paste all this code in a python shell, you'll get False and
   #  use existing keys, so have the key files or override this value.)
 
-  use_new_keys = len(sys.argv) == 2 and sys.argv[1] == '--newkeys'
+  #use_new_keys = len(sys.argv) == 2 and sys.argv[1] == '--newkeys'
 
 
   # Create target files: file1.txt and file2.txt
@@ -173,7 +173,7 @@ def mainrepo():
 # Director window
 # ----------------
 
-def director():
+def director(use_new_keys=False):
   import os # For paths and symlink
   import shutil # For copying directory trees
   import sys, subprocess, time # For hosting
@@ -187,7 +187,7 @@ def director():
   DIRECTOR_REPO_HOST = 'http://localhost'
   DIRECTOR_REPO_PORT = 30301
 
-  use_new_keys = len(sys.argv) == 2 and sys.argv[1] == '--newkeys'
+  #use_new_keys = len(sys.argv) == 2 and sys.argv[1] == '--newkeys'
 
 
   # Create repo at './repodirector'
@@ -296,11 +296,13 @@ def director():
 # Client window
 # ----------------
 
-def client():
+def client(use_new_keys=False):
   # Make client directory and copy the root file from the repository.
   import os # For paths and makedirs
   import shutil # For copyfile
   import tuf.client.updater
+  import tuf.repository_tool as rt
+  import tuf.keys
 
   WORKING_DIR = os.getcwd()
   CLIENT_DIR = os.path.join(WORKING_DIR, 'clientane')
@@ -397,7 +399,132 @@ def client():
 
   if os.path.exists('./file2.txt'):
     print('File file2.txt has successfully been validated and downloaded.')
-    #assert False, 'File file2.txt has successfully been validated and downloaded.'
   else:
     print('Nope, file2.txt was not downloaded.')
     assert False
+
+  # Test installing the firmware.
+
+  # Here, I'll assume that the client retains metadata about the firmware image
+  # it currently has installed. Things could operate instead such that metadata
+  # is calculated based on the installed image.
+  # For this test, we'll assume that the target info provided by the Director
+  # and supplier for file2 is the same as what is already running on the
+  # client.
+
+  # This is a tuf.formats.TARGETFILE_SCHEMA, containing filepath and fileinfo
+  # fields.
+  installed_firmware_targetinfo = file2_trustworthy_info
+
+  # We'll construct a signed SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA from the
+  # targetinfo.
+  # First, construct and check an ECU_VERSION_MANIFEST_SCHEMA.
+  ecu_manifest = {
+      'installed_image': installed_firmware_targetinfo,
+      'timeserver_time': '2016-10-10T11:37:30Z',
+      'previous_timeserver_time': '2016-10-10T11:37:30Z',
+      'attacks_detected': ''
+  }
+  uptane.formats.ECU_VERSION_MANIFEST_SCHEMA.check_match(ecu_manifest)
+
+  # Now we'll convert it into a signable object and sign it with a key we
+  # generate.
+
+  if use_new_keys:
+    rt.generate_and_write_ed25519_keypair('secondary', password='pw')
+
+  # Load in from the generated files.
+  key_pub = rt.import_ed25519_publickey_from_file('secondary.pub')
+  key_pri = rt.import_ed25519_privatekey_from_file('secondary', password='pw')
+
+  # Turn this into a canonical key matching tuf.formats.ANYKEY_SCHEMA
+  key = {
+      'keytype': key_pub['keytype'],
+      'keyid': key_pub['keyid'],
+      'keyval': {'public': key_pub['public'], 'private': key_pri['private']}}
+  tuf.formats.ANYKEY_SCHEMA.check_match(key)
+
+  # Now sign with that key.
+  signed_ecu_manifest = sign_ecu_manifest(ecu_manifest, [key])
+
+
+  #installed_firmware_targetinfo.
+
+  #tuf.keys.create_signature(key_secondary_pri, )
+
+
+
+def sign_ecu_manifest(ecu_manifest, keys_to_sign_with):
+  """
+  Signs the given ECU manifest with all the given keys.
+
+  Arguments:
+    ecu_manifest:
+      An object conforming to ECU_VERSION_MANIFEST_SCHEMA.
+    keys_to_sign_with:
+      A list whose elements must conform to tuf.formats.ANYKEY_SCHEMA.
+
+  Returns:
+    An object conforming to uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST (with
+    signatures included).
+
+  """
+
+  # Wrap the ECU version manifest object into an
+  # uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST and check the format.
+  # {
+  #     'signed': ecu_version_manifest,
+  #     'signatures': []
+  # }
+  # The below was partially modeled after tuf.repository_lib.sign_metadata()
+  signable_ecu_version_manifest = tuf.formats.make_signable(
+      ecu_manifest)
+  uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
+      signable_ecu_version_manifest)
+
+  signatures = []
+
+  for signing_key in keys_to_sign_with:
+    
+    tuf.formats.ANYKEY_SCHEMA.check_match(signing_key)
+
+    # If we already have a signature with this keyid, skip.
+    if signing_key['keyid'] in [key['keyid'] for key in signatures]:
+      print('Already signed with this key.')
+      continue
+
+    # If the given key was public, raise a FormatError.
+    if 'private' not in signing_key['keyval']:
+      raise tuf.FormatError('One of the given keys lacks a private key value, '
+          'and so cannot be used for signing: ' + repr(signing_key))
+    
+    # We should already be guaranteed to have a supported key type due to
+    # the ANYKEY_SCHEMA.check_match call above. Defensive programming.
+    if signing_key['keytype'] not in SUPPORTED_KEY_TYPES:
+      assert False, 'Programming error: key types have already been ' + \
+          'validated; should not be possible that we now have an ' + \
+          'unsupported key type, but we do: ' + repr(signing_key['keytype'])
+
+
+    # Else, all is well. Sign the ecu manifest with the given key, adding that
+    # signature to the signatures list in the signable_ecu_version_manifest.
+    signable_ecu_version_manifest['signatures'].append(
+        tuf.keys.create_signature(
+        signing_key,
+        signable_ecu_version_manifest['signed']))
+
+
+  # Confirm that the formats match what is expected post-signing, including a
+  # check again for SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA. Raise
+  # 'tuf.FormatError' if the format is wrong.
+
+  tuf.formats.check_signable_object_format(signable)
+  tuf.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
+      signable_ecu_version_manifest)
+
+  return signable_ecu_version_manifest # Fully signed
+
+
+
+
+

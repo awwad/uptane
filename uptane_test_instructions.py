@@ -1,6 +1,8 @@
-# The code below is intended to be run IN THREE PYTHON SHELLS:
-# - One for the Main Repository ("supplier")
-# - One for the Director Repository
+# The code below is intended to be run IN FIVE PYTHON SHELLS:
+# - One for the Main Repository ("supplier"), speaking HTTP
+# - One for the Director Repository, speaking HTTP
+# - One for the Director Service, speaking XMLRPC (receives manifests)
+# - One for the Timeserver, speaking XMLRPC (receives requests for signed times)
 # - One for the client
 
 # Each shell should be run in a python environment (the same environment is
@@ -12,18 +14,26 @@
 # If you're going to be running the ASN.1 encoding scripts (not involved here),
 # you'll also need to `pip install pyasn1`
 
-# In each python window, run:
+# WINDOW 1: the supplier's repository
 #   import uptane_test_instructions as u
-
-# Then run the following:
-# In the mainrepo's window:
 #   u.ServeMainRepo()
 
-# In the director's window:
+# WINDOW 2: the director's repository
+#   import uptane_test_instructions as u
 #   u.ServeDirectorRepo()
 
+# WINDOW 3: the director service
+#   import uptane.director.director as director
+#   d = director.Director()
+#   d.listen()
+
+# WINDOW 4: the timeserver service:
+#   import uptane.director.timeserver as timeserver
+#   timeserver.listen(use_new_keys=True)
+
 # In the client's window:
-# (AFTER THE OTHER TWO HAVE FINISHED STARTING UP AND ARE HOSTING)
+# (ONLY AFTER THE OTHERS HAVE FINISHED STARTING UP AND ARE HOSTING)
+#   import uptane_test_instructions as u
 #   u.client()
 
 
@@ -378,7 +388,11 @@ def client(use_new_keys=False):
   ##############
   # Generate a nonce and get the time from the timeserver.
   nonce = secondary_ecu._create_nonce()
+  secondary_ecu.update_time_from_timeserver(nonce)
 
+  # Repeat, so that the secondary has both most recent and previous times.
+  nonce = secondary_ecu._create_nonce()
+  secondary_ecu.update_time_from_timeserver(nonce)
 
 
 
@@ -386,7 +400,7 @@ def client(use_new_keys=False):
 
 
   ##############
-  # REPOSITORY COMMUNICATIONS
+  # REPOSITORIES (BOTH) COMMUNICATIONS
   ##############
 
   # Starting with just the root.json files for the director and mainrepo, and
@@ -493,9 +507,6 @@ def client(use_new_keys=False):
   # ECU manifest later.
   assert len(verified_targets), 'No targets were found, but no error was generated??'
   installed_firmware_targetinfo = verified_targets[0]
-
-  # import ipdb
-  # ipdb.set_trace()
 
 
   # Load or generate a key.

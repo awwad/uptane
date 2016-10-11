@@ -43,6 +43,10 @@ class Secondary(object):
       expect the Director to use here. Full verification clients should have
       None in this field.
 
+    self.attacks_detected
+      A string representing whatever attacks the secondary wishes to alert the
+      Director about. Empty string indicates no alerts.
+
   """
 
   def __init__(self,
@@ -62,6 +66,7 @@ class Secondary(object):
     self.previous_timeserver_time = None
     self.timeserver_public_key = timeserver_public_key
     self.director_public_key = director_public_key
+    self.attacks_detected = ''
 
     if not self.partial_verifying and self.director_public_key is not None:
       raise TypeError('Secondary not set as partial verifying, but a director '
@@ -203,9 +208,21 @@ class Secondary(object):
     uptane.formats.SIGNABLE_TIMESERVER_ATTESTATION_SCHEMA.check_match(
         new_timeserver_attestation)
 
+    # Assume there's only one signature.
+    assert len(new_timeserver_attestation['signatures']) == 1
+
+
     # TODO: <~> Check timeserver signature using self.timeserver_public_key!
+    tuf.keys.verify_signature(
+        self.timeserver_public_key,
+        new_timeserver_attestation['signatures'][0],
+        new_timeserver_attestation['signed'])
+
 
     if not nonce in new_timeserver_attestation['signed']['nonces']:
+      # TODO: Determine whether or not to add something to self.attacks_detected
+      # to indicate this problem. It's probably not certain enough? But perhaps
+      # we should err on the side of reporting.
       # TODO: Create a new class for this Exception in this file.
       raise Exception('Timeserver returned a time attestation that did not '
           'include our nonce. This time is questionable. Report to Primary '
@@ -238,9 +255,9 @@ class Secondary(object):
     ecu_manifest = {
         'ecu_serial': self.ecu_serial,
         'installed_image': installed_firmware_targetinfo,
-        'timeserver_time': '2016-10-10T11:37:30Z', # TODO
-        'previous_timeserver_time': '2016-10-10T11:37:30Z', # TODO
-        'attacks_detected': '' # TODO
+        'timeserver_time': self.most_recent_timeserver_time,
+        'previous_timeserver_time': self.previous_timeserver_time,
+        'attacks_detected': self.attacks_detected
     }
     uptane.formats.ECU_VERSION_MANIFEST_SCHEMA.check_match(ecu_manifest)
 

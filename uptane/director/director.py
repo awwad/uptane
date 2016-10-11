@@ -114,7 +114,7 @@ class Director:
 
     # Create server
     server = SimpleXMLRPCServer((DIRECTOR_SERVER_HOST, DIRECTOR_SERVER_PORT),
-        requestHandler=RequestHandler)
+        requestHandler=RequestHandler, allow_none=True)
     server.register_introspection_functions()
 
     # Add a function to the Director's xml-rpc interface.

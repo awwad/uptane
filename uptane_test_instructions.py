@@ -304,6 +304,8 @@ def client(use_new_keys=False):
   import tuf.repository_tool as rt
   import tuf.keys
   import uptane.clients.secondary as secondary
+  import uptane.common # for canonical key construction
+  import uptane.director.timeserver as timeserver # for the port
 
   client_directory_name = 'clientane' # name for this secondary's directory
   vin = 'vin1111'
@@ -361,8 +363,31 @@ def client(use_new_keys=False):
   # # each repository.
   # upd = tuf.client.updater.Updater('updater')
 
-  # Create a secondary, using directory 'clientane'
-  secondary_ecu = secondary.Secondary(client_directory_name, ecu_serial)
+  # Load the public timeserver key.
+  key_timeserver_pub = rt.import_ed25519_publickey_from_file('timeserver.pub')
+
+
+  # Create a full metadata verification secondary, using directory 'clientane'.
+  secondary_ecu = secondary.Secondary(
+      client_directory_name, ecu_serial,
+      timeserver_public_key=key_timeserver_pub)
+
+
+  ##############
+  # TIMESERVER COMMUNICATIONS
+  ##############
+  # Generate a nonce and get the time from the timeserver.
+  nonce = secondary_ecu._create_nonce()
+
+
+
+
+
+
+
+  ##############
+  # REPOSITORY COMMUNICATIONS
+  ##############
 
   # Starting with just the root.json files for the director and mainrepo, and
   # pinned.json, the client will now use TUF to connect to each repository and
@@ -405,8 +430,6 @@ def client(use_new_keys=False):
           'connecting to an untrustworthy Director, or the Director and '
           'Supplier may be out of sync.')
 
-  #import ipdb
-  #ipdb.set_trace()
 
   # Insist that file2.txt is one of the verified targets.
   assert True in [targ['filepath'] == '/file2.txt' for targ in \
@@ -483,25 +506,32 @@ def client(use_new_keys=False):
   key_pub = rt.import_ed25519_publickey_from_file('secondary.pub')
   key_pri = rt.import_ed25519_privatekey_from_file('secondary', password='pw')
 
-  # Turn this into a canonical key matching tuf.formats.ANYKEY_SCHEMA
-  # Note: it looks like the resulting object is the same as the private key
-  # anyway, at least with ed25519. Is it always?
-  key = {
-      'keytype': key_pub['keytype'],
-      'keyid': key_pub['keyid'],
-      'keyval': {
-        'public': key_pub['keyval']['public'],
-        'private': key_pri['keyval']['private']}}
-  tuf.formats.ANYKEY_SCHEMA.check_match(key)
+  # # Turn this into a canonical key matching tuf.formats.ANYKEY_SCHEMA
+  # # Note: it looks like the resulting object is the same as the private key
+  # # anyway, at least with ed25519. Is it always?
+  # key = {
+  #     'keytype': key_pub['keytype'],
+  #     'keyid': key_pub['keyid'],
+  #     'keyval': {
+  #       'public': key_pub['keyval']['public'],
+  #       'private': key_pri['keyval']['private']}}
+  # tuf.formats.ANYKEY_SCHEMA.check_match(key)
+  key = uptane.common.canonical_key_from_pub_and_pri(key_pub, key_pri)
+
 
   # Generate and sign a manifest indicating that this ECU has a particular
   # version/hash/size of file2.txt as its firmware.
   signed_ecu_manifest = secondary_ecu.generate_signed_ecu_manifest(
       installed_firmware_targetinfo, [key])
 
-  import ipdb
-  ipdb.set_trace()
 
+  secondary_ecu.submit_ecu_manifest_to_director(signed_ecu_manifest)
+
+
+  # Attack: MITM w/o key modifies ECU manifest.
+  # Modify the ECU manifest without updating the signature.
+  signed_ecu_manifest['signed']['attacks_detected'] = 'Fake attack attack not detected!'
+  signed_ecu_manifest['signed']['ecu_serial'] = 'ecu22222'
   secondary_ecu.submit_ecu_manifest_to_director(signed_ecu_manifest)
 
 

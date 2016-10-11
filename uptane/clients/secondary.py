@@ -31,9 +31,26 @@ class Secondary(object):
       The directory in the working directory where all client data is stored
       for this secondary.
 
+    self.timeserver_public_key:
+      The key we expect the timeserver to use.
+
+    self.partial_verifying:
+      True if this instance is a partial verifier, False if it employs full
+      metadata verification.
+
+    self.director_public_key
+      If this is a partial verification secondary, we store the key that we
+      expect the Director to use here. Full verification clients should have
+      None in this field.
+
   """
 
-  def __init__(self, client_dir, ecu_serial):
+  def __init__(self,
+        client_dir,
+        ecu_serial,
+        timeserver_public_key=None,
+        director_public_key=None,
+        partial_verifying=False):
     
     tuf.formats.RELPATH_SCHEMA.check_match(client_dir)
     
@@ -41,6 +58,15 @@ class Secondary(object):
     self.ecu_serial = ecu_serial
     self.client_dir = client_dir
     self.director_proxy = None
+    self.most_recent_timeserver_time = None
+    self.previous_timeserver_time = None
+    self.timeserver_public_key = timeserver_public_key
+    self.director_public_key = director_public_key
+
+    if not self.partial_verifying and self.director_public_key is not None:
+      raise TypeError('Secondary not set as partial verifying, but a director '
+          'key was still provided. Full verification secondaries employ the '
+          'normal TUF verifications rooted at root metadata files.')
 
     #self.director_host = director.DIRECTOR_SERVER_HOST
     #self.director_port = director.DIRECTOR_SERVER_PORT
@@ -133,7 +159,9 @@ class Secondary(object):
 
 
 
-
+  # This is not part of the real design: when the primary steps in, it will
+  # take over this functionality, and we will instead be sending this ecu
+  # manifest to the Primary.
   def submit_ecu_manifest_to_director(self, signed_ecu_manifest):
 
     uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
@@ -145,8 +173,8 @@ class Secondary(object):
     server = xmlrpc.client.ServerProxy(
         'http://' + str(director.DIRECTOR_SERVER_HOST) + ':' +
         str(director.DIRECTOR_SERVER_PORT))
-    if not server.system.listMethods():
-      raise Exception('Unable to connect to server.')
+    #if not server.system.listMethods():
+    #  raise Exception('Unable to connect to server.')
 
     server.submit_ecu_manifest(self.vin, self.ecu_serial, signed_ecu_manifest)
 
@@ -158,6 +186,39 @@ class Secondary(object):
     from the timeserver (or an intervening party)."""
     return random.randint(formats.NONCE_LOWER_BOUND, formats.NONCE_UPPER_BOUND)
 
+
+
+  # This function will be split between the Primary and Secondary once the
+  # Primary is ready, and we will instead be retrieving this time from the
+  # Primary.
+  def update_time_from_timeserver(self, nonce):
+
+    server = xmlrpc.client.ServerProxy(
+        'http://' + str(director.DIRECTOR_SERVER_HOST) + ':' +
+        str(director.DIRECTOR_SERVER_PORT))
+
+    new_timeserver_attestation = server.get_signed_time([nonce]) # Primary
+
+    # Check format.
+    uptane.formats.SIGNABLE_TIMESERVER_ATTESTATION_SCHEMA.check_match(
+        new_timeserver_attestation)
+
+    # TODO: <~> Check timeserver signature using self.timeserver_public_key!
+
+    if not nonce in new_timeserver_attestation['signed']['nonces']:
+      # TODO: Create a new class for this Exception in this file.
+      raise Exception('Timeserver returned a time attestation that did not '
+          'include our nonce. This time is questionable. Report to Primary '
+          'may have been missed. If you see this persistently, it is possible '
+          'that the Primary or Timeserver is compromised.')
+
+
+    # Extract actual time from the timeserver's signed attestation.
+    new_timeserver_time = new_timeserver_attestation['signed']['time']
+
+    # Rotate last recorded times and save new time.
+    self.previous_timeserver_time = self.most_recent_timeserver_time
+    self.most_recent_timeserver_time = new_timeserver_time
 
 
 

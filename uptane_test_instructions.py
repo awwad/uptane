@@ -156,7 +156,7 @@ def ServeMainRepo(use_new_keys=False):
   # Wait / allow any exceptions to kill the server.
 
   try:
-    time.sleep(10000) # Stop hosting after a while.
+    time.sleep(1000000) # Stop hosting after a while.
   except:
     print('Exception caught')
     pass
@@ -279,7 +279,7 @@ def ServeDirectorRepo(use_new_keys=False):
   # Wait / allow any exceptions to kill the server.
 
   try:
-    time.sleep(10000) # Stop hosting after a while.
+    time.sleep(1000000) # Stop hosting after a while.
   except:
     print('Exception caught')
     pass
@@ -304,6 +304,9 @@ def client(use_new_keys=False):
   import tuf.repository_tool as rt
   import tuf.keys
   import uptane.clients.secondary as secondary
+
+  client_directory_name = 'clientane' # name for this secondary's directory
+  ecu_serial = 'ecu11111'
 
   # WORKING_DIR = os.getcwd()
   # CLIENT_DIR = os.path.join(WORKING_DIR, 'clientane')
@@ -358,7 +361,7 @@ def client(use_new_keys=False):
   # upd = tuf.client.updater.Updater('updater')
 
   # Create a secondary, using directory 'clientane'
-  secondary_ecu = secondary.Secondary('clientane')
+  secondary_ecu = secondary.Secondary(client_directory_name, ecu_serial)
 
   # Starting with just the root.json files for the director and mainrepo, and
   # pinned.json, the client will now use TUF to connect to each repository and
@@ -387,9 +390,11 @@ def client(use_new_keys=False):
   # repositories list file2.txt as a target, and they both have matching metadata
   # for it.
   verified_targets = []
-  for target_filepath in directed_targets:
+  for targetinfo in directed_targets:
+    target_filepath = targetinfo['filepath']
     try:
-      verified_target = secondary.get_validated_target_info(target_filepath)
+      verified_targets.append(
+        secondary_ecu.get_validated_target_info(target_filepath))
     except tuf.UnknownTargetError:
       print('Director has instructed us to download a target (' +
           target_filepath + ') that is not validated by the combination of '
@@ -399,38 +404,57 @@ def client(use_new_keys=False):
           'connecting to an untrustworthy Director, or the Director and '
           'Supplier may be out of sync.')
 
+  #import ipdb
+  #ipdb.set_trace()
+
+  # Insist that file2.txt is one of the verified targets.
+  assert True in [targ['filepath'] == '/file2.txt' for targ in \
+      verified_targets], 'I do not see /file2.txt in the verified targets.' + \
+      ' Test has changed or something is wrong. The targets are: ' + \
+      repr(verified_targets)
 
 
-
-  file2_trustworthy_info = upd.target('file2.txt')
+  #file2_trustworthy_info = upd.target('file2.txt')
 
   # If you execute the following, commented-out command, you'll get a not found
   # error, because while the mainrepo specifies file1.txt, the Director does not.
   # Anything the Director doesn't also list can't be validated.
-  # file1_trustworthy_info = upd.target('file1.txt')
+  # file1_trustworthy_info = secondary.updater.target('file1.txt')
 
-  # Delete file2.txt if it already exists.
-  if os.path.exists('./file2.txt'):
-    os.remove('./file2.txt')
+  # Delete file2.txt if it already exists. We're about to download it.
+  if os.path.exists(os.path.join(client_directory_name, 'file2.txt')):
+    os.remove(os.path.join(client_directory_name, 'file2.txt'))
 
-  # Now that we have fileinfo for file2.txt, matching the Director and mainrepo
-  # (Supplier), we can download the file and only keep it if it matches that
-  # fileinfo. This call will try every mirror on every repository within the
-  # appropriate delegation in pinned.json until one of them works. In this case,
-  # both the Director and mainrepo (Supplier) are hosting the file, just for my
-  # convenience in setup. If you remove the file from the Director before calling
-  # this, it will still work (assuming mainrepo still has it).
-  # (The second argument here is just where to put the file.)
+  # Now that we have fileinfo for all targets listed by both the Director and
+  # the Supplier (mainrepo) -- which should include file2.txt in this test --
+  # we can download the target files and only keep each if it matches the
+  # verified fileinfo. This call will try every mirror on every repository
+  # within the appropriate delegation in pinned.json until one of them works.
+  # In this case, both the Director and mainrepo (Supplier) are hosting the
+  # file, just for my convenience in setup. If you remove the file from the
+  # Director before calling this, it will still work (assuming mainrepo still
+  # has it). (The second argument here is just where to put the files.)
+  # This should include file2.txt.
+  for verified_target in verified_targets:
+    secondary_ecu.updater.download_target(
+        verified_target, client_directory_name)
 
-  upd.download_target(file2_trustworthy_info, '.')
+    file_location = os.path.join(
+        client_directory_name, verified_target['filepath'][1:])
 
-  if os.path.exists('./file2.txt'):
+    print(file_location)
+    # Make sure the download occurred.
+    assert os.path.exists(file_location), 'Failed download w/o error??: ' + \
+        str(verified_target)
+
+  #upd.download_target(file2_trustworthy_info, '.')
+
+  if os.path.exists(os.path.join(client_directory_name, 'file2.txt')):
     print('File file2.txt has successfully been validated and downloaded.')
   else:
     print('Nope, file2.txt was not downloaded.')
     assert False
 
-  # Test installing the firmware.
 
   # Here, I'll assume that the client retains metadata about the firmware image
   # it currently has installed. Things could operate instead such that metadata
@@ -441,10 +465,13 @@ def client(use_new_keys=False):
 
   # This is a tuf.formats.TARGETFILE_SCHEMA, containing filepath and fileinfo
   # fields.
-  installed_firmware_targetinfo = file2_trustworthy_info
+  # Grab the first verified target, presumably file2.txt, to use it for the
+  # ECU manifest later.
+  assert len(verified_targets), 'No targets were found, but no error was generated??'
+  installed_firmware_targetinfo = verified_targets[0]
 
-  import ipdb
-  ipdb.set_trace()
+  # import ipdb
+  # ipdb.set_trace()
 
 
   # Load or generate a key.
@@ -466,10 +493,8 @@ def client(use_new_keys=False):
         'private': key_pri['keyval']['private']}}
   tuf.formats.ANYKEY_SCHEMA.check_match(key)
 
-
-  # Instantiate a secondary. /:
-  secondary_ecu = secondary.Secondary()
-
+  # Generate and sign a manifest indicating that this ECU has a particular
+  # version/hash/size of file2.txt as its firmware.
   signed_ecu_manifest = secondary_ecu.generate_signed_ecu_manifest(
       installed_firmware_targetinfo, [key])
 

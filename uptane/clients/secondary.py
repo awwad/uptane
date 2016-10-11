@@ -33,10 +33,11 @@ class Secondary(object):
 
   """
 
-  def __init__(self, client_dir):
+  def __init__(self, client_dir, ecu_serial):
     
     tuf.formats.RELPATH_SCHEMA.check_match(client_dir)
     
+    self.ecu_serial = ecu_serial
     self.client_dir = client_dir
     self.director_proxy = None
 
@@ -110,7 +111,7 @@ class Secondary(object):
     # This is not something we can assume - director repo structure is not
     # required to be that flat.
     directed_targets = self.updater.targets_of_role(
-        rolename='targets', repo_name='repodirector')
+        rolename='targets', repo_name='director')
 
     return directed_targets
 
@@ -173,11 +174,11 @@ class Secondary(object):
     # targetinfo.
     # First, construct and check an ECU_VERSION_MANIFEST_SCHEMA.
     ecu_manifest = {
-        'ecu_serial': '1111',
+        'ecu_serial': self.ecu_serial,
         'installed_image': installed_firmware_targetinfo,
-        'timeserver_time': '2016-10-10T11:37:30Z',
-        'previous_timeserver_time': '2016-10-10T11:37:30Z',
-        'attacks_detected': ''
+        'timeserver_time': '2016-10-10T11:37:30Z', # TODO
+        'previous_timeserver_time': '2016-10-10T11:37:30Z', # TODO
+        'attacks_detected': '' # TODO
     }
     uptane.formats.ECU_VERSION_MANIFEST_SCHEMA.check_match(ecu_manifest)
 
@@ -201,7 +202,7 @@ class Secondary(object):
         signable_ecu_manifest)
 
     # Now sign with that key. (Also do ber encoding of the signed portion.)
-    signed_ecu_manifest = sign_signable(ecu_manifest, keys)
+    signed_ecu_manifest = sign_signable(signable_ecu_manifest, keys)
     tuf.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
         signed_ecu_manifest)
 

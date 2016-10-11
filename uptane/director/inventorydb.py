@@ -86,13 +86,13 @@ def save_vehicle_manifest(vin, manifest_dict):
   json.dump(open(scrubbed_vin, 'w'))
 
   for ecu_serial in manifest_dict:
-    save_ecu_attestation(ecu_serial, manifest_dict[ecu_serial])
+    save_ecu_manifest(ecu_serial, manifest_dict[ecu_serial])
 
 
 
 
 
-def get_ecu_attestation(ecu_serial):
+def get_ecu_manifest(vin, ecu_serial):
   uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial) # Check arg format
   # This is obviously EXTREMELY insecure and the 'vin' passed in should be
   # scrubbed.
@@ -105,7 +105,7 @@ def get_ecu_attestation(ecu_serial):
 
 
 
-def save_ecu_attestation(ecu_serial, attestation_dict):
+def save_ecu_manifest(vin, ecu_serial, attestation_dict):
   uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial)
   uptane.formats.ECU_VERSION_MANIFEST_SCHEMA.check_match(attestation_dict)
 

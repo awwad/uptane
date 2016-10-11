@@ -17,10 +17,10 @@
 
 # Then run the following:
 # In the mainrepo's window:
-#   u.mainrepo()
+#   u.ServeMainRepo()
 
 # In the director's window:
-#   u.director()
+#   u.ServeDirectorRepo()
 
 # In the client's window:
 # (AFTER THE OTHER TWO HAVE FINISHED STARTING UP AND ARE HOSTING)
@@ -31,7 +31,7 @@
 # Main repo window
 # ----------------
 
-def mainrepo(use_new_keys=False):
+def ServeMainRepo(use_new_keys=False):
 
   import os
   import sys, subprocess, time # For hosting and arguments
@@ -173,7 +173,7 @@ def mainrepo(use_new_keys=False):
 # Director window
 # ----------------
 
-def director(use_new_keys=False):
+def ServeDirectorRepo(use_new_keys=False):
   import os # For paths and symlink
   import shutil # For copying directory trees
   import sys, subprocess, time # For hosting
@@ -303,64 +303,75 @@ def client(use_new_keys=False):
   import tuf.client.updater
   import tuf.repository_tool as rt
   import tuf.keys
+  import uptane.clients.secondary as secondary
 
-  WORKING_DIR = os.getcwd()
-  CLIENT_DIR = os.path.join(WORKING_DIR, 'clientane')
-  CLIENT_METADATA_DIR_MAINREPO_CURRENT = os.path.join(CLIENT_DIR, 'metadata', 'mainrepo', 'current')
-  CLIENT_METADATA_DIR_MAINREPO_PREVIOUS = os.path.join(CLIENT_DIR, 'metadata', 'mainrepo', 'previous')
-  CLIENT_METADATA_DIR_DIRECTOR_CURRENT = os.path.join(CLIENT_DIR, 'metadata', 'director', 'current')
-  CLIENT_METADATA_DIR_DIRECTOR_PREVIOUS = os.path.join(CLIENT_DIR, 'metadata', 'director', 'previous')
-  CLIENT_STUBREPO_DIR = os.path.join(CLIENT_DIR, 'stubrepos', '')
+  # WORKING_DIR = os.getcwd()
+  # CLIENT_DIR = os.path.join(WORKING_DIR, 'clientane')
+  # CLIENT_METADATA_DIR_MAINREPO_CURRENT = os.path.join(CLIENT_DIR, 'metadata', 'mainrepo', 'current')
+  # CLIENT_METADATA_DIR_MAINREPO_PREVIOUS = os.path.join(CLIENT_DIR, 'metadata', 'mainrepo', 'previous')
+  # CLIENT_METADATA_DIR_DIRECTOR_CURRENT = os.path.join(CLIENT_DIR, 'metadata', 'director', 'current')
+  # CLIENT_METADATA_DIR_DIRECTOR_PREVIOUS = os.path.join(CLIENT_DIR, 'metadata', 'director', 'previous')
+  # #CLIENT_STUBREPO_DIR = os.path.join(CLIENT_DIR, 'stubrepos', '')
 
-  # Note that the hosts and ports are drawn from pinned.json now.
+  # # Note that the hosts and ports are drawn from pinned.json now.
 
-  MAIN_REPO_DIR = os.path.join(WORKING_DIR, 'repomain')
-  TARGETS_DIR = os.path.join(MAIN_REPO_DIR, 'targets')
-  #MAIN_REPO_HOST = 'http://localhost'
-  #MAIN_REPO_PORT = 30300
-  DIRECTOR_REPO_DIR = os.path.join(WORKING_DIR, 'repodirector')
-  #DIRECTOR_REPO_HOST = 'http://localhost'
-  #DIRECTOR_REPO_PORT = 30301
+  # MAIN_REPO_DIR = os.path.join(WORKING_DIR, 'repomain')
+  # TARGETS_DIR = os.path.join(MAIN_REPO_DIR, 'targets')
+  # #MAIN_REPO_HOST = 'http://localhost'
+  # #MAIN_REPO_PORT = 30300
+  # DIRECTOR_REPO_DIR = os.path.join(WORKING_DIR, 'repodirector')
+  # #DIRECTOR_REPO_HOST = 'http://localhost'
+  # #DIRECTOR_REPO_PORT = 30301
 
-  if os.path.exists(CLIENT_DIR):
-    shutil.rmtree(CLIENT_DIR)
+  # if os.path.exists(CLIENT_DIR):
+  #   shutil.rmtree(CLIENT_DIR)
 
-  for d in [
-      CLIENT_METADATA_DIR_MAINREPO_CURRENT,
-      CLIENT_METADATA_DIR_MAINREPO_PREVIOUS,
-      CLIENT_METADATA_DIR_DIRECTOR_CURRENT,
-      CLIENT_METADATA_DIR_DIRECTOR_PREVIOUS]:
-    os.makedirs(d)
+  # for d in [
+  #     CLIENT_METADATA_DIR_MAINREPO_CURRENT,
+  #     CLIENT_METADATA_DIR_MAINREPO_PREVIOUS,
+  #     CLIENT_METADATA_DIR_DIRECTOR_CURRENT,
+  #     CLIENT_METADATA_DIR_DIRECTOR_PREVIOUS]:
+  #   os.makedirs(d)
 
-  # Get the root.json file from the mainrepo (would come with this client).
-  shutil.copyfile(
-      os.path.join(MAIN_REPO_DIR, 'metadata.staged', 'root.json'),
-      os.path.join(CLIENT_METADATA_DIR_MAINREPO_CURRENT, 'root.json'))
+  # # Get the root.json file from the mainrepo (would come with this client).
+  # shutil.copyfile(
+  #     os.path.join(MAIN_REPO_DIR, 'metadata.staged', 'root.json'),
+  #     os.path.join(CLIENT_METADATA_DIR_MAINREPO_CURRENT, 'root.json'))
 
-  # Get the root.json file from the director repo (would come with this client).
-  shutil.copyfile(
-      os.path.join(DIRECTOR_REPO_DIR, 'metadata.staged', 'root.json'),
-      os.path.join(CLIENT_METADATA_DIR_DIRECTOR_CURRENT, 'root.json'))
+  # # Get the root.json file from the director repo (would come with this client).
+  # shutil.copyfile(
+  #     os.path.join(DIRECTOR_REPO_DIR, 'metadata.staged', 'root.json'),
+  #     os.path.join(CLIENT_METADATA_DIR_DIRECTOR_CURRENT, 'root.json'))
 
-  # Add a pinned.json to this client (softlink it from a saved copy).
-  os.symlink(
-      os.path.join(WORKING_DIR, 'pinned.json'),
-      os.path.join(CLIENT_DIR, 'metadata', 'pinned.json'))
+  # # Add a pinned.json to this client (softlink it from a saved copy).
+  # os.symlink(
+  #     os.path.join(WORKING_DIR, 'pinned.json'),
+  #     os.path.join(CLIENT_DIR, 'metadata', 'pinned.json'))
 
-  # Configure tuf with the client's metadata directories (where it stores the
-  # metadata it has collected from each repository, in subdirectories).
-  tuf.conf.repository_directory = CLIENT_DIR # This setting should probably be called client_directory instead, post-TAP4.
+  # # Configure tuf with the client's metadata directories (where it stores the
+  # # metadata it has collected from each repository, in subdirectories).
+  # tuf.conf.repository_directory = CLIENT_DIR # This setting should probably be called client_directory instead, post-TAP4.
 
-  # Create a TAP-4-compliant updater object. This will read pinning.json
-  # and create single-repository updaters within it to handle connections to
-  # each repository.
-  upd = tuf.client.updater.Updater('updater')
+  # # Create a TAP-4-compliant updater object. This will read pinning.json
+  # # and create single-repository updaters within it to handle connections to
+  # # each repository.
+  # upd = tuf.client.updater.Updater('updater')
+
+  # Create a secondary, using directory 'clientane'
+  secondary_ecu = secondary.Secondary('clientane')
 
   # Starting with just the root.json files for the director and mainrepo, and
   # pinned.json, the client will now use TUF to connect to each repository and
   # download/update top-level metadata. This call updates metadata from both
   # repositories.
-  upd.refresh()
+  # upd.refresh()
+  secondary_ecu.refresh_toplevel_metadata_from_repositories()
+
+
+  # Get the list of targets the director expects us to download and update to.
+  # Note that at this line, this target info is not yet validated with the
+  # supplier repo: that is done a few lines down.
+  directed_targets = secondary_ecu.get_target_list_from_director()
 
   # This call determines what the right fileinfo (hash, length, etc) for
   # target file file2.txt is. This begins by matching paths/patterns in
@@ -375,6 +386,22 @@ def client(use_new_keys=False):
   # In this particular case, fileinfo will match and be stored, since both
   # repositories list file2.txt as a target, and they both have matching metadata
   # for it.
+  verified_targets = []
+  for target_filepath in directed_targets:
+    try:
+      verified_target = secondary.get_validated_target_info(target_filepath)
+    except tuf.UnknownTargetError:
+      print('Director has instructed us to download a target (' +
+          target_filepath + ') that is not validated by the combination of '
+          'Director + Supplier repositories. '
+          'It may be that files have changed in the last few moments on the '
+          'repositories. Try again, but if this happens often, you may be '
+          'connecting to an untrustworthy Director, or the Director and '
+          'Supplier may be out of sync.')
+
+
+
+
   file2_trustworthy_info = upd.target('file2.txt')
 
   # If you execute the following, commented-out command, you'll get a not found
@@ -416,145 +443,39 @@ def client(use_new_keys=False):
   # fields.
   installed_firmware_targetinfo = file2_trustworthy_info
 
+  import ipdb
+  ipdb.set_trace()
 
 
-  signed_ecu_manifest = generate_signed_ecu_manifest(
-      installed_firmware_targetinfo)
+  # Load or generate a key.
+  if use_new_keys:
+    rt.generate_and_write_ed25519_keypair('secondary', password='pw')
+
+  # Load in from the generated files.
+  key_pub = rt.import_ed25519_publickey_from_file('secondary.pub')
+  key_pri = rt.import_ed25519_privatekey_from_file('secondary', password='pw')
+
+  # Turn this into a canonical key matching tuf.formats.ANYKEY_SCHEMA
+  # Note: it looks like the resulting object is the same as the private key
+  # anyway, at least with ed25519. Is it always?
+  key = {
+      'keytype': key_pub['keytype'],
+      'keyid': key_pub['keyid'],
+      'keyval': {
+        'public': key_pub['keyval']['public'],
+        'private': key_pri['keyval']['private']}}
+  tuf.formats.ANYKEY_SCHEMA.check_match(key)
 
 
+  # Instantiate a secondary. /:
+  secondary_ecu = secondary.Secondary()
 
-  def generate_signed_ecu_manifest(installed_firmware_targetinfo):
-    """
-    Takes a tuf.formats.TARGETFILE_SCHEMA (the target info for the firmware on
-    an ECU) and returns a signed ECU manifest indicating that target file info,
-    encoded in BER (requires code added to two ber_* functions below).
-    """
-
-    # We'll construct a signed signable_ecu_manifest_SCHEMA from the
-    # targetinfo.
-    # First, construct and check an ECU_VERSION_MANIFEST_SCHEMA.
-    ecu_manifest = {
-        'installed_image': installed_firmware_targetinfo,
-        'timeserver_time': '2016-10-10T11:37:30Z',
-        'previous_timeserver_time': '2016-10-10T11:37:30Z',
-        'attacks_detected': ''
-    }
-    uptane.formats.ECU_VERSION_MANIFEST_SCHEMA.check_match(ecu_manifest)
-
-    # Now we'll convert it into a signable object and sign it with a key we
-    # generate.
-
-    if use_new_keys:
-      rt.generate_and_write_ed25519_keypair('secondary', password='pw')
-
-    # Load in from the generated files.
-    key_pub = rt.import_ed25519_publickey_from_file('secondary.pub')
-    key_pri = rt.import_ed25519_privatekey_from_file('secondary', password='pw')
-
-    # Turn this into a canonical key matching tuf.formats.ANYKEY_SCHEMA
-    key = {
-        'keytype': key_pub['keytype'],
-        'keyid': key_pub['keyid'],
-        'keyval': {'public': key_pub['public'], 'private': key_pri['private']}}
-    tuf.formats.ANYKEY_SCHEMA.check_match(key)
-
-    # TODO: Once the ber encoder functions are done, do this:
-    original_ecu_manifest = ecu_manifest
-    ecu_manifest = ber_encode_ecu_manifest(ecu_manifest)
-
-    # Wrap the ECU version manifest object into an
-    # uptane.formats.signable_ecu_manifest and check the format.
-    # {
-    #     'signed': ecu_version_manifest,
-    #     'signatures': []
-    # }
-    signable_ecu_manifest = tuf.formats.make_signable(
-        ecu_manifest)
-    uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
-        signable_ecu_manifest)
-
-    # Now sign with that key. (Also do ber encoding of the signed portion.)
-    signed_ecu_manifest = sign_signable(ecu_manifest, [key])
-    tuf.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
-        signed_ecu_manifest)
-
-    # TODO: Once the ber encoder functions are done, do this:
-    original_signed_ecu_manifest = signed_ecu_manifest
-    ber_encoded_signed_ecu_manifest = ber_encode_signable_content(signed_ecu_manifest)
-
-    return ber_encoded_signed_ecu_manifest
+  signed_ecu_manifest = secondary_ecu.generate_signed_ecu_manifest(
+      installed_firmware_targetinfo, [key])
 
 
 
-def ber_encode_signable_content(signable):
-  print('SKIPPING BER ENCODING OF SIGNABLE!!!')
-  return signable
 
-def ber_encode_ecu_manifest(ecu_manifest):
-  print('SKIPPING BER ENCODING OF ECU MANIFEST!!!')
-  return ecu_manifest
-
-
-
-def sign_signable(signable, keys_to_sign_with):
-  """
-  Signs the given signable (e.g. an ECU manifest) with all the given keys.
-
-  Arguments:
-
-    signable:
-      An object with a 'signed' dictionary and a 'signatures' list:
-      conforms to tuf.formats.SIGNABLE_SCHEMA
-
-    keys_to_sign_with:
-      A list whose elements must conform to tuf.formats.ANYKEY_SCHEMA.
-
-  Returns:
-
-    A signable object (tuf.formats.SIGNABLE_SCHEMA), but with the signatures
-    added to its 'signatures' list.
-
-  """
-
-  # The below was partially modeled after tuf.repository_lib.sign_metadata()
-
-  signatures = []
-
-  for signing_key in keys_to_sign_with:
-    
-    tuf.formats.ANYKEY_SCHEMA.check_match(signing_key)
-
-    # If we already have a signature with this keyid, skip.
-    if signing_key['keyid'] in [key['keyid'] for key in signatures]:
-      print('Already signed with this key.')
-      continue
-
-    # If the given key was public, raise a FormatError.
-    if 'private' not in signing_key['keyval']:
-      raise tuf.FormatError('One of the given keys lacks a private key value, '
-          'and so cannot be used for signing: ' + repr(signing_key))
-    
-    # We should already be guaranteed to have a supported key type due to
-    # the ANYKEY_SCHEMA.check_match call above. Defensive programming.
-    if signing_key['keytype'] not in SUPPORTED_KEY_TYPES:
-      assert False, 'Programming error: key types have already been ' + \
-          'validated; should not be possible that we now have an ' + \
-          'unsupported key type, but we do: ' + repr(signing_key['keytype'])
-
-
-    # Else, all is well. Sign the signable with the given key, adding that
-    # signature to the signatures list in the signable.
-    signable['signatures'].append(
-        tuf.keys.create_signature(signing_key, signable['signed']))
-
-
-  # Confirm that the formats match what is expected post-signing, including a
-  # check again for SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA. Raise
-  # 'tuf.FormatError' if the format is wrong.
-
-  tuf.formats.check_signable_object_format(signable)
-
-  return signable # Fully signed
 
 
 

@@ -36,8 +36,10 @@ import uptane.formats
 import tuf
 import json
 
-INVENTORY_DB_DIR = os.path.join(uptane.WORKING_DIR + 'inventorydb')
-
+# TODO: Move this out of import territory and to somewhere sensible.
+INVENTORY_DB_DIR = os.path.join(uptane.WORKING_DIR, 'inventorydb')
+if not os.path.exists(INVENTORY_DB_DIR):
+  os.mkdir(INVENTORY_DB_DIR)
 
 
 def get_ecu_public_key(ecu_serial):
@@ -69,24 +71,24 @@ def get_vehicle_manifest(vin):
 
 
 
-def save_vehicle_manifest(vin, manifest_dict):
+def save_vehicle_manifest(vin, signed_vehicle_manifest):
   """
-  Given a manifest of form VEHICLE_VERSION_MANIFEST_SCHEMA, save it in an
-  index by vin, and save the individual ecu attestations in an index by ecu
-  serial.
-
-  This is CURRENTLY EXPOSED DIRECTLY via director.py:Director.listen() over an
-  XML-RPC interface.
+  Given a manifest of form
+  uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA, save it in an index
+  by vin, and save the individual ecu attestations in an index by ecu serial.
   """
   uptane.formats.VIN_SCHEMA.check_match(vin)
-  uptane.formats.VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(manifest_dict)
+  uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
+      signed_vehicle_manifest)
 
   scrubbed_vin = scrub_filename(vin, INVENTORY_DB_DIR)
 
-  json.dump(open(scrubbed_vin, 'w'))
+  json.dump(signed_vehicle_manifest, open(scrubbed_vin, 'w'))
 
-  for ecu_serial in manifest_dict:
-    save_ecu_manifest(ecu_serial, manifest_dict[ecu_serial])
+  ecu_manifests = signed_vehicle_manifest['signed']['ecu_version_manifests']
+
+  for ecu_serial in ecu_manifests:
+    save_ecu_manifest(vin, ecu_serial, ecu_manifests[ecu_serial])
 
 
 
@@ -105,13 +107,14 @@ def get_ecu_manifest(vin, ecu_serial):
 
 
 
-def save_ecu_manifest(vin, ecu_serial, attestation_dict):
+def save_ecu_manifest(vin, ecu_serial, signed_ecu_manifest):
   uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial)
-  uptane.formats.ECU_VERSION_MANIFEST_SCHEMA.check_match(attestation_dict)
+  uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
+      signed_ecu_manifest)
 
   scrubbed_ecu_serial = scrub_filename(ecu_serial, INVENTORY_DB_DIR)
 
-  json.dump(open(scrubbed_ecu_serial, 'w'))
+  json.dump(signed_ecu_manifest, open(scrubbed_ecu_serial, 'w'))
 
 
 

@@ -63,7 +63,10 @@ def sign_signable(signable, keys_to_sign_with):
   # check again for SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA. Raise
   # 'tuf.FormatError' if the format is wrong.
 
-  tuf.formats.check_signable_object_format(signable)
+  # TODO: <~> Make the function call below useful. The problem is that it
+  # demancs a _type field in the 'signed' sub-object, but we don't guarantee
+  # that will be there here. (TUF signs roles. This isn't a role.))
+  #tuf.formats.check_signable_object_format(signable)
 
   return signable # Fully signed
 

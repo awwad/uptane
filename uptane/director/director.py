@@ -9,11 +9,14 @@
    -Signs a piece of metadata indicating what a particular vehicle is to
     install and returns it to the vehicle
 
+  Currently, this module contains both core and demo code.
+
 """
 
 
 import tuf
 import time # for sleep
+import uptane
 import uptane.director.inventorydb as inventorydb
 import uptane.formats
 import json
@@ -32,49 +35,55 @@ import tuf.repository_tool as rt
 #from uptane_tuf_server import CLEAN_METADATA_PATH, CLEAN_IMAGES_DIR
 
 
+# CONSTANTS
+DIRECTOR_SERVER_HOST = 'localhost'
+DIRECTOR_SERVER_PORT = 30111
+
+import xmlrpc.server
+from xmlrpc.server import SimpleXMLRPCServer
+from xmlrpc.server import SimpleXMLRPCRequestHandler
+
+
+# Restrict director requests to a particular path.
+# Must specify RPC2 here for the XML-RPC interface to work.
+class RequestHandler(SimpleXMLRPCRequestHandler):
+  rpc_paths = ('/RPC2',)
 
 
 
+# class DirectorCore:
+#   """
+#   Foundational part of the reference implementation, CAN remain largely
+#   unchanged in real use. It is upon this that a full director is built to
+#   OEM specifications. A sample of such a Director is in the class
+#   Director below.
 
+#   The DirectorCore class basically exists to:
+#    - Translate a list of vehicle software assignments (roughly mapping ECU IDs
+#      to targets, but not quite: multiple possible images per ECU) into signed
+#      piece of metadata in the form of a director.json file suitable for sending
+#      to a vehicle.
+#      This is defined by uptane.formats.VEHICLE_SOFTWARE_ASSIGNMENTS_SCHEMA.
+#    - 
 
+#   (Does this need to be a class? Probably not. Probably clearer in the
+#   reference implementation, though. Could be that this class should be
+#   implemented by Director (class Director(DirectorCore):))
 
+#   """
+#   def write_director_metadata(self, vehicle_software_assignments):
 
-#receive
+#     uptane.formats.VEHICLE_SOFTWARE_ASSIGNMENTS_SCHEMA.check_match(
+#         vehicle_software_assignments) # Check argument.
 
+#     raise NotImplementedError('Not yet written')
 
-class DirectorCore:
-  """
-  Foundational part of the reference implementation, CAN remain largely
-  unchanged in real use. It is upon this that a full director is built to
-  OEM specifications. A sample of such a Director is in the class
-  Director below.
+#     #repo = tuf.repository_tool.load_repo(   )
 
-  The DirectorCore class basically exists to:
-   - Translate a list of vehicle software assignments (roughly mapping ECU IDs
-     to targets, but not quite: multiple possible images per ECU) into signed
-     piece of metadata in the form of a director.json file suitable for sending
-     to a vehicle.
-     This is defined by uptane.formats.VEHICLE_SOFTWARE_ASSIGNMENTS_SCHEMA.
-   - 
-
-  (Does this need to be a class? Probably not. Probably clearer in the
-  reference implementation, though. Could be that this class should be
-  implemented by Director (class Director(DirectorCore):))
-
-  """
-  def write_director_metadata(self, vehicle_software_assignments):
-
-    uptane.formats.VEHICLE_SOFTWARE_ASSIGNMENTS_SCHEMA.check_match(
-        vehicle_software_assignments) # Check argument.
-
-    raise NotImplementedError('Not yet written')
-
-    #repo = tuf.repository_tool.load_repo(   )
-
-    # load director keys only (grab code from uptane_tuf_server.py)
-    # Call repository_tool internal functions to produce metadata
-    # file.  /:  Ugly.
-    # 
+#     # load director keys only (grab code from uptane_tuf_server.py)
+#     # Call repository_tool internal functions to produce metadata
+#     # file.  /:  Ugly.
+#     # 
 
 
 
@@ -95,33 +104,76 @@ class Director:
     pass
 
 
+  # For the demo
+  def listen(self):
+    """
+    Listens on DIRECTOR_SERVER_PORT for xml-rpc calls to functions:
+      - get_test_value
+      - submit_vehicle_manifest
+    """
+
+    # Create server
+    server = SimpleXMLRPCServer((DIRECTOR_SERVER_HOST, DIRECTOR_SERVER_PORT),
+        requestHandler=RequestHandler)
+    server.register_introspection_functions()
+
+    # Add a function to the Director's xml-rpc interface.
+    # This is just for debugging for now. We are not the timeserver.
+    def get_test_value():
+      return 'one million'
+    server.register_function(get_test_value)
+
+    # Register function that can be called via XML-RPC, allowing
+    server.register_function(
+        self.register_vehicle_manifest, 'submit_vehicle_manifest')
+    #  server.register_function(uptane.director.inventorydb.save_vehicle_manifest,
+    #      'submit_vehicle_manifest')
+
+    # In the longer term, this won't be exposed: it will only be reached via
+    # register_vehicle_manifest. For now, during development, however, this is
+    # exposed.
+    #server.register_function(uptane.director.inventorydb.save_ecu_manifest,
+    #    'submit_ecu_manifest')
+    server.register_function(
+      self.register_ecu_manifest, 'submit_ecu_manifest')
+
+    print('Director will now listen on port ' + str(DIRECTOR_SERVER_PORT))
+    server.serve_forever()
+
+
+
+
 
 
 
   def load_keys(self):
     """
     """
-    self.key_dirroot_pub = rt.import_rsa_publickey_from_file('directorroot.pub')
-    self.key_dirroot_pri = rt.import_rsa_privatekey_from_file('directorroot', password='pw')
-    self.key_dirtime_pub = rt.import_rsa_publickey_from_file('directortimestamp.pub')
-    self.key_dirtime_pri = rt.import_rsa_privatekey_from_file('directortimestamp', password='pw')
-    self.key_dirsnap_pub = rt.import_rsa_publickey_from_file('directorsnapshot.pub')
-    self.key_dirsnap_pri = rt.import_rsa_privatekey_from_file('directorsnapshot', password='pw')
-    self.key_dirtarg_pub = rt.import_rsa_publickey_from_file('director.pub')
-    self.key_dirtarg_pri = rt.import_rsa_privatekey_from_file('director', password='pw')
+    self.key_dirroot_pub = rt.import_ed25519_publickey_from_file('directorroot.pub')
+    self.key_dirroot_pri = rt.import_ed25519_privatekey_from_file('directorroot', password='pw')
+    self.key_dirtime_pub = rt.import_ed25519_publickey_from_file('directortimestamp.pub')
+    self.key_dirtime_pri = rt.import_ed25519_privatekey_from_file('directortimestamp', password='pw')
+    self.key_dirsnap_pub = rt.import_ed25519_publickey_from_file('directorsnapshot.pub')
+    self.key_dirsnap_pri = rt.import_ed25519_privatekey_from_file('directorsnapshot', password='pw')
+    self.key_dirtarg_pub = rt.import_ed25519_publickey_from_file('director.pub')
+    self.key_dirtarg_pri = rt.import_ed25519_privatekey_from_file('director', password='pw')
 
 
 
 
 
-  def validate_ecu_version_manifest(self, ecuid, ecu_manifest):
+  def validate_ecu_manifest(self, ecuid, signed_ecu_manifest):
     """
     Arguments:
       ecuid: uptane.formats.ECU_SERIAL_SCHEMA
       manifest: uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA
     """
     uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
-        ecu_manifest)
+        signed_ecu_manifest)
+
+    # TODO: <~> COMPLETE ME.
+    print('Validation of manifests not yet fully implemented.')
+    # If it doesn't match expectations, error out here.
 
     # Process ECU signature here.
     #   - Get public (or symmetric) key from inventorydb
@@ -130,35 +182,52 @@ class Director:
 
 
 
-  def validate_vehicle_version_manifest(self, vin, manifest):
+  def validate_vehicle_manifest(self, vin, signed_vehicle_manifest):
     """
     Arguments:
       vin: uptane.formats.VIN
       manifest: uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA
     """
-    uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(manifest)
+    uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
+        signed_vehicle_manifest)
 
-    # Process Primary's signature here.
-    return manifest
+    # TODO: <~> COMPLETE ME.
+    print('Validation of manifests not yet fully implemented.')
 
-
-
-
-
-  # JSON
-  def register_vehicle_manifest(self, vin, manifest):
-
-    # Check argument format.
-    uptane.formats.VIN_SCHEMA.check_match(vin)
-    uptane.formats.VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(manifest_dict)
-
-    # Validate the manifest:
-    # Validate Primary signature on full manifest?
+    # Process Primary's signature on full manifest here.
+    # If it doesn't match expectations, error out here.
 
     # Validate individual ECU signatures on their version attestations.
 
 
-    inventorydb.save_vehicle_manifest(vin, manifest)
+
+
+
+  # This is called by the primary through an XMLRPC interface, currently.
+  # It will later become unnecessary, as we will only save ecu manifests when
+  # saving vehicle manifests.
+  def register_ecu_manifest(self, vin, ecu_serial, signed_ecu_manifest):
+    """
+    """
+    # Error out if the signature isn't valid and from the expected party.
+    # Also checks argument format.
+    self.validate_ecu_manifest(ecu_serial, signed_ecu_manifest)
+
+    # Otherwise, we save it:
+    inventorydb.save_ecu_manifest(vin, ecu_serial, signed_ecu_manifest)
+
+
+
+  # This is called by the primary through an XMLRPC interface, currently.
+  def register_vehicle_manifest(self, vin, signed_vehicle_manifest):
+
+    # Check argument format.
+
+    # Error out if the signature isn't valid and from the expected party.
+    # Also checks argument format.
+    self.validate_vehicle_manifest(vin, signed_vehicle_manifest)
+
+    inventorydb.save_vehicle_manifest(vin, signed_vehicle_manifest)
 
 
 

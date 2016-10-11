@@ -306,6 +306,7 @@ def client(use_new_keys=False):
   import uptane.clients.secondary as secondary
 
   client_directory_name = 'clientane' # name for this secondary's directory
+  vin = 'vin1111'
   ecu_serial = 'ecu11111'
 
   # WORKING_DIR = os.getcwd()
@@ -498,7 +499,10 @@ def client(use_new_keys=False):
   signed_ecu_manifest = secondary_ecu.generate_signed_ecu_manifest(
       installed_firmware_targetinfo, [key])
 
+  import ipdb
+  ipdb.set_trace()
 
+  secondary_ecu.submit_ecu_manifest_to_director(signed_ecu_manifest)
 
 
 

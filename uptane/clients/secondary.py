@@ -37,6 +37,7 @@ class Secondary(object):
     
     tuf.formats.RELPATH_SCHEMA.check_match(client_dir)
     
+    self.vin = 'vin1111'
     self.ecu_serial = ecu_serial
     self.client_dir = client_dir
     self.director_proxy = None
@@ -133,10 +134,10 @@ class Secondary(object):
 
 
 
-  def submit_ecu_manifest_to_director(self, ecu_manifest):
+  def submit_ecu_manifest_to_director(self, signed_ecu_manifest):
 
     uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
-        ecu_manifest)
+        signed_ecu_manifest)
     # TODO: <~> Be sure to update the previous line to indicate an ASN.1
     # version of the ecu_manifest after encoders have been implemented.
 
@@ -147,7 +148,7 @@ class Secondary(object):
     if not server.system.listMethods():
       raise Exception('Unable to connect to server.')
 
-    s.submit_ecu_manifest(ecu_manifest)
+    server.submit_ecu_manifest(self.vin, self.ecu_serial, signed_ecu_manifest)
 
 
 
@@ -203,7 +204,7 @@ class Secondary(object):
 
     # Now sign with that key. (Also do ber encoding of the signed portion.)
     signed_ecu_manifest = sign_signable(signable_ecu_manifest, keys)
-    tuf.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
+    uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
         signed_ecu_manifest)
 
     # TODO: Once the ber encoder functions are done, do this:

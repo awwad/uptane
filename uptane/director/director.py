@@ -115,25 +115,16 @@ class Director:
     # Create server
     server = SimpleXMLRPCServer((DIRECTOR_SERVER_HOST, DIRECTOR_SERVER_PORT),
         requestHandler=RequestHandler, allow_none=True)
-    server.register_introspection_functions()
+    #server.register_introspection_functions()
 
-    # Add a function to the Director's xml-rpc interface.
-    # This is just for debugging for now. We are not the timeserver.
-    def get_test_value():
-      return 'one million'
-    server.register_function(get_test_value)
-
-    # Register function that can be called via XML-RPC, allowing
+    # Register function that can be called via XML-RPC, allowing a Primary to
+    # submit a vehicle version manifest.
     server.register_function(
         self.register_vehicle_manifest, 'submit_vehicle_manifest')
-    #  server.register_function(uptane.director.inventorydb.save_vehicle_manifest,
-    #      'submit_vehicle_manifest')
 
     # In the longer term, this won't be exposed: it will only be reached via
     # register_vehicle_manifest. For now, during development, however, this is
     # exposed.
-    #server.register_function(uptane.director.inventorydb.save_ecu_manifest,
-    #    'submit_ecu_manifest')
     server.register_function(
       self.register_ecu_manifest, 'submit_ecu_manifest')
 
@@ -215,6 +206,12 @@ class Director:
 
     # Otherwise, we save it:
     inventorydb.save_ecu_manifest(vin, ecu_serial, signed_ecu_manifest)
+
+    # Alert if there's been a detected attack.
+    if signed_ecu_manifest['signed']['attacks_detected']:
+      print('Attacks have been reported by the Secondary!')
+      print('Attacks listed by ECU ' + repr(ecu_serial) + ':')
+      print(signed_ecu_manifest['signed']['attacks_detected'])
 
 
 

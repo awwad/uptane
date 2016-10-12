@@ -7,13 +7,15 @@ from uptane.common import sign_signable
 
 
 import xmlrpc.client
-import uptane.director.newdirector as director
+import uptane.director.director as director
+import uptane.director.timeserver as timeserver
 
 import os # For paths and makedirs
 import shutil # For copyfile
 import tuf.client.updater
 import tuf.repository_tool as rt
 import tuf.keys
+import random # for nonces
 
 class Secondary(object):
 
@@ -66,6 +68,7 @@ class Secondary(object):
     self.previous_timeserver_time = None
     self.timeserver_public_key = timeserver_public_key
     self.director_public_key = director_public_key
+    self.partial_verifying = partial_verifying
     self.attacks_detected = ''
 
     if not self.partial_verifying and self.director_public_key is not None:
@@ -189,7 +192,8 @@ class Secondary(object):
   def _create_nonce(self):
     """Returns a pseudorandom number for use in protecting from replay attacks
     from the timeserver (or an intervening party)."""
-    return random.randint(formats.NONCE_LOWER_BOUND, formats.NONCE_UPPER_BOUND)
+    return random.randint(
+        uptane.formats.NONCE_LOWER_BOUND, uptane.formats.NONCE_UPPER_BOUND)
 
 
 
@@ -199,8 +203,8 @@ class Secondary(object):
   def update_time_from_timeserver(self, nonce):
 
     server = xmlrpc.client.ServerProxy(
-        'http://' + str(director.DIRECTOR_SERVER_HOST) + ':' +
-        str(director.DIRECTOR_SERVER_PORT))
+        'http://' + str(timeserver.TIMESERVER_HOST) + ':' +
+        str(timeserver.TIMESERVER_PORT))
 
     new_timeserver_attestation = server.get_signed_time([nonce]) # Primary
 
@@ -213,11 +217,15 @@ class Secondary(object):
 
 
     # TODO: <~> Check timeserver signature using self.timeserver_public_key!
-    tuf.keys.verify_signature(
+    valid = tuf.keys.verify_signature(
         self.timeserver_public_key,
         new_timeserver_attestation['signatures'][0],
         new_timeserver_attestation['signed'])
 
+    if not valid:
+      raise tuf.BadSignatureError('Timeserver returned an invalid signature. '
+          'Time is questionable. If you see this persistently, it is possible '
+          'that the Primary is compromised.')
 
     if not nonce in new_timeserver_attestation['signed']['nonces']:
       # TODO: Determine whether or not to add something to self.attacks_detected

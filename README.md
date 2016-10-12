@@ -24,34 +24,35 @@ The code below is intended to be run IN FIVE PYTHON SHELLS:
 Each shell should be run in a python environment (the same environment is
 fine) that has the awwad/tuf:pinning version of TUF installed (see [above](#installation)).
 
-*WINDOW 1: the supplier's repository*
+*WINDOW 1: the Supplier repository*
 ```
-  import uptane_test_instructions as u
-  u.ServeMainRepo()
-```
-
-*WINDOW 2: the director's repository*
-```
-  import uptane_test_instructions as u
-  u.ServeDirectorRepo()
+import uptane_test_instructions as u
+u.ServeMainRepo()
 ```
 
-*WINDOW 3: the director service*
+*WINDOW 2: the Director repository*
 ```
-  import uptane.director.director as director
-  d = director.Director()
-  d.listen()
+import uptane_test_instructions as u
+u.ServeDirectorRepo()
 ```
 
-*WINDOW 4: the timeserver service:*
+*WINDOW 3: the Director service (receives manifests)*
 ```
-  import uptane.director.timeserver as timeserver
-  timeserver.listen(use_new_keys=True)
+import uptane.director.director as director
+d = director.Director()
+d.listen()
+```
+
+*WINDOW 4: the Timeserver service:*
+```
+import uptane.director.timeserver as timeserver
+timeserver.listen(use_new_keys=True)
 ```
 
 *WINDOW 5: In the client's window:*
 (ONLY AFTER THE OTHERS HAVE FINISHED STARTING UP AND ARE HOSTING)
 ```
-  u.client()
+import uptane_test_instructions as u
+u.client()
 ```
 

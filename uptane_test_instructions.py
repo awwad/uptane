@@ -182,7 +182,10 @@ def ServeMainRepo(use_new_keys=False):
 # Director window
 # ----------------
 
-def ServeDirectorRepo(use_new_keys=False):
+def ServeDirectorRepo(
+  use_new_keys=False,
+  additional_root_key=False,
+  additional_targets_key=False):
   import os # For paths and symlink
   import shutil # For copying directory trees
   import sys, subprocess, time # For hosting
@@ -211,7 +214,10 @@ def ServeDirectorRepo(use_new_keys=False):
     rt.generate_and_write_ed25519_keypair('directortimestamp', password='pw')
     rt.generate_and_write_ed25519_keypair('directorsnapshot', password='pw')
     rt.generate_and_write_ed25519_keypair('director', password='pw') # targets
-
+    if additional_root_key:
+      rt.generate_and_write_ed25519_keypair('directorroot2', password='pw')
+    if additional_targets_key:
+      rt.generate_and_write_ed25519_keypair('director2', password='pw')
 
   key_dirroot_pub = rt.import_ed25519_publickey_from_file('directorroot.pub')
   key_dirroot_pri = rt.import_ed25519_privatekey_from_file('directorroot', password='pw')
@@ -221,6 +227,14 @@ def ServeDirectorRepo(use_new_keys=False):
   key_dirsnap_pri = rt.import_ed25519_privatekey_from_file('directorsnapshot', password='pw')
   key_dirtarg_pub = rt.import_ed25519_publickey_from_file('director.pub')
   key_dirtarg_pri = rt.import_ed25519_privatekey_from_file('director', password='pw')
+  key_dirroot2_pub = None
+  key_dirroot2_pri = None
+  if additional_root_key:
+    key_dirroot2_pub = rt.import_ed25519_publickey_from_file('directorroot2.pub')
+    key_dirroot2_pri = rt.import_ed25519_privatekey_from_file('directorroot2', password='pw')
+  if additional_targets_key:
+    key_dirtarg2_pub = rt.import_ed25519_publickey_from_file('director2.pub')
+    key_dirtarg2_pri = rt.import_ed25519_privatekey_from_file('director2', password='pw')
 
 
   # Add top level keys to the main repository.
@@ -233,6 +247,12 @@ def ServeDirectorRepo(use_new_keys=False):
   repodirector.timestamp.load_signing_key(key_dirtime_pri)
   repodirector.snapshot.load_signing_key(key_dirsnap_pri)
   repodirector.targets.load_signing_key(key_dirtarg_pri)
+  if additional_targets_key:
+    repodirector.targets.add_verification_key(key_dirtarg2_pub)
+    repodirector.targets.load_signing_key(key_dirtarg2_pri)
+  if additional_root_key:
+    repodirector.root.add_verification_key(key_dirroot2_pub)
+    repodirector.root.load_signing_key(key_dirroot2_pri)
 
 
   # Add target to director.

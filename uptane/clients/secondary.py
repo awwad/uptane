@@ -9,9 +9,6 @@
 
 """
 
-
-# Rewrite of secondaries.
-
 import uptane.formats
 import tuf.formats
 import uptane.ber_encoder as ber_encoder
@@ -38,7 +35,7 @@ class Secondary(object):
 
     self.updater:
       A tuf.client.updater.Updater object used to retrieve metadata and
-      target files from the director and supplier repositories.
+      target files from the Director and Supplier repositories.
 
     self.client_dir:
       The directory in the working directory where all client data is stored
@@ -79,11 +76,18 @@ class Secondary(object):
         ecu_serial,
         timeserver_public_key=None,
         director_public_key=None,
-        partial_verifying=False):
-    
+        partial_verifying=False,
+        vin='vin1111'):
+
+    # Check arguments:
     tuf.formats.RELPATH_SCHEMA.check_match(client_dir)
-    
-    self.vin = 'vin1111'
+    uptane.formats.VIN_SCHEMA.check_match(vin)
+    uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial)
+    for key in [timeserver_public_key, director_public_key]:
+      if key is not None:
+        tuf.formats.ANYKEY_SCHEMA.check_match(key)
+
+    self.vin = vin
     self.ecu_serial = ecu_serial
     self.client_dir = client_dir
     self.director_proxy = None
@@ -95,7 +99,7 @@ class Secondary(object):
     self.attacks_detected = ''
 
     if not self.partial_verifying and self.director_public_key is not None:
-      raise TypeError('Secondary not set as partial verifying, but a director '
+      raise Exception('Secondary not set as partial verifying, but a director ' # TODO: Choose error class.
           'key was still provided. Full verification secondaries employ the '
           'normal TUF verifications rooted at root metadata files.')
 
@@ -108,9 +112,14 @@ class Secondary(object):
     CLIENT_METADATA_DIR_MAINREPO_PREVIOUS = os.path.join(CLIENT_DIR, 'metadata', 'mainrepo', 'previous')
     CLIENT_METADATA_DIR_DIRECTOR_CURRENT = os.path.join(CLIENT_DIR, 'metadata', 'director', 'current')
     CLIENT_METADATA_DIR_DIRECTOR_PREVIOUS = os.path.join(CLIENT_DIR, 'metadata', 'director', 'previous')
-    #CLIENT_STUBREPO_DIR = os.path.join(CLIENT_DIR, 'stubrepos', '')
 
-    # Note that the hosts and ports are drawn from pinned.json now.
+    # Note that the hosts and ports for the repositories are drawn from
+    # pinned.json now. The services (timeserver and the director's
+    # submit-manifest service) are still addressed here, though, currently
+    # by pulling the constants from their modules directly
+    # e.g. timeserver.TIMESERVER_PORT and director.DIRECTOR_SERVER_PORT).
+    # Note that despite the vague name, the latter is not the director
+    # repository, but a service that receives manifests.
     #MAIN_REPO_HOST = 'http://localhost'
     #MAIN_REPO_PORT = 30300
     #DIRECTOR_REPO_HOST = 'http://localhost'
@@ -121,6 +130,7 @@ class Secondary(object):
     #TARGETS_DIR = os.path.join(MAIN_REPO_DIR, 'targets')
     DIRECTOR_REPO_DIR = os.path.join(WORKING_DIR, 'repodirector')
 
+    # Set up the TUF client directories for the two repositories.
     if os.path.exists(CLIENT_DIR):
       shutil.rmtree(CLIENT_DIR)
 
@@ -178,6 +188,12 @@ class Secondary(object):
 
   def get_validated_target_info(self, target_filepath):
     """
+    Returns trustworthy target information for the given target file
+    (specified by its file path). This information has been cleared according
+    to the trust requirements of the pinning file (pinned.json) that this
+    client is equipped with. In general, this means that the Director repository
+    and the Supplier (mainrepo) repository have agreed on the file information
+    (cryptographic hash and length).
     Raises tuf.UnknownTargetError if a given filepath is not listed by the
     consensus of Director and Supplier (or through whichever trusted path is
     specified by this client's pinned.json file.) If info is returned, it

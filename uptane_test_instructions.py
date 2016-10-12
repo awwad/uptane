@@ -20,20 +20,20 @@ get everything you need, run the following:
 If you're going to be running the ASN.1 encoding scripts (not involved here),
 you'll also need to `pip install pyasn1`
 
-# WINDOW 1: the supplier's repository
+# WINDOW 1: the Supplier repository
 import uptane_test_instructions as u
 u.ServeMainRepo()
 
-# WINDOW 2: the director's repository
+# WINDOW 2: the Director repository
 import uptane_test_instructions as u
 u.ServeDirectorRepo()
 
-# WINDOW 3: the director service
+# WINDOW 3: the Director service (receives manifests)
 import uptane.director.director as director
 d = director.Director()
 d.listen()
 
-# WINDOW 4: the timeserver service:
+# WINDOW 4: the Timeserver service (responds to requests for signed times):
 import uptane.director.timeserver as timeserver
 timeserver.listen()
 
@@ -338,7 +338,7 @@ def client(use_new_keys=False):
   ##############
   print('Secondary has these times right now: ')
   print('  Latest:' + repr(secondary_ecu.most_recent_timeserver_time))
-  print('  Prevoius:' + repr(secondary_ecu.previous_timeserver_time))
+  print('  Previous:' + repr(secondary_ecu.previous_timeserver_time))
   # Generate a nonce and get the time from the timeserver.
   nonce = secondary_ecu._create_nonce()
   secondary_ecu.update_time_from_timeserver(nonce)

@@ -153,7 +153,7 @@ class Director:
 
 
 
-  def validate_ecu_manifest(self, ecuid, signed_ecu_manifest):
+  def validate_ecu_manifest(self, ecu_serial, signed_ecu_manifest):
     """
     Arguments:
       ecuid: uptane.formats.ECU_SERIAL_SCHEMA
@@ -162,14 +162,21 @@ class Director:
     uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
         signed_ecu_manifest)
 
-    # TODO: <~> COMPLETE ME.
-    print('Validation of manifests not yet fully implemented.')
     # If it doesn't match expectations, error out here.
 
-    # Process ECU signature here.
+    # TODO: <~> COMPLETE ME. Process ECU signature here.
     #   - Get public (or symmetric) key from inventorydb
+    #   - Call tuf.keys.validate_signature to validate the signature.
+    print('Validation of manifests not yet fully implemented.')
 
-    #   - Employ modded bits of TUF code to validate the signature.
+    if ecu_serial != signed_ecu_manifest['signed']['ecu_serial']:
+      # TODO: Choose an exception class.
+      raise Exception('Received a spoofed or mistaken manifest: supposed '
+          'origin ECU (' + repr(ecu_serial) + ') is not the same as what is '
+          'signed in the manifest itself (' +
+          repr(signed_ecu_manifest['signed']['ecu_serial']) + ').')
+
+
 
 
 

@@ -1,10 +1,21 @@
+"""
+<Program Name>
+  secondary.py
+
+<Purpose>
+  An Uptane client modeling the full behavior of a secondary ECU performing
+  full metadata verification, as would be performed during ECU boot.
+  Also includes some partial verification functionality.
+
+"""
+
+
 # Rewrite of secondaries.
 
 import uptane.formats
 import tuf.formats
 import uptane.ber_encoder as ber_encoder
 from uptane.common import sign_signable
-
 
 import xmlrpc.client
 import uptane.director.director as director
@@ -48,6 +59,18 @@ class Secondary(object):
     self.attacks_detected
       A string representing whatever attacks the secondary wishes to alert the
       Director about. Empty string indicates no alerts.
+
+    # self.firmware_fileinfo:
+    #     The image the ecu is currently using, identified by filename in the
+    #     repo, hash of the file, and file sieze. This is an object matching
+    #     tuf.formats.TARGETFILE_SCHEMA
+
+    # self.nonce_next
+    #   Next nonce the ECU will send to the Timeserver (via the Primary).
+
+    # self.nonce_sent
+    #   The last nonce the ECU sent to the Timeserver (via the Primary).
+
 
   """
 
@@ -299,3 +322,42 @@ class Secondary(object):
         signed_ecu_manifest)
 
     return ber_encoded_signed_ecu_manifest
+
+
+
+
+
+  # def report_to_primary(self):
+  #   """Sends version info to the Primary, along with a nonce for future
+  #   timeserver requests."""
+  #   nonce_to_use = self.create_nonce()
+
+  #   self.nonce_sent = self.nonce_next
+  #   self.nonce_next = self._create_nonce()
+  #   # Consider saving some nonce history beyond just one position.
+
+  #   # Additional data that may be sent to the primary:
+  #   # Current time (perceived time? last timeserver call?)
+  #   # Previous recorded time (to the extent this makes sense - previous timeserver time?)
+  #   #
+  #   raise NotImplementedError('Not yet written.')
+
+
+  # def receive_updates_from_primary(self):
+  #   """
+  #   Listen for update data from the Primary and store it in extra storage to be
+  #   checked and "installed" on next boot.
+
+  #   Cycles forever.
+  #   """
+
+  #   while True:
+  #     raise NotImplementedError('Not yet written.')
+
+  #     sleep(0.05)
+
+  # def validate_new_image(self):
+  #   """
+  #   Given file_info for a new image, validate it against signed metadata.
+  #   """
+  #   raise NotImplementedError('Not yet written.')

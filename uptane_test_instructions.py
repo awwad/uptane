@@ -360,7 +360,7 @@ def client(use_new_keys=False):
   # timeserver's key not checking out.
   print('ATTACK TEST: simulating modified timeserver data.')
   key_timeserver_wrong_pub = rt.import_ed25519_publickey_from_file(
-      'timeserver_wrong.pub')
+      os.path.join('attack_data', 'timeserver_wrong.pub'))
   secondary_ecu.timeserver_public_key = key_timeserver_wrong_pub
   try:
     nonce = secondary_ecu._create_nonce()
@@ -510,11 +510,15 @@ def client(use_new_keys=False):
 
   # Attack: MITM w/o key modifies ECU manifest.
   # Modify the ECU manifest without updating the signature.
-  signed_ecu_manifest['signed']['attacks_detected'] = 'Fake attack attack not detected!'
+  signed_ecu_manifest['signed']['attacks_detected'] = 'Everything is great!'
   signed_ecu_manifest['signed']['ecu_serial'] = 'ecu22222'
   secondary_ecu.submit_ecu_manifest_to_director(signed_ecu_manifest)
+  # (The Director, in its window, should now indicate that it has received this
+  # manifest. If signature checking for manifests is on, then the manifest is
+  # rejected. Otherwise, it is simply accepted.)
 
 
+  print('Tests succeeded.')
 
 
 

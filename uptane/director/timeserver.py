@@ -19,6 +19,7 @@ import uptane
 import uptane.director.inventorydb as inventorydb
 import uptane.formats
 import json
+import time
 #import asn1_conversion as asn1
 
 import tuf.repository_tool as rt
@@ -54,7 +55,7 @@ def listen(use_new_keys=False):
   # Create server
   server = SimpleXMLRPCServer((TIMESERVER_HOST, TIMESERVER_PORT),
       requestHandler=RequestHandler)#, allow_none=True)
-  #server.register_introspection_functions()
+  server.register_introspection_functions()
 
   # Add a function to the Director's xml-rpc interface.
   # Register function that can be called via XML-RPC, allowing a Primary to
@@ -86,8 +87,14 @@ def load_timeserver_key(use_new_keys=False):
 def get_signed_time(nonces):
   uptane.formats.NONCE_LIST_SCHEMA.check_match(nonces)
 
+  # Get the time, format it appropriately, and check the resulting format.
+  # e.g. '2016-10-10T11:37:30Z'
+  clock = tuf.formats.unix_timestamp_to_datetime(int(time.time()))
+  clock = clock.isoformat() + 'Z'
+  tuf.formats.ISO8601_DATETIME_SCHEMA.check_match(clock)
+
   time_attestation = {
-    'time': '2016-10-10T11:37:30Z', # TODO: get time
+    'time': clock,
     'nonces': nonces
   }
 

@@ -1,40 +1,46 @@
-# The code below is intended to be run IN FIVE PYTHON SHELLS:
-# - One for the Main Repository ("supplier"), speaking HTTP
-# - One for the Director Repository, speaking HTTP
-# - One for the Director Service, speaking XMLRPC (receives manifests)
-# - One for the Timeserver, speaking XMLRPC (receives requests for signed times)
-# - One for the client
+"""
 
-# Each shell should be run in a python environment (the same environment is
-# fine) that has the awwad/tuf:pinning version of TUF installed. In order to
-# get everything you need, run the following:
-# `pip install cffi==1.7.0 pycrypto==2.6.1 pynacl==1.0.1 cryptography`
-# `pip install git+git://github.com/awwad/tuf.git@pinning`
+uptane_test_instructions.py
 
-# If you're going to be running the ASN.1 encoding scripts (not involved here),
-# you'll also need to `pip install pyasn1`
+This is demonstration code for Uptane.
+
+The code below is intended to be run IN FIVE PYTHON SHELLS:
+- One for the Main Repository ("supplier"), speaking HTTP
+- One for the Director Repository, speaking HTTP
+- One for the Director Service, speaking XMLRPC (receives manifests)
+- One for the Timeserver, speaking XMLRPC (receives requests for signed times)
+- One for the client
+
+Each shell should be run in a python environment (the same environment is
+fine) that has the awwad/tuf:pinning version of TUF installed. In order to
+get everything you need, run the following:
+`pip install cffi==1.7.0 pycrypto==2.6.1 pynacl==1.0.1 cryptography`
+`pip install git+git://github.com/awwad/tuf.git@pinning`
+
+If you're going to be running the ASN.1 encoding scripts (not involved here),
+you'll also need to `pip install pyasn1`
 
 # WINDOW 1: the supplier's repository
-#   import uptane_test_instructions as u
-#   u.ServeMainRepo()
+import uptane_test_instructions as u
+u.ServeMainRepo()
 
 # WINDOW 2: the director's repository
-#   import uptane_test_instructions as u
-#   u.ServeDirectorRepo()
+import uptane_test_instructions as u
+u.ServeDirectorRepo()
 
 # WINDOW 3: the director service
-#   import uptane.director.director as director
-#   d = director.Director()
-#   d.listen()
+import uptane.director.director as director
+d = director.Director()
+d.listen()
 
 # WINDOW 4: the timeserver service:
-#   import uptane.director.timeserver as timeserver
-#   timeserver.listen(use_new_keys=True)
+import uptane.director.timeserver as timeserver
+timeserver.listen()
 
-# In the client's window:
-# (ONLY AFTER THE OTHERS HAVE FINISHED STARTING UP AND ARE HOSTING)
-#   import uptane_test_instructions as u
-#   u.client()
+In the client's window (ONLY after the others FINISH starting and are hosting)
+import uptane_test_instructions as u
+u.client()
+"""
 
 
 # ----------------
@@ -53,13 +59,6 @@ def ServeMainRepo(use_new_keys=False):
   TARGETS_DIR = os.path.join(MAIN_REPO_DIR, 'targets')
   MAIN_REPO_HOST = 'http://localhost'
   MAIN_REPO_PORT = 30300
-
-
-  # Whether to use existing keys or create new ones, an argument to the script.
-  # (If you just copy-paste all this code in a python shell, you'll get False and
-  #  use existing keys, so have the key files or override this value.)
-
-  #use_new_keys = len(sys.argv) == 2 and sys.argv[1] == '--newkeys'
 
 
   # Create target files: file1.txt and file2.txt
@@ -321,58 +320,6 @@ def client(use_new_keys=False):
   vin = 'vin1111'
   ecu_serial = 'ecu11111'
 
-  # WORKING_DIR = os.getcwd()
-  # CLIENT_DIR = os.path.join(WORKING_DIR, 'clientane')
-  # CLIENT_METADATA_DIR_MAINREPO_CURRENT = os.path.join(CLIENT_DIR, 'metadata', 'mainrepo', 'current')
-  # CLIENT_METADATA_DIR_MAINREPO_PREVIOUS = os.path.join(CLIENT_DIR, 'metadata', 'mainrepo', 'previous')
-  # CLIENT_METADATA_DIR_DIRECTOR_CURRENT = os.path.join(CLIENT_DIR, 'metadata', 'director', 'current')
-  # CLIENT_METADATA_DIR_DIRECTOR_PREVIOUS = os.path.join(CLIENT_DIR, 'metadata', 'director', 'previous')
-  # #CLIENT_STUBREPO_DIR = os.path.join(CLIENT_DIR, 'stubrepos', '')
-
-  # # Note that the hosts and ports are drawn from pinned.json now.
-
-  # MAIN_REPO_DIR = os.path.join(WORKING_DIR, 'repomain')
-  # TARGETS_DIR = os.path.join(MAIN_REPO_DIR, 'targets')
-  # #MAIN_REPO_HOST = 'http://localhost'
-  # #MAIN_REPO_PORT = 30300
-  # DIRECTOR_REPO_DIR = os.path.join(WORKING_DIR, 'repodirector')
-  # #DIRECTOR_REPO_HOST = 'http://localhost'
-  # #DIRECTOR_REPO_PORT = 30301
-
-  # if os.path.exists(CLIENT_DIR):
-  #   shutil.rmtree(CLIENT_DIR)
-
-  # for d in [
-  #     CLIENT_METADATA_DIR_MAINREPO_CURRENT,
-  #     CLIENT_METADATA_DIR_MAINREPO_PREVIOUS,
-  #     CLIENT_METADATA_DIR_DIRECTOR_CURRENT,
-  #     CLIENT_METADATA_DIR_DIRECTOR_PREVIOUS]:
-  #   os.makedirs(d)
-
-  # # Get the root.json file from the mainrepo (would come with this client).
-  # shutil.copyfile(
-  #     os.path.join(MAIN_REPO_DIR, 'metadata.staged', 'root.json'),
-  #     os.path.join(CLIENT_METADATA_DIR_MAINREPO_CURRENT, 'root.json'))
-
-  # # Get the root.json file from the director repo (would come with this client).
-  # shutil.copyfile(
-  #     os.path.join(DIRECTOR_REPO_DIR, 'metadata.staged', 'root.json'),
-  #     os.path.join(CLIENT_METADATA_DIR_DIRECTOR_CURRENT, 'root.json'))
-
-  # # Add a pinned.json to this client (softlink it from a saved copy).
-  # os.symlink(
-  #     os.path.join(WORKING_DIR, 'pinned.json'),
-  #     os.path.join(CLIENT_DIR, 'metadata', 'pinned.json'))
-
-  # # Configure tuf with the client's metadata directories (where it stores the
-  # # metadata it has collected from each repository, in subdirectories).
-  # tuf.conf.repository_directory = CLIENT_DIR # This setting should probably be called client_directory instead, post-TAP4.
-
-  # # Create a TAP-4-compliant updater object. This will read pinning.json
-  # # and create single-repository updaters within it to handle connections to
-  # # each repository.
-  # upd = tuf.client.updater.Updater('updater')
-
   # Load the public timeserver key.
   key_timeserver_pub = rt.import_ed25519_publickey_from_file('timeserver.pub')
 
@@ -383,16 +330,48 @@ def client(use_new_keys=False):
       timeserver_public_key=key_timeserver_pub)
 
 
+  # import ipdb
+  # ipdb.set_trace()
+
   ##############
   # TIMESERVER COMMUNICATIONS
   ##############
+  print('Secondary has these times right now: ')
+  print('  Latest:' + repr(secondary_ecu.most_recent_timeserver_time))
+  print('  Prevoius:' + repr(secondary_ecu.previous_timeserver_time))
   # Generate a nonce and get the time from the timeserver.
   nonce = secondary_ecu._create_nonce()
   secondary_ecu.update_time_from_timeserver(nonce)
 
   # Repeat, so that the secondary has both most recent and previous times.
+  # It will use both when generating a manifest to send to the Director later.
   nonce = secondary_ecu._create_nonce()
   secondary_ecu.update_time_from_timeserver(nonce)
+
+  print('After two calls to the timeserver, Secondary has these times: ')
+  print('  Latest:' + repr(secondary_ecu.most_recent_timeserver_time))
+  print('  Previous:' + repr(secondary_ecu.previous_timeserver_time))
+
+
+  # If we change our copy of the timeserver's public key here, it simulates a
+  # man in the middle (possibly the Primary) changing the time and invalidating
+  # the timeserver's signature.
+  # The result of running the below will be an informative error about the
+  # timeserver's key not checking out.
+  print('ATTACK TEST: simulating modified timeserver data.')
+  key_timeserver_wrong_pub = rt.import_ed25519_publickey_from_file(
+      'timeserver_wrong.pub')
+  secondary_ecu.timeserver_public_key = key_timeserver_wrong_pub
+  try:
+    nonce = secondary_ecu._create_nonce()
+    secondary_ecu.update_time_from_timeserver(nonce)
+  except tuf.BadSignatureError:
+    print('Successfully detected bad signature on timeserver time.')
+  else:
+    raise Exception('Failed to detect bad signature on timeserver time!')
+
+  # Put the right public key back.  
+  secondary_ecu.timeserver_public_key = key_timeserver_pub
 
 
 
@@ -517,16 +496,6 @@ def client(use_new_keys=False):
   key_pub = rt.import_ed25519_publickey_from_file('secondary.pub')
   key_pri = rt.import_ed25519_privatekey_from_file('secondary', password='pw')
 
-  # # Turn this into a canonical key matching tuf.formats.ANYKEY_SCHEMA
-  # # Note: it looks like the resulting object is the same as the private key
-  # # anyway, at least with ed25519. Is it always?
-  # key = {
-  #     'keytype': key_pub['keytype'],
-  #     'keyid': key_pub['keyid'],
-  #     'keyval': {
-  #       'public': key_pub['keyval']['public'],
-  #       'private': key_pri['keyval']['private']}}
-  # tuf.formats.ANYKEY_SCHEMA.check_match(key)
   key = uptane.common.canonical_key_from_pub_and_pri(key_pub, key_pri)
 
 

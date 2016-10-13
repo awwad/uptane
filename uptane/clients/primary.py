@@ -210,4 +210,10 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
 
 
+  def send_image_to_secndary(self):
+    """
+    Send target file to the secndary through C intermediate
+    """
+    
+
 

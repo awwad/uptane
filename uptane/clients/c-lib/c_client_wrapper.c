@@ -4,9 +4,6 @@
  *
  */
 
-#ifndef C_CLIENT_WRAPPER_H
-#define C_CLIENT_WRAPPER_H
-
 #include "libuptane.h"
 #include <python2.7/Python.h>
 
@@ -41,4 +38,9 @@ void initpyfoo() {
   (void) Py_InitModule("pyfoo", Module_methods);
 }
 
-#endif
+/*
+ * We do not need to do something in main
+ */
+int main() {
+  return 0;
+}

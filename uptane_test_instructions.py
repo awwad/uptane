@@ -5,9 +5,9 @@ uptane_test_instructions.py
 This is demonstration code for Uptane.
 
 The code below is intended to be run IN FIVE PYTHON SHELLS:
-- One for the Main Repository ("supplier"), speaking HTTP
+- One for the OEM Repository, speaking HTTP
 - One for the Director Repository, speaking HTTP
-- One for the Director Service, speaking XMLRPC (receives manifests)
+- One for the Director Services, speaking XMLRPC (receives manifests)
 - One for the Timeserver, speaking XMLRPC (receives requests for signed times)
 - One for the client
 
@@ -37,7 +37,9 @@ d.listen()
 import uptane.director.timeserver as timeserver
 timeserver.listen()
 
-In the client's window (ONLY after the others FINISH starting and are hosting)
+# In the client's window (ONLY after the others FINISH starting and are hosting)
+# Running this sets up a fresh secondary and executes a full update cycle,
+# along with a few tests.
 import uptane_test_instructions as u
 u.client()
 """
@@ -58,7 +60,7 @@ def ServeMainRepo(use_new_keys=False):
   MAIN_REPO_DIR = os.path.join(WORKING_DIR, 'repomain')
   TARGETS_DIR = os.path.join(MAIN_REPO_DIR, 'targets')
   MAIN_REPO_HOST = 'http://localhost'
-  MAIN_REPO_PORT = 30300
+  MAIN_REPO_PORT = 30301
 
 
   # Create target files: file1.txt and file2.txt
@@ -116,6 +118,7 @@ def ServeMainRepo(use_new_keys=False):
 
   # Perform delegation from mainrepo's targets role to mainrepo's role1 role.
 
+  # Delegate to a new Supplier.
   repomain.targets.delegate('role1', [key_role1_pub],
       ['repomain/targets/file1.txt', 'repomain/targets/file2.txt'],
       threshold=1, backtrack=True,
@@ -197,9 +200,7 @@ def ServeDirectorRepo(
   DIRECTOR_REPO_DIR = os.path.join(WORKING_DIR, 'repodirector')
   TARGETS_DIR = os.path.join(MAIN_REPO_DIR, 'targets')
   DIRECTOR_REPO_HOST = 'http://localhost'
-  DIRECTOR_REPO_PORT = 30301
-
-  #use_new_keys = len(sys.argv) == 2 and sys.argv[1] == '--newkeys'
+  DIRECTOR_REPO_PORT = 30401
 
 
   # Create repo at './repodirector'
@@ -349,9 +350,6 @@ def client(use_new_keys=False):
       client_directory_name, ecu_serial,
       timeserver_public_key=key_timeserver_pub)
 
-
-  # import ipdb
-  # ipdb.set_trace()
 
   ##############
   # TIMESERVER COMMUNICATIONS
@@ -525,21 +523,24 @@ def client(use_new_keys=False):
       installed_firmware_targetinfo, [key])
 
 
+  print('Submitting the Secondary\'s real manifest to the Director.')
   secondary_ecu.submit_ecu_manifest_to_director(signed_ecu_manifest)
+  print('Submission successful.')
 
 
   import xmlrpc.client # To catch the Fault exception.
 
   # Attack: MITM w/o key modifies ECU manifest.
   # Modify the ECU manifest without updating the signature.
+
   signed_ecu_manifest['signed']['attacks_detected'] = 'Everything is great!'
   signed_ecu_manifest['signed']['ecu_serial'] = 'ecu22222'
   try:
     secondary_ecu.submit_ecu_manifest_to_director(signed_ecu_manifest)
   except xmlrpc.client.Fault as e:
-    print('Director service rejected the fraudulent ECU manifest.')
+    print('Director service REJECTED the fraudulent ECU manifest.')
   else:
-    print('Director service accepted the fraudulent ECU manifest!')
+    print('Director service ACCEPTED the fraudulent ECU manifest!')
   # (The Director, in its window, should now indicate that it has received this
   # manifest. If signature checking for manifests is on, then the manifest is
   # rejected. Otherwise, it is simply accepted.)

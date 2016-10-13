@@ -8,6 +8,8 @@
 
 """
 
+PRIMARY_SERVER_PORT = 30300
+
 class Primary(object): # Consider inheriting from Secondary and refactoring.
   """
   Fields:
@@ -77,6 +79,12 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     self.timeserver_public_key = timeserver_public_key
     self.director_public_key = director_public_key
 
+    # Initialize the dictionary of manifests. Since this is a dictionary indexed
+    # by ECU serial and with value being a single manifest, we aren't keeping
+    # multiple manifests per ECU. This has implications. See above, in the class
+    # docstring's fields section.
+    self.ecu_manifests = {}
+
     #WORKING_DIR = os.getcwd()
     CLIENT_DIR = full_client_dir #os.path.join(WORKING_DIR, client_dir)
     CLIENT_METADATA_DIR_MAINREPO_CURRENT = os.path.join(CLIENT_DIR, 'metadata', 'mainrepo', 'current')
@@ -127,6 +135,36 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     # each repository.
     self.updater = tuf.client.updater.Updater('updater')
 
+
+
+
+
+
+  def listen(self):
+    """
+    Listens on PRIMARY_SERVER_PORT for xml-rpc calls to functions:
+      - get_test_value
+      - submit_vehicle_manifest
+    """
+
+    # Create server
+    server = SimpleXMLRPCServer((DIRECTOR_SERVER_HOST, DIRECTOR_SERVER_PORT),
+        requestHandler=RequestHandler, allow_none=True)
+    #server.register_introspection_functions()
+
+    # # Register function that can be called via XML-RPC, allowing a Primary to
+    # # submit a vehicle version manifest.
+    # server.register_function(
+    #     self.register_vehicle_manifest, 'submit_vehicle_manifest')
+
+    # In the longer term, this won't be exposed: it will only be reached via
+    # register_vehicle_manifest. For now, during development, however, this is
+    # exposed.
+    server.register_function(
+      self.register_ecu_manifest, 'submit_ecu_manifest')
+
+    print('Director will now listen on port ' + str(DIRECTOR_SERVER_PORT))
+    server.serve_forever()
 
 
 

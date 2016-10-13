@@ -25,7 +25,7 @@ import time
 import tuf.repository_tool as rt
 # CONSTANTS
 TIMESERVER_HOST = 'localhost'
-TIMESERVER_PORT = 30112
+TIMESERVER_PORT = 30209
 
 import xmlrpc.server
 from xmlrpc.server import SimpleXMLRPCServer

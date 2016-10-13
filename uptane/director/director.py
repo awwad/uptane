@@ -37,7 +37,7 @@ import tuf.repository_tool as rt
 
 # CONSTANTS
 DIRECTOR_SERVER_HOST = 'localhost'
-DIRECTOR_SERVER_PORT = 30111
+DIRECTOR_SERVER_PORT = 30109
 
 import xmlrpc.server
 from xmlrpc.server import SimpleXMLRPCServer
@@ -101,10 +101,16 @@ class Director:
 
     self.load_keys()
 
-    pass
+    # Hard-coded key for a single ECU for now.
+    test_ecu_public_key = rt.import_ed25519_publickey_from_file('secondary.pub')
+    test_ecu_serial = 'ecu11111'
+    self.ecu_public_keys = {
+        test_ecu_serial: rt.import_ed25519_publickey_from_file('secondary.pub')}
 
 
-  # For the demo
+
+
+
   def listen(self):
     """
     Listens on DIRECTOR_SERVER_PORT for xml-rpc calls to functions:
@@ -167,7 +173,6 @@ class Director:
     # TODO: <~> COMPLETE ME. Process ECU signature here.
     #   - Get public (or symmetric) key from inventorydb
     #   - Call tuf.keys.validate_signature to validate the signature.
-    print('Validation of manifests not yet fully implemented.')
 
     if ecu_serial != signed_ecu_manifest['signed']['ecu_serial']:
       # TODO: Choose an exception class.
@@ -176,6 +181,23 @@ class Director:
           'signed in the manifest itself (' +
           repr(signed_ecu_manifest['signed']['ecu_serial']) + ').')
 
+    if ecu_serial not in self.ecu_public_keys:
+      # TODO: Choose an exception class.
+      raise Exception('The Director is not aware of the given ECU SERIAL. '
+          'Manifest rejected.')
+
+    ecu_public_key = self.ecu_public_keys[ecu_serial]
+
+    valid = tuf.keys.verify_signature(
+        ecu_public_key,
+        signed_ecu_manifest['signatures'][0], # TODO: Fix assumptions.
+        signed_ecu_manifest['signed'])
+
+    if not valid:
+      raise tuf.BadSignatureError('Sender supplied an invalid signature. '
+          'ECU Manifest is questionable; discarding. If you see this '
+          'persistently, it is possible that the Primary is compromised or '
+          'that there is a man in the middle attack or misconfiguration.')
 
 
 

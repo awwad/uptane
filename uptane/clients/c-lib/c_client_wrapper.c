@@ -20,7 +20,7 @@ static PyObject* py_send_isotp_file_wrapper(PyObject* self, PyObject* args) {
    */
   send_isotp_file(target, data_type, filename);
 
-  return Py_BuildValue();
+  return Py_BuildValue("i", 1);
 }
 
 /*

@@ -126,7 +126,7 @@ def scrub_filename(fname, expected_containing_dir):
 
   Performs basic scrubbing to try to ensure that the filename provided is
   actually just a plain filename (no pathing), so that it cannot specify a file
-  that 
+  that is not in the provided directory.
 
   May break (exception trigger-happy) if there's a softlink somewhere in the
   working directory path.

@@ -37,7 +37,7 @@ import tuf.repository_tool as rt
 
 # CONSTANTS
 DIRECTOR_SERVER_HOST = 'localhost'
-DIRECTOR_SERVER_PORT = 30109
+DIRECTOR_SERVER_PORT = 30501
 
 import xmlrpc.server
 from xmlrpc.server import SimpleXMLRPCServer
@@ -101,11 +101,11 @@ class Director:
 
     self.load_keys()
 
-    # Hard-coded key for a single ECU for now.
+    # Start with a hard-coded key for a single ECU for now.
     test_ecu_public_key = rt.import_ed25519_publickey_from_file('secondary.pub')
     test_ecu_serial = 'ecu11111'
-    self.ecu_public_keys = {
-        test_ecu_serial: rt.import_ed25519_publickey_from_file('secondary.pub')}
+    self.ecu_public_keys = {}
+    self.register_ecu_serial(test_ecu_serial, test_ecu_public_key)
 
 
 
@@ -132,7 +132,10 @@ class Director:
     # register_vehicle_manifest. For now, during development, however, this is
     # exposed.
     server.register_function(
-      self.register_ecu_manifest, 'submit_ecu_manifest')
+        self.register_ecu_manifest, 'submit_ecu_manifest')
+
+    server.register_function(
+        self.register_ecu_serial, 'register_ecu_serial')
 
     print('Director will now listen on port ' + str(DIRECTOR_SERVER_PORT))
     server.serve_forever()
@@ -158,6 +161,21 @@ class Director:
 
 
 
+  def register_ecu_serial(self, ecu_serial, ecu_key):
+    uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial)
+    tuf.formats.ANYKEY_SCHEMA.check_match(ecu_key)
+
+    if ecu_serial in self.ecu_public_keys:
+      # TODO: Pick a class for this exception later.
+      raise Exception('This ecu_serial has already been registered. Rejecting '
+          'registration request.')
+
+    else:
+      self.ecu_public_keys[ecu_serial] = ecu_key
+      print('Registered a new ECU with ECU serial ' + repr(ecu_serial) + ' and'
+          ' key: ' + repr(ecu_key))
+
+
 
   def validate_ecu_manifest(self, ecu_serial, signed_ecu_manifest):
     """
@@ -170,10 +188,6 @@ class Director:
 
     # If it doesn't match expectations, error out here.
 
-    # TODO: <~> COMPLETE ME. Process ECU signature here.
-    #   - Get public (or symmetric) key from inventorydb
-    #   - Call tuf.keys.validate_signature to validate the signature.
-
     if ecu_serial != signed_ecu_manifest['signed']['ecu_serial']:
       # TODO: Choose an exception class.
       raise Exception('Received a spoofed or mistaken manifest: supposed '
@@ -181,10 +195,16 @@ class Director:
           'signed in the manifest itself (' +
           repr(signed_ecu_manifest['signed']['ecu_serial']) + ').')
 
+    # TODO: Consider mechanism for fetching keys from inventorydb itself,
+    # rather than registering them after Director svc starts up.
     if ecu_serial not in self.ecu_public_keys:
+      # Print to Director svc window:
+      print('Rejecting a manifest from an ECU whose key is not registered.')
+      # Raise a fault for the offending ECU's XMLRPC request.
       # TODO: Choose an exception class.
-      raise Exception('The Director is not aware of the given ECU SERIAL. '
-          'Manifest rejected.')
+      raise Exception('The Director is not aware of the given ECU SERIAL (' +
+          repr(ecu_serial) + '. Manifest rejected. Register the new ECU with '
+          'its key in order to be able to check its manifests.')
 
     ecu_public_key = self.ecu_public_keys[ecu_serial]
 
@@ -194,6 +214,10 @@ class Director:
         signed_ecu_manifest['signed'])
 
     if not valid:
+      # Print to Director svc window:
+      print('Rejecting a manifest because its signature is not valid. It must '
+          'be correctly signed by the expected key for that ECU.')
+      # Raise a fault for the offending ECU's XMLRPC request.
       raise tuf.BadSignatureError('Sender supplied an invalid signature. '
           'ECU Manifest is questionable; discarding. If you see this '
           'persistently, it is possible that the Primary is compromised or '
@@ -235,6 +259,8 @@ class Director:
 
     # Otherwise, we save it:
     inventorydb.save_ecu_manifest(vin, ecu_serial, signed_ecu_manifest)
+
+    print('Received a valid ECU manifest from ECU ' + repr(ecu_serial))
 
     # Alert if there's been a detected attack.
     if signed_ecu_manifest['signed']['attacks_detected']:

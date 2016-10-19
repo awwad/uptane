@@ -22,7 +22,7 @@ def ber_encode_signable_object(signable):
         signature Signature
       }
   """
-  print('SKIPPING BER ENCODING OF SIGNABLE!!!')
+  print('(Skipping ASN.1-BER encoding of signable object!)')
   return signable
 
 def ber_encode_ecu_manifest(ecu_manifest):
@@ -49,7 +49,7 @@ def ber_encode_ecu_manifest(ecu_manifest):
 
 
   """
-  print('SKIPPING BER ENCODING OF ECU MANIFEST!!!')
+  print('(Skipping ASN.1-BER encoding of ECU manifest!)')
   return ecu_manifest
 
 

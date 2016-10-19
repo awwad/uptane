@@ -7,8 +7,8 @@
   to Secondaries, collect ECU manifests, generate timeserver requests, etc.
 
 """
-
-PRIMARY_SERVER_PORT = 30300
+PRIMARY_SERVER_HOST = 'localhost'
+PRIMARY_SERVER_PORT = 30701
 
 class Primary(object): # Consider inheriting from Secondary and refactoring.
   """
@@ -148,7 +148,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     """
 
     # Create server
-    server = SimpleXMLRPCServer((DIRECTOR_SERVER_HOST, DIRECTOR_SERVER_PORT),
+    server = SimpleXMLRPCServer((PRIMARY_SERVER_HOST, PRIMARY_SERVER_PORT),
         requestHandler=RequestHandler, allow_none=True)
     #server.register_introspection_functions()
 
@@ -163,7 +163,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     server.register_function(
       self.register_ecu_manifest, 'submit_ecu_manifest')
 
-    print('Director will now listen on port ' + str(DIRECTOR_SERVER_PORT))
+    print('Primary will now listen on port ' + str(PRIMARY_SERVER_PORT))
     server.serve_forever()
 
 
@@ -178,8 +178,8 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
   def get_target_list_from_director(self):
     # TODO: <~> MUST FIX FOR PRODUCTION! Note that this assumes that the
-    # director is conveying information to this secondary in its target role.
-    # This is not something we can assume - director repo structure is not
+    # Director is conveying information directly in its "targets" role.
+    # This is not something we can assume - Director repo structure is not
     # required to be that flat.
     directed_targets = self.updater.targets_of_role(
         rolename='targets', repo_name='director')
@@ -210,10 +210,10 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
 
 
-  def send_image_to_secndary(self):
+  def send_image_to_secondary(self):
     """
-    Send target file to the secndary through C intermediate
+    Send target file to the secondary through C intermediate
     """
-    
+    pass
 
 

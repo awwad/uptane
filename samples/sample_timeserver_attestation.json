@@ -1,0 +1,1 @@
+{"signatures": [{"method": "ed25519", "sig": "a2a38f6fdff153292b78256ad999b8009994cd59437e6756ed85eff3be23f8f8e9536ea676e38b85f9018108b6d4103b17a48aa0b87c938ca936fce8daf04e0a", "keyid": "79c796d7e87389d1ebad04edce49faef611d139ee41ea9fb1931732afbfaac2e"}], "signed": {"nonces": [1232150386], "time": "2016-10-14T14:58:42Z"}}

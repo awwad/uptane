@@ -25,7 +25,8 @@ import time
 import tuf.repository_tool as rt
 # CONSTANTS
 TIMESERVER_HOST = 'localhost'
-TIMESERVER_PORT = 30209
+TIMESERVER_PORT = 30601
+
 
 import xmlrpc.server
 from xmlrpc.server import SimpleXMLRPCServer
@@ -61,6 +62,7 @@ def listen(use_new_keys=False):
   # Register function that can be called via XML-RPC, allowing a Primary to
   # request the time for its Secondaries.
   server.register_function(get_signed_time, 'get_signed_time')
+  server.register_function(get_signed_time_ber, 'get_signed_time_ber')
 
   print('Timeserver will now listen on port ' + str(TIMESERVER_PORT))
   server.serve_forever()
@@ -109,7 +111,31 @@ def get_signed_time(nonces):
 
 
 
+def get_signed_time_ber(nonces):
+  """
+  Same as get_signed_time, but re-encodes the resulting JSON into a BER
+  file.
+  """
+  signable_time_attestation_in_json = get_signed_time(nonces)
+
+
+  #from json2ber2json import *
+  import timeservermetadata
+  import timeserver
+
+  json_signed = signable_time_attestation_in_json['signed']
+  json_signatures = signable_time_attestation_in_json['signatures']
+  asn_signed, ber_signed = timeserver.get_asn_and_ber_signed(timeservermetadata.get_asn_signed, json_signed)
+  ber_metadata = timeserver.json_to_ber_metadata(asn_signed, ber_signed, json_signatures)
+  # To decode on other side:
+  # after_json = timeserver.ber_to_json_metadata(timeservermetadata.get_json_signed, ber_metadata)
+
+  #signable_time_attestation_in_ber = \
+  #    time_to_ber.get_asn_signed(signable_time_attestation_in_json)
+
+  return ber_metadata
 
 
 
-
+if __name__ == '__main__':
+  listen()

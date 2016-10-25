@@ -5,24 +5,22 @@ Early demonstration code for UPTANE. Python 3 is preferred during development.
 ### Installation
 (As usual, virtual environments are recommended for development and testing, but not necessary.)
 
-Run the following:
+To install, run the following from this directory (uptane/):
 ```
 pip install cffi==1.7.0 pycrypto==2.6.1 pynacl==1.0.1 cryptography
 pip install git+git://github.com/awwad/tuf.git@pinning
+pip install -e .
 ```
 
 If you're going to be running the ASN.1 encoding scripts, you'll also need to `pip install pyasn1`
 
 ### Running
-The code below is intended to be run IN FIVE PYTHON SHELLS:
-- One for the Main Repository ("supplier"), speaking HTTP
-- One for the Director Repository, speaking HTTP
-- One for the Director Service, speaking XMLRPC (receives manifests)
-- One for the Timeserver, speaking XMLRPC (receives requests for signed times)
-- One for a client to perform full metadata verification
-
-Each shell should be run in a python environment (the same environment is
-fine) that has the awwad/tuf:pinning version of TUF installed (see [above](#installation)).
+The code below is intended to be run IN FIVE PANES:
+- Python shell for the Main Repository ("supplier"). This speaks HTTP.
+- Python shell for the Director Repository. This speaks HTTP.
+- Bash shell for the Director Service. This speaks XMLRPC and receives, validates, and saves manifests.
+- Bash shell for the Timeserver. This speaks XMLRPC and receives requests for signed times.
+- Python shell for a Primary client to perform full metadata verification.
 
 *WINDOW 1: the Supplier repository*
 ```python

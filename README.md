@@ -25,34 +25,46 @@ Each shell should be run in a python environment (the same environment is
 fine) that has the awwad/tuf:pinning version of TUF installed (see [above](#installation)).
 
 *WINDOW 1: the Supplier repository*
-```
-import uptane_test_instructions as u
-u.ServeMainRepo()
+```python
+import demo_oem_repo as demo_oem
+demo_oem.clean_slate()
+demo_oem.write_to_live()
+demo_oem.host()
+# See instructions in uptane_test_instructions for examples of how to manipulate further.
 ```
 
 *WINDOW 2: the Director repository*
-```
-import uptane_test_instructions as u
-u.ServeDirectorRepo()
+```python
+import demo_director_repo as demo_director
+demo_director.clean_slate()
+demo_director.write_to_live()
+demo_director.host()
+# See instructions in sections below for examples of what to do next.
 ```
 
 *WINDOW 3: the Director service (receives manifests)*
-```
-import uptane.director.director as director
-d = director.Director()
-d.listen()
+```shell
+#!/bin/bash
+chmod 755 run_director_svc.sh
+./run_director_svc.sh
 ```
 
 *WINDOW 4: the Timeserver service:*
-```
-import uptane.director.timeserver as timeserver
-timeserver.listen(use_new_keys=True)
+```shell
+#!/bin/bash
+chmod 755 run_timeserver.sh
+./run_timeserver.sh
 ```
 
 *WINDOW 5: In the client's window:*
 (ONLY AFTER THE OTHERS HAVE FINISHED STARTING UP AND ARE HOSTING)
-```
-import uptane_test_instructions as u
-u.client()
+```python
+import demo_client
+demo_client.clean_slate()
+demo_client.update_cycle()
+demo_client.generate_and_send_manifest_to_director()
+# Some attacks:
+demo_client.ATTACK_send_corrupt_manifest_to_director()
+demo_client.ATTACK_send_manifest_with_wrong_sig_to_director()
 ```
 

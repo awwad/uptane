@@ -58,10 +58,13 @@ demo_director.host()
 # Running this sets up a fresh secondary and executes a full update cycle,
 # along with a few tests.
 import demo_client
-demo_client.clean_slate() #default: use_new_keys=False
+demo_client.clean_slate()
 demo_client.update_cycle()
+demo_client.generate_and_send_manifest_to_director()
+demo_client.ATTACK_send_corrupt_manifest_to_director()
+demo_client.ATTACK_send_manifest_with_wrong_sig_to_director()
 
-# (For attacks and such, see below in the client section.)
+# (For details on attacks and such, see below in the client section.)
 """
 
 

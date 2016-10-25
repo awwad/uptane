@@ -36,12 +36,18 @@ import tuf.repository_tool as rt
 
 
 # CONSTANTS
-DIRECTOR_SERVER_HOST = 'localhost'
+DIRECTOR_SERVER_HOST = '0.0.0.0' #'localhost'
 DIRECTOR_SERVER_PORT = 30501
 
 import xmlrpc.server
 from xmlrpc.server import SimpleXMLRPCServer
 from xmlrpc.server import SimpleXMLRPCRequestHandler
+
+# Colorful printing for demo.
+RED = '\033[41m\033[30m' # black on red
+GREEN = '\033[42m\033[30m' # black on green
+YELLOW = '\033[93m' # yellow on black
+ENDCOLORS = '\033[0m'
 
 
 # Restrict director requests to a particular path.
@@ -137,7 +143,7 @@ class Director:
     server.register_function(
         self.register_ecu_serial, 'register_ecu_serial')
 
-    print('Director will now listen on port ' + str(DIRECTOR_SERVER_PORT))
+    print(' Director will now listen on port ' + str(DIRECTOR_SERVER_PORT))
     server.serve_forever()
 
 
@@ -172,8 +178,10 @@ class Director:
 
     else:
       self.ecu_public_keys[ecu_serial] = ecu_key
-      print('Registered a new ECU with ECU serial ' + repr(ecu_serial) + ' and'
-          ' key: ' + repr(ecu_key))
+      print()
+      print(GREEN + ' Registered a new ECU:')
+      print('    ECU Serial: ' + repr(ecu_serial))
+      print('    ECU Key: ' + repr(ecu_key) + '\n' + ENDCOLORS)
 
 
 
@@ -199,7 +207,8 @@ class Director:
     # rather than registering them after Director svc starts up.
     if ecu_serial not in self.ecu_public_keys:
       # Print to Director svc window:
-      print('Rejecting a manifest from an ECU whose key is not registered.')
+      print()
+      print(RED + ' Rejecting a manifest from an ECU whose key is not registered.' + ENDCOLORS)
       # Raise a fault for the offending ECU's XMLRPC request.
       # TODO: Choose an exception class.
       raise Exception('The Director is not aware of the given ECU SERIAL (' +
@@ -215,8 +224,8 @@ class Director:
 
     if not valid:
       # Print to Director svc window:
-      print('Rejecting a manifest because its signature is not valid. It must '
-          'be correctly signed by the expected key for that ECU.')
+      print(RED + ' Rejecting a manifest because its signature is not valid.')
+      print(' It must be correctly signed by the expected key for that ECU.' + ENDCOLORS)
       # Raise a fault for the offending ECU's XMLRPC request.
       raise tuf.BadSignatureError('Sender supplied an invalid signature. '
           'ECU Manifest is questionable; discarding. If you see this '
@@ -260,13 +269,13 @@ class Director:
     # Otherwise, we save it:
     inventorydb.save_ecu_manifest(vin, ecu_serial, signed_ecu_manifest)
 
-    print('Received a valid ECU manifest from ECU ' + repr(ecu_serial))
+    print(GREEN + ' Received a valid ECU manifest from ECU ' + repr(ecu_serial) + ENDCOLORS)
 
     # Alert if there's been a detected attack.
     if signed_ecu_manifest['signed']['attacks_detected']:
-      print('Attacks have been reported by the Secondary!')
-      print('Attacks listed by ECU ' + repr(ecu_serial) + ':')
-      print(signed_ecu_manifest['signed']['attacks_detected'])
+      print(YELLOW + ' Attacks have been reported by the Secondary!')
+      print(' Attacks listed by ECU ' + repr(ecu_serial) + ':')
+      print(' ' + signed_ecu_manifest['signed']['attacks_detected'] + ENDCOLORS)
 
 
 

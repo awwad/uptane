@@ -62,8 +62,8 @@ def clean_slate(
   load_or_generate_key(use_new_keys)
 
 
-  print(GREEN + '\nNow simulating a Secondary that rolled off the assembly line'
-      ' and has never seen an update.\n' + ENDCOLORS)
+  print(GREEN + '\n Now simulating a Primary that rolled off the assembly line'
+      '\n and has never seen an update.\n' + ENDCOLORS)
 
 
 
@@ -276,7 +276,7 @@ def generate_and_send_manifest_to_director():
       current_firmware_fileinfo, [ecu_key])
 
 
-  print('Submitting the Secondary\'s manifest to the Director.')
+  print('Submitting the Primary\'s manifest to the Director.')
   secondary_ecu.submit_ecu_manifest_to_director(most_recent_signed_ecu_manifest)
   print('Submission successful.')
 

@@ -14,7 +14,7 @@ WORKING_DIR = os.getcwd()
 MAIN_REPO_NAME = 'repomain'
 MAIN_REPO_DIR = os.path.join(WORKING_DIR, MAIN_REPO_NAME)
 TARGETS_DIR = os.path.join(MAIN_REPO_DIR, 'targets')
-MAIN_REPO_HOST = 'http://localhost'
+MAIN_REPO_HOST = 'http://192.168.1.124'
 MAIN_REPO_PORT = 30301
 
 repo = None
@@ -26,7 +26,7 @@ def clean_slate(use_new_keys=False):
   
   global repo
 
-  # Create target files: file1.txt and file2.txt
+  # Create target files: file1.txt and infotainment_firmware.txt
 
   if os.path.exists(TARGETS_DIR):
     shutil.rmtree(TARGETS_DIR)
@@ -36,8 +36,8 @@ def clean_slate(use_new_keys=False):
   fobj = open(os.path.join(TARGETS_DIR, 'file1.txt'), 'w')
   fobj.write('Contents of file1.txt')
   fobj.close()
-  fobj = open(os.path.join(TARGETS_DIR, 'file2.txt'), 'w')
-  fobj.write('Contents of file2.txt')
+  fobj = open(os.path.join(TARGETS_DIR, 'infotainment_firmware.txt'), 'w')
+  fobj.write('Contents of infotainment_firmware.txt')
   fobj.close()
 
 
@@ -84,9 +84,9 @@ def clean_slate(use_new_keys=False):
   # Delegate to a new Supplier.
   repo.targets.delegate('role1', [key_role1_pub],
       [os.path.join(MAIN_REPO_NAME, 'targets/file1.txt'),
-       os.path.join(MAIN_REPO_NAME, 'targets/file2.txt')],
+       os.path.join(MAIN_REPO_NAME, 'targets/infotainment_firmware.txt')],
       threshold=1, backtrack=True,
-      restricted_paths=[os.path.join(TARGETS_DIR, 'file*.txt')])
+      restricted_paths=[os.path.join(TARGETS_DIR, '*')])
 
 
   # Add delegated role keys to repo

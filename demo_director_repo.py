@@ -16,7 +16,7 @@ MAIN_REPO_DIR = demo_oem_repo.MAIN_REPO_DIR
 DIRECTOR_REPO_NAME = 'repodirector'
 DIRECTOR_REPO_DIR = os.path.join(WORKING_DIR, DIRECTOR_REPO_NAME)
 TARGETS_DIR = os.path.join(MAIN_REPO_DIR, 'targets')
-DIRECTOR_REPO_HOST = 'http://localhost'
+DIRECTOR_REPO_HOST = 'http://192.168.1.124'
 DIRECTOR_REPO_PORT = 30401
 
 repo = None
@@ -90,16 +90,23 @@ def clean_slate(
   # like targets.add_target_from_metadata that doesn't require an actual target
   # file to exist, but instead provides metadata on some hypothetical file that
   # the director may not physically hold.
-  if os.path.exists(os.path.join(DIRECTOR_REPO_DIR, 'targets', 'file2.txt')):
-    os.remove(os.path.join(DIRECTOR_REPO_DIR, 'targets', 'file2.txt'))
+  if os.path.exists(os.path.join(DIRECTOR_REPO_DIR, 'targets', 'infotainment_firmware.txt')):
+    os.remove(os.path.join(DIRECTOR_REPO_DIR, 'targets', 'infotainment_firmware.txt'))
 
-  os.symlink(os.path.join(TARGETS_DIR, 'file2.txt'),
-      os.path.join(DIRECTOR_REPO_DIR, 'targets', 'file2.txt'))
+  os.symlink(os.path.join(TARGETS_DIR, 'infotainment_firmware.txt'),
+      os.path.join(DIRECTOR_REPO_DIR, 'targets', 'infotainment_firmware.txt'))
+
+  fobj = open(os.path.join(TARGETS_DIR, 'additional_file.txt'), 'w')
+  fobj.write('Contents of additional_file.txt')
+  fobj.close()
 
   repo.targets.add_target(
-      os.path.join(DIRECTOR_REPO_DIR, 'targets', 'file2.txt'),
-      custom={"ecu-serial-number": "some_ecu_serial", "type": "application"})
+      os.path.join(DIRECTOR_REPO_DIR, 'targets', 'infotainment_firmware.txt'),
+      custom={"ecu-serial-number": "ecu11111"})
 
+  #repo.targets.add_target(
+  #    os.path.join(DIRECTOR_REPO_DIR, 'targets', 'additional_file.txt'),
+  #    custom={"ecu-serial-number": "ecu11111"})
 
 
 

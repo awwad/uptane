@@ -24,7 +24,7 @@ import time
 
 import tuf.repository_tool as rt
 # CONSTANTS
-TIMESERVER_HOST = 'localhost'
+TIMESERVER_HOST = '0.0.0.0' #'localhost'
 TIMESERVER_PORT = 30601
 
 

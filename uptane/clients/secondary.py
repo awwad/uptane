@@ -19,6 +19,7 @@ import tuf.repository_tool as rt
 import os # For paths and makedirs
 import shutil # For copyfile
 import random # for nonces
+#from uptane import GREEN, RED, YELLOW, ENDCOLORS
 
 #log = uptane.logging.getLogger('secondary')
 
@@ -31,9 +32,9 @@ class Secondary(object):
       A tuf.client.updater.Updater object used to retrieve metadata and
       target files from the Director and Supplier repositories.
 
-    self.client_dir:
-      The directory in the working directory where all client data is stored
-      for this secondary.
+    self.full_client_dir:
+      The full path of the directory where all client data is stored for this
+      secondary.
 
     self.timeserver_public_key:
       The key we expect the timeserver to use.
@@ -81,23 +82,27 @@ class Secondary(object):
 
   def __init__(
     self,
-    client_dir,
+    full_client_dir,
+    pinning_filename,
+    vin,
     ecu_serial,
     fname_root_from_mainrepo,
     fname_root_from_directorrepo,
     ecu_key,
+    time,
+    timeserver_public_key,
     firmware_fileinfo=None,
-    timeserver_public_key=None,
     director_public_key=None,
-    partial_verifying=False,
-    vin='vin1111'):
+    partial_verifying=False):
 
     # Check arguments:
-    tuf.formats.RELPATH_SCHEMA.check_match(client_dir)
+    tuf.formats.PATH_SCHEMA.check_match(full_client_dir)
+    tuf.formats.PATH_SCHEMA.check_match(pinning_filename)
     tuf.formats.PATH_SCHEMA.check_match(fname_root_from_mainrepo)
     tuf.formats.PATH_SCHEMA.check_match(fname_root_from_directorrepo)
     uptane.formats.VIN_SCHEMA.check_match(vin)
     uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial)
+    tuf.formats.ISO8601_DATETIME_SCHEMA.check_match(time)
     for key in [timeserver_public_key, director_public_key]:
       if key is not None:
         tuf.formats.ANYKEY_SCHEMA.check_match(key)
@@ -105,27 +110,26 @@ class Secondary(object):
     self.ecu_key = ecu_key
     self.vin = vin
     self.ecu_serial = ecu_serial
-    self.client_dir = client_dir
+    self.full_client_dir = full_client_dir
     self.director_proxy = None
-    self.most_recent_timeserver_time = None
-    self.previous_timeserver_time = None
+    self.most_recent_timeserver_time = time
+    self.previous_timeserver_time = time
     self.timeserver_public_key = timeserver_public_key
     self.director_public_key = director_public_key
     self.partial_verifying = partial_verifying
     self.attacks_detected = ''
     self.firmware_fileinfo = firmware_fileinfo
+    self.most_recent_timeserver_time = time
 
     if not self.partial_verifying and self.director_public_key is not None:
       raise Exception('Secondary not set as partial verifying, but a director ' # TODO: Choose error class.
           'key was still provided. Full verification secondaries employ the '
           'normal TUF verifications rooted at root metadata files.')
 
-    WORKING_DIR = os.getcwd()
-    CLIENT_DIR = os.path.join(WORKING_DIR, client_dir)
-    CLIENT_METADATA_DIR_MAINREPO_CURRENT = os.path.join(CLIENT_DIR, 'metadata', 'mainrepo', 'current')
-    CLIENT_METADATA_DIR_MAINREPO_PREVIOUS = os.path.join(CLIENT_DIR, 'metadata', 'mainrepo', 'previous')
-    CLIENT_METADATA_DIR_DIRECTOR_CURRENT = os.path.join(CLIENT_DIR, 'metadata', 'director', 'current')
-    CLIENT_METADATA_DIR_DIRECTOR_PREVIOUS = os.path.join(CLIENT_DIR, 'metadata', 'director', 'previous')
+    CLIENT_METADATA_DIR_MAINREPO_CURRENT = os.path.join(self.full_client_dir, 'metadata', 'mainrepo', 'current')
+    CLIENT_METADATA_DIR_MAINREPO_PREVIOUS = os.path.join(self.full_client_dir, 'metadata', 'mainrepo', 'previous')
+    CLIENT_METADATA_DIR_DIRECTOR_CURRENT = os.path.join(self.full_client_dir, 'metadata', 'director', 'current')
+    CLIENT_METADATA_DIR_DIRECTOR_PREVIOUS = os.path.join(self.full_client_dir, 'metadata', 'director', 'previous')
 
     # Note that the hosts and ports for the repositories are drawn from
     # pinned.json now. The services (timeserver and the director's
@@ -137,8 +141,8 @@ class Secondary(object):
 
 
     # Set up the TUF client directories for the two repositories.
-    if os.path.exists(CLIENT_DIR):
-      shutil.rmtree(CLIENT_DIR)
+    if os.path.exists(self.full_client_dir):
+      shutil.rmtree(self.full_client_dir)
 
     for d in [
         CLIENT_METADATA_DIR_MAINREPO_CURRENT,
@@ -159,12 +163,12 @@ class Secondary(object):
 
     # Add a pinned.json to this client (softlink it from a saved copy).
     os.symlink(
-        os.path.join(WORKING_DIR, 'pinned.json'),
-        os.path.join(CLIENT_DIR, 'metadata', 'pinned.json'))
+        pinning_filename,
+        os.path.join(self.full_client_dir, 'metadata', 'pinned.json'))
 
     # Configure tuf with the client's metadata directories (where it stores the
     # metadata it has collected from each repository, in subdirectories).
-    tuf.conf.repository_directory = CLIENT_DIR # This setting should probably be called client_directory instead, post-TAP4.
+    tuf.conf.repository_directory = self.full_client_dir # This setting should probably be called client_directory instead, post-TAP4.
 
     # Create a TAP-4-compliant updater object. This will read pinning.json
     # and create single-repository updaters within it to handle connections to
@@ -279,7 +283,7 @@ class Secondary(object):
 
     # Now sign with that key. (Also do ber encoding of the signed portion.)
     signed_ecu_manifest = uptane.common.sign_signable(
-        signable_ecu_manifest, self.ecu_key)
+        signable_ecu_manifest, [self.ecu_key])
     uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
         signed_ecu_manifest)
 

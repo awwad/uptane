@@ -16,6 +16,7 @@ import uptane.common  # for sign_signable and canonical_key_from_pub_and_pri
 import tuf
 import tuf.repository_tool as rt
 #import asn1_conversion as asn1
+#from uptane import GREEN, RED, YELLOW, ENDCOLORS
 
 #log = uptane.logging.getLogger('timeserver')
 

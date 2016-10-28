@@ -32,7 +32,7 @@ def sign_signable(signable, keys_to_sign_with):
   signatures = []
 
   for signing_key in keys_to_sign_with:
-    
+
     tuf.formats.ANYKEY_SCHEMA.check_match(signing_key)
 
     # If we already have a signature with this keyid, skip.
@@ -44,7 +44,7 @@ def sign_signable(signable, keys_to_sign_with):
     if 'private' not in signing_key['keyval']:
       raise tuf.FormatError('One of the given keys lacks a private key value, '
           'and so cannot be used for signing: ' + repr(signing_key))
-    
+
     # We should already be guaranteed to have a supported key type due to
     # the ANYKEY_SCHEMA.check_match call above. Defensive programming.
     if signing_key['keytype'] not in SUPPORTED_KEY_TYPES:

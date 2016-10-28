@@ -31,11 +31,12 @@
 
 import uptane
 import uptane.formats
-import uptane.director.inventorydb as inventorydb
+import uptane.services.inventorydb as inventorydb
 import tuf
 import tuf.formats
 import tuf.repository_tool as rt
 #import asn1_conversion as asn1
+from uptane import GREEN, RED, YELLOW, ENDCOLORS
 
 log = uptane.logging.getLogger('director')
 

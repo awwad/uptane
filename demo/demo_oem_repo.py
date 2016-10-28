@@ -4,20 +4,16 @@ demo_oem_repo.py
 Demonstration code handling an OEM repository.
 """
 
+import demo
 import uptane
 import os
 import sys, subprocess, time # For hosting and arguments
 import tuf.repository_tool as rt
 import shutil # for rmtree
-from demo_globals import *
 
-MAIN_REPO_NAME = 'repomain'
-MAIN_REPO_DIR = os.path.join(uptane.WORKING_DIR, MAIN_REPO_NAME)
-TARGETS_DIR = os.path.join(MAIN_REPO_DIR, 'targets')
 
 repo = None
 server_process = None
-
 
 
 def clean_slate(use_new_keys=False):
@@ -26,43 +22,43 @@ def clean_slate(use_new_keys=False):
 
   # Create target files: file1.txt and infotainment_firmware.txt
 
-  if os.path.exists(TARGETS_DIR):
-    shutil.rmtree(TARGETS_DIR)
+  if os.path.exists(demo.MAIN_REPO_TARGETS_DIR):
+    shutil.rmtree(demo.MAIN_REPO_TARGETS_DIR)
 
-  os.makedirs(TARGETS_DIR)
+  os.makedirs(demo.MAIN_REPO_TARGETS_DIR)
 
-  fobj = open(os.path.join(TARGETS_DIR, 'file1.txt'), 'w')
+  fobj = open(os.path.join(demo.MAIN_REPO_TARGETS_DIR, 'file1.txt'), 'w')
   fobj.write('Contents of file1.txt')
   fobj.close()
-  fobj = open(os.path.join(TARGETS_DIR, 'infotainment_firmware.txt'), 'w')
+  fobj = open(os.path.join(demo.MAIN_REPO_TARGETS_DIR, 'infotainment_firmware.txt'), 'w')
   fobj.write('Contents of infotainment_firmware.txt')
   fobj.close()
 
 
   # Create repo at './repomain'
 
-  repo = rt.create_new_repository(MAIN_REPO_NAME)
+  repo = rt.create_new_repository(demo.MAIN_REPO_NAME)
 
 
   # Create keys and/or load keys into memory.
 
   if use_new_keys:
-    rt.generate_and_write_ed25519_keypair('mainroot', password='pw')
-    rt.generate_and_write_ed25519_keypair('maintimestamp', password='pw')
-    rt.generate_and_write_ed25519_keypair('mainsnapshot', password='pw')
-    rt.generate_and_write_ed25519_keypair('maintargets', password='pw')
-    rt.generate_and_write_ed25519_keypair('mainrole1', password='pw')
+    demo.generate_key('mainroot')
+    demo.generate_key('maintimestamp')
+    demo.generate_key('mainsnapshot')
+    demo.generate_key('maintargets')
+    demo.generate_key('mainrole1')
 
-  key_root_pub = rt.import_ed25519_publickey_from_file('mainroot.pub')
-  key_root_pri = rt.import_ed25519_privatekey_from_file('mainroot', password='pw')
-  key_timestamp_pub = rt.import_ed25519_publickey_from_file('maintimestamp.pub')
-  key_timestamp_pri = rt.import_ed25519_privatekey_from_file('maintimestamp', password='pw')
-  key_snapshot_pub = rt.import_ed25519_publickey_from_file('mainsnapshot.pub')
-  key_snapshot_pri = rt.import_ed25519_privatekey_from_file('mainsnapshot', password='pw')
-  key_targets_pub = rt.import_ed25519_publickey_from_file('maintargets.pub')
-  key_targets_pri = rt.import_ed25519_privatekey_from_file('maintargets', password='pw')
-  key_role1_pub = rt.import_ed25519_publickey_from_file('mainrole1.pub')
-  key_role1_pri = rt.import_ed25519_privatekey_from_file('mainrole1', password='pw')
+  key_root_pub = demo.import_public_key('mainroot')
+  key_root_pri = demo.import_private_key('mainroot')
+  key_timestamp_pub = demo.import_public_key('maintimestamp')
+  key_timestamp_pri = demo.import_private_key('maintimestamp')
+  key_snapshot_pub = demo.import_public_key('mainsnapshot')
+  key_snapshot_pri = demo.import_private_key('mainsnapshot')
+  key_targets_pub = demo.import_public_key('maintargets')
+  key_targets_pri = demo.import_private_key('maintargets')
+  key_role1_pub = demo.import_public_key('mainrole1')
+  key_role1_pri = demo.import_private_key('mainrole1')
 
 
   # Add top level keys to the main repository.
@@ -81,10 +77,10 @@ def clean_slate(use_new_keys=False):
 
   # Delegate to a new Supplier.
   repo.targets.delegate('role1', [key_role1_pub],
-      [os.path.join(MAIN_REPO_NAME, 'targets/file1.txt'),
-       os.path.join(MAIN_REPO_NAME, 'targets/infotainment_firmware.txt')],
+      [os.path.join(demo.MAIN_REPO_NAME, 'targets/file1.txt'),
+       os.path.join(demo.MAIN_REPO_NAME, 'targets/infotainment_firmware.txt')],
       threshold=1, backtrack=True,
-      restricted_paths=[os.path.join(TARGETS_DIR, '*')])
+      restricted_paths=[os.path.join(demo.MAIN_REPO_TARGETS_DIR, '*')])
 
 
   # Add delegated role keys to repo
@@ -104,12 +100,12 @@ def write_to_live():
 
   # Move staged metadata (from the write above) to live metadata directory.
 
-  if os.path.exists(os.path.join(MAIN_REPO_DIR, 'metadata')):
-    shutil.rmtree(os.path.join(MAIN_REPO_DIR, 'metadata'))
+  if os.path.exists(os.path.join(demo.MAIN_REPO_DIR, 'metadata')):
+    shutil.rmtree(os.path.join(demo.MAIN_REPO_DIR, 'metadata'))
 
   shutil.copytree(
-      os.path.join(MAIN_REPO_DIR, 'metadata.staged'),
-      os.path.join(MAIN_REPO_DIR, 'metadata'))
+      os.path.join(demo.MAIN_REPO_DIR, 'metadata.staged'),
+      os.path.join(demo.MAIN_REPO_DIR, 'metadata'))
 
 
 
@@ -121,13 +117,13 @@ def host():
 
   # Prepare to host the main repo contents
 
-  os.chdir(MAIN_REPO_DIR)
+  os.chdir(demo.MAIN_REPO_DIR)
 
   command = []
   if sys.version_info.major < 3:  # Python 2 compatibility
-    command = ['python', '-m', 'SimpleHTTPServer', str(MAIN_REPO_PORT)]
+    command = ['python', '-m', 'SimpleHTTPServer', str(demo.MAIN_REPO_PORT)]
   else:
-    command = ['python', '-m', 'http.server', str(MAIN_REPO_PORT)]
+    command = ['python', '-m', 'http.server', str(demo.MAIN_REPO_PORT)]
 
 
   # Begin hosting mainrepo.
@@ -137,8 +133,8 @@ def host():
   os.chdir(uptane.WORKING_DIR)
 
   print('Main Repo server process started, with pid ' + str(server_process.pid))
-  print('Main Repo serving on port: ' + str(MAIN_REPO_PORT))
-  url = MAIN_REPO_HOST + ':' + str(MAIN_REPO_PORT) + '/'
+  print('Main Repo serving on port: ' + str(demo.MAIN_REPO_PORT))
+  url = demo.MAIN_REPO_HOST + ':' + str(demo.MAIN_REPO_PORT) + '/'
   print('Main Repo URL is: ' + url)
 
   # Wait / allow any exceptions to kill the server.

@@ -4,9 +4,11 @@ demo_secondary.py
 Demonstration code handling a full verification secondary client.
 """
 
+import demo
 import uptane
 import uptane.common # for canonical key construction and signing
 import uptane.clients.secondary as secondary
+from uptane import GREEN, RED, YELLOW, ENDCOLORS
 import tuf.keys
 import tuf.repository_tool as rt
 import tuf.client.updater
@@ -14,10 +16,9 @@ import tuf.client.updater
 import os # For paths and makedirs
 import shutil # For copyfile
 import threading # for the demo listener
+import time
 import xmlrpc.client
 import xmlrpc.server
-
-from demo_globals import *
 
 
 # Globals
@@ -54,7 +55,7 @@ def clean_slate(
 
 
   # Load the public timeserver key.
-  key_timeserver_pub = rt.import_ed25519_publickey_from_file('timeserver.pub')
+  key_timeserver_pub = demo.import_public_key('timeserver')
 
   # Set starting firmware fileinfo (that this ECU had coming from the factory)
   factory_firmware_fileinfo = {
@@ -68,30 +69,32 @@ def clean_slate(
   # Prepare this ECU's key.
   load_or_generate_key(use_new_keys)
 
+  # Generate a trusted initial time for the Secondary.
+  clock = tuf.formats.unix_timestamp_to_datetime(int(time.time()))
+  clock = clock.isoformat() + 'Z'
+  tuf.formats.ISO8601_DATETIME_SCHEMA.check_match(clock)
+
   # Initialize a full verification Secondary ECU, making a client directory and
   # copying the root file from the repositories.
   # This also generates a nonce to use in the next time query, sets the initial
   # firmware fileinfo, etc.
   secondary_ecu = secondary.Secondary(
-      full_client_dir=os.path.join(os.getcwd(), _client_directory_name),
+      full_client_dir=os.path.join(uptane.WORKING_DIR, _client_directory_name),
+      pinning_filename=demo.DEMO_PINNING_FNAME,
+      vin=_vin,
       ecu_serial=_ecu_serial,
-      fname_root_from_mainrepo='/Users/s/w/uptane/repomain/metadata/root.json',
-      fname_root_from_directorrepo='/Users/s/w/uptane/repodirector/metadata/root.json',
+      fname_root_from_mainrepo=demo.MAIN_REPO_ROOT_FNAME,
+      fname_root_from_directorrepo=demo.DIRECTOR_REPO_ROOT_FNAME,
       ecu_key=ecu_key,
+      time=clock,
       firmware_fileinfo=factory_firmware_fileinfo,
       timeserver_public_key=key_timeserver_pub)
 
   # secondary_ecu.update_time_from_timeserver(nonce)
 
 
-  if listener_thread is None:
-    listener_thread = threading.Thread(target=secondary_ecu.listen)
-    listener_thread.setDaemon(True)
-    listener_thread.start()
-
-
-  print(GREEN + '\n Now simulating a Primary that rolled off the assembly line'
-      '\n and has never seen an update.\n' + ENDCOLORS)
+  print(GREEN + '\n Now simulating a Secondary that rolled off the assembly '
+      'line\n and has never seen an update.' + ENDCOLORS)
 
 
 
@@ -105,8 +108,6 @@ class RequestHandler(xmlrpc.server.SimpleXMLRPCRequestHandler):
 def listen():
   """
   Listens on SECONDARY_SERVER_PORT for xml-rpc calls to functions
-  
-  threading.Thread(target=self.listen).start()
   """
 
   # Create server
@@ -118,10 +119,20 @@ def listen():
   # Register function that can be called via XML-RPC, allowing a Primary to
   # send metadata and images to the Secondary.
   server.register_function(
-      self.receive_msg_from_primary, 'receive_msg_from_primary')
+      secondary_ecu.receive_msg_from_primary, 'receive_msg_from_primary')
 
   print(' Secondary will now listen on port ' + str(SECONDARY_SERVER_PORT))
-  server.serve_forever()
+
+  if listener_thread is not None:
+    print('Sorry - there is already a Secondary thread listening.')
+    return
+  else:
+    print(' Starting Secondary Listener Thread: will now listen on port ' +
+        str(demo.SECONDARY_SERVER_PORT))
+    listener_thread = threading.Thread(target=server.serve_forever)
+    listener_thread.setDaemon(True)
+    listener_thread.start()
+
 
 
 
@@ -158,11 +169,11 @@ def load_or_generate_key(use_new_keys=False):
   global ecu_key
 
   if use_new_keys:
-    rt.generate_and_write_ed25519_keypair('secondary', password='pw')
+    demo.generate_key('secondary')
 
   # Load in from the generated files.
-  key_pub = rt.import_ed25519_publickey_from_file('secondary.pub')
-  key_pri = rt.import_ed25519_privatekey_from_file('secondary', password='pw')
+  key_pub = demo.import_public_key('secondary')
+  key_pri = demo.import_private_key('secondary')
 
   ecu_key = uptane.common.canonical_key_from_pub_and_pri(key_pub, key_pri)
 
@@ -351,10 +362,10 @@ def update_cycle():
 
 
 def generate_and_send_manifest_to_director():
-  
+
   global secondary_ecu
   global most_recent_signed_ecu_manifest
-  
+
   # Generate and sign a manifest indicating that this ECU has a particular
   # version/hash/size of file2.txt as its firmware.
   most_recent_signed_ecu_manifest = secondary_ecu.generate_signed_ecu_manifest(
@@ -414,8 +425,8 @@ def ATTACK_send_manifest_with_wrong_sig_to_director():
       signable_corrupt_manifest)
 
   # Attacker loads a key she may have (perhaps some other ECU's key)
-  key2_pub = rt.import_ed25519_publickey_from_file('secondary2.pub')
-  key2_pri = rt.import_ed25519_privatekey_from_file('secondary2', password='pw')
+  key2_pub = demo.import_public_key('secondary2')
+  key2_pri = demo.import_private_key('secondary2')
   ecu2_key = uptane.common.canonical_key_from_pub_and_pri(key2_pub, key2_pri)
   keys = [ecu2_key]
 
@@ -425,7 +436,7 @@ def ATTACK_send_manifest_with_wrong_sig_to_director():
   uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
       signed_corrupt_manifest)
 
-  import xmlrpc.client # for xmlrpc.client.Fault
+  #import xmlrpc.client # for xmlrpc.client.Fault
 
   try:
     secondary_ecu.submit_ecu_manifest_to_director(signed_corrupt_manifest)

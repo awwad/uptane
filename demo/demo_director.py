@@ -25,8 +25,9 @@
 
 """
 
+import demo
 import uptane
-import uptane.director.director as director
+import uptane.services.director as director
 
 import threading # for the director services interface
 import xmlrpc.server # for the director services interface
@@ -34,14 +35,8 @@ import os # For paths and symlink
 import shutil # For copying directory trees
 import sys, subprocess, time # For hosting
 import tuf.repository_tool as rt
-import demo_oem_repo # for the main repo directory /:
+import demo.demo_oem_repo as demo_oem_repo # for the main repo directory /:
 
-from demo_globals import *
-
-MAIN_REPO_DIR = demo_oem_repo.MAIN_REPO_DIR
-DIRECTOR_REPO_NAME = 'repodirector'
-DIRECTOR_REPO_DIR = os.path.join(uptane.WORKING_DIR, DIRECTOR_REPO_NAME)
-TARGETS_DIR = os.path.join(MAIN_REPO_DIR, 'targets')
 
 # Dynamic global objects
 repo = None
@@ -65,37 +60,37 @@ def clean_slate(
 
   # Create repo at './repodirector'
 
-  repo = rt.create_new_repository(DIRECTOR_REPO_NAME)
+  repo = rt.create_new_repository(demo.DIRECTOR_REPO_NAME)
 
 
   # Create keys and/or load keys into memory.
 
   if use_new_keys:
-    rt.generate_and_write_ed25519_keypair('directorroot', password='pw')
-    rt.generate_and_write_ed25519_keypair('directortimestamp', password='pw')
-    rt.generate_and_write_ed25519_keypair('directorsnapshot', password='pw')
-    rt.generate_and_write_ed25519_keypair('director', password='pw') # targets
+    demo.generate_key('directorroot')
+    demo.generate_key('directortimestamp')
+    demo.generate_key('directorsnapshot')
+    demo.generate_key('director') # targets
     if additional_root_key:
-      rt.generate_and_write_ed25519_keypair('directorroot2', password='pw')
+      demo.generate_key('directorroot2')
     if additional_targets_key:
-      rt.generate_and_write_ed25519_keypair('director2', password='pw')
+      demo.generate_key('director2')
 
-  key_dirroot_pub = rt.import_ed25519_publickey_from_file('directorroot.pub')
-  key_dirroot_pri = rt.import_ed25519_privatekey_from_file('directorroot', password='pw')
-  key_dirtime_pub = rt.import_ed25519_publickey_from_file('directortimestamp.pub')
-  key_dirtime_pri = rt.import_ed25519_privatekey_from_file('directortimestamp', password='pw')
-  key_dirsnap_pub = rt.import_ed25519_publickey_from_file('directorsnapshot.pub')
-  key_dirsnap_pri = rt.import_ed25519_privatekey_from_file('directorsnapshot', password='pw')
-  key_dirtarg_pub = rt.import_ed25519_publickey_from_file('director.pub')
-  key_dirtarg_pri = rt.import_ed25519_privatekey_from_file('director', password='pw')
+  key_dirroot_pub = demo.import_public_key('directorroot')
+  key_dirroot_pri = demo.import_private_key('directorroot')
+  key_dirtime_pub = demo.import_public_key('directortimestamp')
+  key_dirtime_pri = demo.import_private_key('directortimestamp')
+  key_dirsnap_pub = demo.import_public_key('directorsnapshot')
+  key_dirsnap_pri = demo.import_private_key('directorsnapshot')
+  key_dirtarg_pub = demo.import_public_key('director')
+  key_dirtarg_pri = demo.import_private_key('director')
   key_dirroot2_pub = None
   key_dirroot2_pri = None
   if additional_root_key:
-    key_dirroot2_pub = rt.import_ed25519_publickey_from_file('directorroot2.pub')
-    key_dirroot2_pri = rt.import_ed25519_privatekey_from_file('directorroot2', password='pw')
+    key_dirroot2_pub = demo.import_public_key('directorroot2')
+    key_dirroot2_pri = demo.import_private_key('directorroot2')
   if additional_targets_key:
-    key_dirtarg2_pub = rt.import_ed25519_publickey_from_file('director2.pub')
-    key_dirtarg2_pri = rt.import_ed25519_privatekey_from_file('director2', password='pw')
+    key_dirtarg2_pub = demo.import_public_key('director2')
+    key_dirtarg2_pri = demo.import_private_key('director2')
 
 
   # Add top level keys to the main repository.
@@ -122,22 +117,22 @@ def clean_slate(
   # like targets.add_target_from_metadata that doesn't require an actual target
   # file to exist, but instead provides metadata on some hypothetical file that
   # the director may not physically hold.
-  if os.path.exists(os.path.join(DIRECTOR_REPO_DIR, 'targets', 'infotainment_firmware.txt')):
-    os.remove(os.path.join(DIRECTOR_REPO_DIR, 'targets', 'infotainment_firmware.txt'))
+  if os.path.exists(os.path.join(demo.DIRECTOR_REPO_TARGETS_DIR, 'infotainment_firmware.txt')):
+    os.remove(os.path.join(demo.DIRECTOR_REPO_TARGETS_DIR, 'infotainment_firmware.txt'))
 
-  os.symlink(os.path.join(TARGETS_DIR, 'infotainment_firmware.txt'),
-      os.path.join(DIRECTOR_REPO_DIR, 'targets', 'infotainment_firmware.txt'))
+  os.symlink(os.path.join(demo.MAIN_REPO_TARGETS_DIR, 'infotainment_firmware.txt'),
+      os.path.join(demo.DIRECTOR_REPO_TARGETS_DIR, 'infotainment_firmware.txt'))
 
-  fobj = open(os.path.join(TARGETS_DIR, 'additional_file.txt'), 'w')
+  fobj = open(os.path.join(demo.DIRECTOR_REPO_TARGETS_DIR, 'additional_file.txt'), 'w')
   fobj.write('Contents of additional_file.txt')
   fobj.close()
 
   repo.targets.add_target(
-      os.path.join(DIRECTOR_REPO_DIR, 'targets', 'infotainment_firmware.txt'),
+      os.path.join(demo.DIRECTOR_REPO_TARGETS_DIR, 'infotainment_firmware.txt'),
       custom={"ecu-serial-number": "ecu11111"})
 
   #repo.targets.add_target(
-  #    os.path.join(DIRECTOR_REPO_DIR, 'targets', 'additional_file.txt'),
+  #    os.path.join(demo.DIRECTOR_REPO_TARGETS_DIR, 'additional_file.txt'),
   #    custom={"ecu-serial-number": "ecu11111"})
 
 
@@ -155,7 +150,7 @@ def clean_slate(
       ecu_public_keys=dict())
 
   # Start with a hard-coded key for a single ECU for now.
-  test_ecu_public_key = rt.import_ed25519_publickey_from_file('secondary.pub')
+  test_ecu_public_key = demo.import_public_key('secondary')
   test_ecu_serial = 'ecu11111'
   director_service_instance.register_ecu_serial(
       test_ecu_serial, test_ecu_public_key)
@@ -174,12 +169,12 @@ def write_to_live():
 
   # Move staged metadata (from the write) to live metadata directory.
 
-  if os.path.exists(os.path.join(DIRECTOR_REPO_DIR, 'metadata')):
-    shutil.rmtree(os.path.join(DIRECTOR_REPO_DIR, 'metadata'))
+  if os.path.exists(os.path.join(demo.DIRECTOR_REPO_DIR, 'metadata')):
+    shutil.rmtree(os.path.join(demo.DIRECTOR_REPO_DIR, 'metadata'))
 
   shutil.copytree(
-      os.path.join(DIRECTOR_REPO_DIR, 'metadata.staged'),
-      os.path.join(DIRECTOR_REPO_DIR, 'metadata'))
+      os.path.join(demo.DIRECTOR_REPO_DIR, 'metadata.staged'),
+      os.path.join(demo.DIRECTOR_REPO_DIR, 'metadata'))
 
   # TODO: <~> Call the encoders here to convert the metadata files into BER
   # versions and also host those!
@@ -202,13 +197,13 @@ def host():
 
   # Prepare to host the director repo contents.
 
-  os.chdir(DIRECTOR_REPO_DIR)
+  os.chdir(demo.DIRECTOR_REPO_DIR)
 
   command = []
   if sys.version_info.major < 3: # Python 2 compatibility
-    command = ['python', '-m', 'SimpleHTTPServer', str(DIRECTOR_REPO_PORT)]
+    command = ['python', '-m', 'SimpleHTTPServer', str(demo.DIRECTOR_REPO_PORT)]
   else:
-    command = ['python', '-m', 'http.server', str(DIRECTOR_REPO_PORT)]
+    command = ['python', '-m', 'http.server', str(demo.DIRECTOR_REPO_PORT)]
 
 
   # Begin hosting the director's repository.
@@ -218,8 +213,8 @@ def host():
   os.chdir(uptane.WORKING_DIR)
 
   print('Director repo server process started, with pid ' + str(repo_server_process.pid))
-  print('Director repo serving on port: ' + str(DIRECTOR_REPO_PORT))
-  url = DIRECTOR_REPO_HOST + ':' + str(DIRECTOR_REPO_PORT) + '/'
+  print('Director repo serving on port: ' + str(demo.DIRECTOR_REPO_PORT))
+  url = demo.DIRECTOR_REPO_HOST + ':' + str(demo.DIRECTOR_REPO_PORT) + '/'
   print('Director repo URL is: ' + url)
 
   # Wait / allow any exceptions to kill the server.
@@ -232,6 +227,12 @@ def host():
   #   if repo_server_process.returncode is None:
   #     print('Terminating Director repo server process ' + str(repo_server_process.pid))
   #     repo_server_process.kill()
+
+
+# Restrict director requests to a particular path.
+# Must specify RPC2 here for the XML-RPC interface to work.
+class RequestHandler(xmlrpc.server.SimpleXMLRPCRequestHandler):
+  rpc_paths = ('/RPC2',)
 
 
 def listen():
@@ -249,14 +250,15 @@ def listen():
 
   # Create server
   server = xmlrpc.server.SimpleXMLRPCServer(
-      (DIRECTOR_SERVER_HOST, DIRECTOR_SERVER_PORT),
+      (demo.DIRECTOR_SERVER_HOST, demo.DIRECTOR_SERVER_PORT),
       requestHandler=RequestHandler, allow_none=True)
   #server.register_introspection_functions()
 
   # Register function that can be called via XML-RPC, allowing a Primary to
   # submit a vehicle version manifest.
   server.register_function(
-      self.register_vehicle_manifest, 'submit_vehicle_manifest')
+      director_service_instance.register_vehicle_manifest,
+      'submit_vehicle_manifest')
 
   # In the longer term, this won't be exposed: it will only be reached via
   # register_vehicle_manifest. For now, during development, however, this is
@@ -273,8 +275,9 @@ def listen():
     return
   else:
     print(' Starting Director Services Thread: will now listen on port ' +
-        str(DIRECTOR_SERVER_PORT))
+        str(demo.DIRECTOR_SERVER_PORT))
     director_service_thread = threading.Thread(target=server.serve_forever)
+    director_service_thread.setDaemon(True)
     director_service_thread.start()
 
 

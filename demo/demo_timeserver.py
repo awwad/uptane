@@ -18,12 +18,13 @@
 
 """
 
+import demo
 import uptane
 import uptane.common
-from demo_globals import *
+import tuf.formats
 
 import xmlrpc.server
-import uptane.director.timeserver as timeserver
+import uptane.services.timeserver as timeserver
 
 
 # Restrict director requests to a particular path.
@@ -37,12 +38,12 @@ class RequestHandler(xmlrpc.server.SimpleXMLRPCRequestHandler):
 
 def load_timeserver_key(use_new_keys=False):
   if use_new_keys:
-    rt.generate_and_write_ed25519_keypair('timeserver', password='pw')
+    demo.generate_key('timeserver')
   # Load in from the generated files (whether new or old).
-  timeserver_key = rt.import_ed25519_privatekey_from_file(
-      'timeserver', password='pw')
+  timeserver_key = demo.import_private_key('timeserver')
   tuf.formats.ANYKEY_SCHEMA.check_match(timeserver_key) # Is this redundant?
 
+  return timeserver_key
 
 
 
@@ -60,7 +61,7 @@ def listen(use_new_keys=False):
 
   # Create server
   server = xmlrpc.server.SimpleXMLRPCServer(
-      (TIMESERVER_HOST, TIMESERVER_PORT),
+      (demo.TIMESERVER_HOST, demo.TIMESERVER_PORT),
       requestHandler=RequestHandler)#, allow_none=True)
   #server.register_introspection_functions()
 
@@ -70,7 +71,7 @@ def listen(use_new_keys=False):
   server.register_function(timeserver.get_signed_time, 'get_signed_time')
   server.register_function(timeserver.get_signed_time_ber, 'get_signed_time_ber')
 
-  print('Timeserver will now listen on port ' + str(TIMESERVER_PORT))
+  print('Timeserver will now listen on port ' + str(demo.TIMESERVER_PORT))
   server.serve_forever()
 
 

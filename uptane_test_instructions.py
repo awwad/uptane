@@ -167,7 +167,7 @@ demo_client.ATTACK_send_manifest_with_wrong_sig_to_director()
   else:
     raise Exception('Failed to detect bad signature on timeserver time!')
 
-  # Put the right public key back.  
+  # Put the right public key back.
   secondary_ecu.timeserver_public_key = key_timeserver_pub
 
 

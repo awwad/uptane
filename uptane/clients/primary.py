@@ -7,35 +7,36 @@
   to Secondaries, collect ECU manifests, generate timeserver requests, etc.
 
 """
-PRIMARY_SERVER_HOST = 'localhost'
-PRIMARY_SERVER_PORT = 30701
+import uptane.formats
+import tuf.formats
+import uptane.ber_encoder as ber_encoder
+from uptane.common import sign_signable
+
+import uptane.director.director as director
+import uptane.director.timeserver as timeserver
+
+import os # For paths and makedirs
+import shutil # For copyfile
+import tuf.client.updater
+import tuf.repository_tool as rt
+import tuf.keys
+#import random # for nonces
+
+log = uptane.logging.getLogger('primary')
+
+
 
 class Primary(object): # Consider inheriting from Secondary and refactoring.
   """
   Fields:
-    
+
     self.ecu_manifests:
       A dictionary containing the manifests provided by all ECUs. Will include
-      only the most recent copy. The Primary does not verify signatures on
-      ECU manifests according to the Implementation Specification, and so
-      these reports are succeptible to denial attacks from other, compromised
-      ECUs (who can send bogus ECU manifests and replace a valid manifest from
-      another ECU).
-      
-      There are deployment design choices that an OEM should consider. If
-      assymmetric encryption is being used and the Primary has a public key for
-      each ECU, the Primary may provide additional security by only storing ECU
-      manifests if the signature matches the Primary's expectations, and so the
-      most recent manifest is likely adequate. In other circumstances, it may
-      be necessary to include a list of all manifests (excluding complete
-      duplicates with the same time, etc, perhaps) and provide this to the
-      Director. That would not match the Implementation Specification, however,
-      which assumes that vehicle manifests contain one ECU manifest per ECU.
-      
-      # TODO: <~> Consider.
-
-    self.director_proxy:
-      An xmlrpc proxy for the director server, used to submit manifests.
+      all manifests sent by all ECUs. The Primary does not verify signatures on
+      ECU manifests according to the Implementation Specification.
+      Compromised ECUs may send bogus ECU manifests, so we simply send all
+      manifests to the Director, who will sort through and discern what is
+      going on.
 
     self.updater:
       A tuf.client.updater.Updater object used to retrieve metadata and
@@ -48,23 +49,47 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     self.timeserver_public_key:
       The key we expect the timeserver to use.
 
-    # self.nonces_sent
-    #   The list of nonces sent to the Timeserver by our Secondaries,
-    #   for an extra check.
+    self.my_secondaries:
+      A dictionary mapping ecu_serial to that ECU's number in the Primary's
+      config file.
+
+    self.nonces_sent
+      The list of nonces sent to the Timeserver by our Secondaries,
+      for an extra check.
+
+  Use:
+    import uptane.clients.primary as primary
+    p = primary.Primary(
+        full_client_dir='/Users/s/w/uptane/temp_primarymetadata',
+        pinning_filename='/Users/s/w/uptane/pinned.json',
+        vin='vin11111',
+        ecu_serial='ecu00000',
+        fname_root_from_mainrepo='/Users/s/w/uptane/repomain/metadata/root.json',
+        fname_root_from_directorrepo='/Users/s/w/uptane/repodirector/metadata/root.json')
+
   """
 
   def __init__(self,
-        full_client_dir,  # '/Users/s/w/uptane/temp_primarymetadata'
-        pinning_filename, # '/Users/s/w/uptane/pinned.json'
-        vin,              # 'vin11111'
-        ecu_serial,       # 'ecu00000'
-        timeserver_public_key=None,
-        director_public_key=None)
+    full_client_dir,  # '/Users/s/w/uptane/temp_primarymetadata'
+    pinning_filename, # '/Users/s/w/uptane/pinned.json'
+    vin,              # 'vin11111'
+    ecu_serial,       # 'ecu00000'
+    fname_root_from_mainrepo,
+    fname_root_from_directorrepo,
+    timeserver_public_key=None,
+    #director_public_key=None,
+    my_secondaries=dict()):
+
+    """
+    See class docstring.
+    """
 
     # Check arguments:
-    tuf.formats.RELPATH_SCHEMA.check_match(client_dir)
+    tuf.formats.RELPATH_SCHEMA.check_match(full_client_dir)
+    tuf.formats.PATH_SCHEMA.check_match(fname_root_from_mainrepo)
+    tuf.formats.PATH_SCHEMA.check_match(fname_root_from_directorrepo)
     uptane.formats.VIN_SCHEMA.check_match(vin)
-    uptane.formats.ECU_SERIAL.check_match(ecu_serial)
+    uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial)
     for key in [timeserver_public_key, director_public_key]:
       if key is not None:
         tuf.formats.ANYKEY_SCHEMA.check_match(key)
@@ -72,17 +97,16 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     self.vin = vin
     self.ecu_serial = ecu_serial
     self.full_client_dir = full_client_dir
-    self.director_proxy = None
     self.most_recent_timeserver_time = None
     self.previous_timeserver_time = None
     self.all_timeserver_attestations = []
     self.timeserver_public_key = timeserver_public_key
     self.director_public_key = director_public_key
+    self.nonces_sent = []
 
-    # Initialize the dictionary of manifests. Since this is a dictionary indexed
-    # by ECU serial and with value being a single manifest, we aren't keeping
-    # multiple manifests per ECU. This has implications. See above, in the class
-    # docstring's fields section.
+    # Initialize the dictionary of manifests. This is a dictionary indexed
+    # by ECU serial and with value being a list of manifests from that ECU, to
+    # support the case in which multiple manifests have come from that ECU.
     self.ecu_manifests = {}
 
     #WORKING_DIR = os.getcwd()
@@ -113,12 +137,12 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
     # Get the root.json file from the mainrepo (would come with this client).
     shutil.copyfile(
-        os.path.join(MAIN_REPO_DIR, 'metadata.staged', 'root.json'),
+        fname_root_from_mainrepo,
         os.path.join(CLIENT_METADATA_DIR_MAINREPO_CURRENT, 'root.json'))
 
     # Get the root.json file from the director repo (would come with this client).
     shutil.copyfile(
-        os.path.join(DIRECTOR_REPO_DIR, 'metadata.staged', 'root.json'),
+        fname_root_from_directorrepo,
         os.path.join(CLIENT_METADATA_DIR_DIRECTOR_CURRENT, 'root.json'))
 
     # Add a pinned.json to this client (softlink it from the indicated copy).
@@ -136,35 +160,6 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     self.updater = tuf.client.updater.Updater('updater')
 
 
-
-
-
-
-  def listen(self):
-    """
-    Listens on PRIMARY_SERVER_PORT for xml-rpc calls to functions:
-      - get_test_value
-      - submit_vehicle_manifest
-    """
-
-    # Create server
-    server = SimpleXMLRPCServer((PRIMARY_SERVER_HOST, PRIMARY_SERVER_PORT),
-        requestHandler=RequestHandler, allow_none=True)
-    #server.register_introspection_functions()
-
-    # # Register function that can be called via XML-RPC, allowing a Primary to
-    # # submit a vehicle version manifest.
-    # server.register_function(
-    #     self.register_vehicle_manifest, 'submit_vehicle_manifest')
-
-    # In the longer term, this won't be exposed: it will only be reached via
-    # register_vehicle_manifest. For now, during development, however, this is
-    # exposed.
-    server.register_function(
-      self.register_ecu_manifest, 'submit_ecu_manifest')
-
-    print('Primary will now listen on port ' + str(PRIMARY_SERVER_PORT))
-    server.serve_forever()
 
 
 
@@ -215,5 +210,96 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     Send target file to the secondary through C intermediate
     """
     pass
+
+
+
+
+  def generate_signed_vehicle_manifest(self, use_json=False):
+    """
+    Spool ECU manifests together into a vehicle manifest and sign it.
+    Support multiple manifests from the same ECU.
+    Output will comply with uptane.formats.VEHICLE_VERSION_MANIFEST_SCHEMA.
+    """
+    spooled_ecu_manifests = []
+
+    for ecu_serial in self.ecu_manifests:
+      for manifest in self.ecu_manifests[ecu_serial]:
+        spooled_ecu_manifests.append(manifest)
+
+
+    # Create the vv manifest:
+    vehicle_manifest = {
+        'vin': self.vin,
+        'primary_ecu_serial': self.ecu_serial,
+        'ecu_version_manifests': spooled_ecu_manifests
+    }
+
+    uptane.formats.VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(vehicle_manifest)
+
+    # Wrap the vehicle version manifest object into an
+    # uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA and check format.
+    # {
+    #     'signed': vehicle_manifest,
+    #     'signatures': []
+    # }
+    signable_vehicle_manifest = tuf.formats.make_signable(vehicle_manifest)
+    uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
+        signable_vehicle_manifest)
+
+    # Now sign with that key. (Also do ber encoding of the signed portion.)
+    signed_vehicle_manifest = sign_signable(signable_vehicle_manifest, keys)
+    uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
+        signed_vehicle_manifest)
+
+    if use_json:
+      return signed_vehicle_manifest
+
+    # TODO: Once the ber encoder functions are done, do this:
+    original_signed_vehicle_manifest = signed_vehicle_manifest
+    ber_signed_vehicle_manifest = ber_encoder.ber_encode_signable_object(
+        signed_vehicle_manifest)
+
+    return ber_signed_vehicle_manifest
+
+
+
+
+
+  def register_ecu_manifest(self, vin, ecu_serial, nonce, signed_ecu_manifest):
+    """
+    Called by Secondaries through an XMLRPC interface, currently (or through
+    another interface and passed through to this one).
+
+    The Primary need not track ECU serials, so calling this doesn't result in a
+    verification of the ECU's signature on the ECU manifest. This information
+    is bundled together in a single vehicle report to the Director service.
+    """
+    # Check argument format.
+    uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
+        signed_vehicle_manifest)
+
+    if ecu_serial != signed_ecu_manifest['signed']['ecu_serial']:
+      # TODO: Choose an exception class.
+      raise Exception('Received a spoofed or mistaken manifest: supposed '
+          'origin ECU (' + repr(ecu_serial) + ') is not the same as what is '
+          'signed in the manifest itself (' +
+          repr(signed_ecu_manifest['signed']['ecu_serial']) + ').')
+
+    # If we haven't errored out above, then the format is correct, so save
+    # the manifest to the Primary's dictionary of manifests.
+    if ecu_serial in self.ecu_manifests:
+      self.ecu_manifests[ecu_serial].append(signed_ecu_manifest)
+    else:
+      self.ecu_manifests[ecu_serial] = [signed_ecu_manifest]
+
+
+    log.debug(GREEN + ' Primary received an ECU manifest from ECU ' +
+        repr(ecu_serial) + ENDCOLORS)
+
+    # Alert if there's been a detected attack.
+    if signed_ecu_manifest['signed']['attacks_detected']:
+      log.warning(YELLOW + ' Attacks have been reported by the Secondary! \n '
+          'Attacks listed by ECU ' + repr(ecu_serial) + ':\n ' +
+          signed_ecu_manifest['signed']['attacks_detected'] + ENDCOLORS)
 
 

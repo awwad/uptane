@@ -4,18 +4,16 @@ demo_oem_repo.py
 Demonstration code handling an OEM repository.
 """
 
+import uptane
 import os
 import sys, subprocess, time # For hosting and arguments
 import tuf.repository_tool as rt
 import shutil # for rmtree
-
-WORKING_DIR = os.getcwd()
+from demo_globals import *
 
 MAIN_REPO_NAME = 'repomain'
-MAIN_REPO_DIR = os.path.join(WORKING_DIR, MAIN_REPO_NAME)
+MAIN_REPO_DIR = os.path.join(uptane.WORKING_DIR, MAIN_REPO_NAME)
 TARGETS_DIR = os.path.join(MAIN_REPO_DIR, 'targets')
-MAIN_REPO_HOST = 'http://192.168.1.124'
-MAIN_REPO_PORT = 30301
 
 repo = None
 server_process = None
@@ -23,7 +21,7 @@ server_process = None
 
 
 def clean_slate(use_new_keys=False):
-  
+
   global repo
 
   # Create target files: file1.txt and infotainment_firmware.txt
@@ -136,7 +134,7 @@ def host():
 
   server_process = subprocess.Popen(command, stderr=subprocess.PIPE)
 
-  os.chdir(WORKING_DIR)
+  os.chdir(uptane.WORKING_DIR)
 
   print('Main Repo server process started, with pid ' + str(server_process.pid))
   print('Main Repo serving on port: ' + str(MAIN_REPO_PORT))

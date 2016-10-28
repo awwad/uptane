@@ -1,27 +1,53 @@
 """
-demo_director_repo.py
+<Program Name>
+  demo_director_repo.py
 
-Demonstration code handling a Director repository.
+<Purpose>
+  Demonstration code handling a Director repository and services.
+
+  Runs an Uptane-compliant demonstration Director.
+  This accepts and validates ECU and Vehicle Manifests and writes and hosts
+  metadata.
+
+  Use:
+    import demo_director
+    demo_director.clean_slate()
+    demo_director.write_to_live()
+    demo_director.host()
+    demo_director.listen()
+
+    # Cleanup: (Note that this kills the metadata http hosting process, but does
+    #           not stop the XMLRPC-serving thread.)
+    demo_director.kill_server()
+
+  Various attacks / manipulations can be performed before the server is killed.
+  Some of these are discussed in uptane_test_instructions.py.
+
 """
 
+import uptane
+import uptane.director.director as director
+
+import threading # for the director services interface
+import xmlrpc.server # for the director services interface
 import os # For paths and symlink
 import shutil # For copying directory trees
 import sys, subprocess, time # For hosting
 import tuf.repository_tool as rt
-import demo_oem_repo
+import demo_oem_repo # for the main repo directory /:
 
-WORKING_DIR = os.getcwd()
+from demo_globals import *
 
 MAIN_REPO_DIR = demo_oem_repo.MAIN_REPO_DIR
 DIRECTOR_REPO_NAME = 'repodirector'
-DIRECTOR_REPO_DIR = os.path.join(WORKING_DIR, DIRECTOR_REPO_NAME)
+DIRECTOR_REPO_DIR = os.path.join(uptane.WORKING_DIR, DIRECTOR_REPO_NAME)
 TARGETS_DIR = os.path.join(MAIN_REPO_DIR, 'targets')
-DIRECTOR_REPO_HOST = 'http://192.168.1.124'
-DIRECTOR_REPO_PORT = 30401
 
+# Dynamic global objects
 repo = None
-server_process = None
-
+repo_server_process = None
+director_service_instance = None
+director_service_thread = None
 
 
 def clean_slate(
@@ -30,6 +56,12 @@ def clean_slate(
   additional_targets_key=False):
 
   global repo
+  global director_service_instance
+
+
+  # ----------------
+  # REPOSITORY SETUP:
+  # ----------------
 
   # Create repo at './repodirector'
 
@@ -110,6 +142,27 @@ def clean_slate(
 
 
 
+  # --------------
+  # SERVICES SETUP:
+  # --------------
+
+  # Create the demo Director instance.
+  director_service_instance = director.Director(
+      key_root=key_dirroot_pri,
+      key_timestamp=key_dirtime_pri,
+      key_snapshot=key_dirsnap_pri,
+      key_targets=key_dirtarg_pri,
+      ecu_public_keys=dict())
+
+  # Start with a hard-coded key for a single ECU for now.
+  test_ecu_public_key = rt.import_ed25519_publickey_from_file('secondary.pub')
+  test_ecu_serial = 'ecu11111'
+  director_service_instance.register_ecu_serial(
+      test_ecu_serial, test_ecu_public_key)
+
+
+
+
 
 def write_to_live():
 
@@ -136,8 +189,16 @@ def write_to_live():
 
 
 def host():
+  """
+  Hosts the Director repository (http serving metadata files) as a separate
+  process. Should be stopped with kill_server().
 
-  global server_process
+  Note that you must also run listen() to start the Director services (run on
+  xmlrpc).
+  """
+
+
+  global repo_server_process
 
   # Prepare to host the director repo contents.
 
@@ -152,11 +213,11 @@ def host():
 
   # Begin hosting the director's repository.
 
-  server_process = subprocess.Popen(command, stderr=subprocess.PIPE)
+  repo_server_process = subprocess.Popen(command, stderr=subprocess.PIPE)
 
-  os.chdir(WORKING_DIR)
+  os.chdir(uptane.WORKING_DIR)
 
-  print('Director repo server process started, with pid ' + str(server_process.pid))
+  print('Director repo server process started, with pid ' + str(repo_server_process.pid))
   print('Director repo serving on port: ' + str(DIRECTOR_REPO_PORT))
   url = DIRECTOR_REPO_HOST + ':' + str(DIRECTOR_REPO_PORT) + '/'
   print('Director repo URL is: ' + url)
@@ -168,9 +229,53 @@ def host():
   #   print('Exception caught')
   #   pass
   # finally:
-  #   if server_process.returncode is None:
-  #     print('Terminating Director repo server process ' + str(server_process.pid))
-  #     server_process.kill()
+  #   if repo_server_process.returncode is None:
+  #     print('Terminating Director repo server process ' + str(repo_server_process.pid))
+  #     repo_server_process.kill()
+
+
+def listen():
+  """
+  Listens on DIRECTOR_SERVER_PORT for xml-rpc calls to functions:
+    - submit_vehicle_manifest
+    - submit_ecu_manifest
+    - register_ecu_serial
+
+  Note that you must also run host() in order to serve the metadata files via
+  http.
+  """
+
+  global director_service_thread
+
+  # Create server
+  server = xmlrpc.server.SimpleXMLRPCServer(
+      (DIRECTOR_SERVER_HOST, DIRECTOR_SERVER_PORT),
+      requestHandler=RequestHandler, allow_none=True)
+  #server.register_introspection_functions()
+
+  # Register function that can be called via XML-RPC, allowing a Primary to
+  # submit a vehicle version manifest.
+  server.register_function(
+      self.register_vehicle_manifest, 'submit_vehicle_manifest')
+
+  # In the longer term, this won't be exposed: it will only be reached via
+  # register_vehicle_manifest. For now, during development, however, this is
+  # exposed.
+  server.register_function(
+      director_service_instance.register_ecu_manifest, 'submit_ecu_manifest')
+
+  server.register_function(
+      director_service_instance.register_ecu_serial, 'register_ecu_serial')
+
+
+  if director_service_thread is not None:
+    print('Sorry - there is already a Director service thread listening.')
+    return
+  else:
+    print(' Starting Director Services Thread: will now listen on port ' +
+        str(DIRECTOR_SERVER_PORT))
+    director_service_thread = threading.Thread(target=server.serve_forever)
+    director_service_thread.start()
 
 
 
@@ -178,12 +283,12 @@ def host():
 
 def kill_server():
 
-  global server_process
+  global repo_server_process
 
-  if server_process is None:
+  if repo_server_process is None:
     print('No server to stop.')
     return
 
   else:
-    print('Killing server process with pid: ' + str(server_process.pid))
-    server_process.kill()
+    print('Killing server process with pid: ' + str(repo_server_process.pid))
+    repo_server_process.kill()

@@ -61,7 +61,7 @@ VEHICLE_VERSION_MANIFEST_SCHEMA = SCHEMA.Object(
     primary_ecu_serial = ECU_SERIAL_SCHEMA, # Spec: primaryIdentifier
     ecu_version_manifests = SCHEMA.DictOf(
         key_schema = ECU_SERIAL_SCHEMA,
-        value_schema = SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA))
+        value_schema = SCHEMA.ListOf(SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA)))
 
 # This object corresponds to "VehicleVersionManifest" in ASN.1 in the Uptane
 # Implementation Specification.

@@ -316,9 +316,15 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
         signable_vehicle_manifest)
 
     # Now sign with that key. (Also do ber encoding of the signed portion.)
-    signed_vehicle_manifest = sign_signable(signable_vehicle_manifest, keys)
+    signed_vehicle_manifest = sign_signable(
+        signable_vehicle_manifest, [self.primary_key])
     uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
         signed_vehicle_manifest)
+
+    # Now that the ECU manifests have been incorporated into a vehicle manifest,
+    # discard the ECU manifests.
+
+    self.ecu_manifests = dict()
 
     if use_json:
       return signed_vehicle_manifest

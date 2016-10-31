@@ -115,8 +115,11 @@ def clean_slate(
   # secondary_ecu.update_time_from_timeserver(nonce)
 
 
-  print(GREEN + '\n Now simulating a Secondary that rolled off the assembly '
-      'line\n and has never seen an update.' + ENDCOLORS)
+  register_self_with_director()
+
+
+  print('\n' + GREEN + ' Now simulating a Secondary that rolled off the '
+      'assembly line\n and has never seen an update.' + ENDCOLORS)
 
 
 
@@ -412,7 +415,6 @@ def ATTACK_send_corrupt_manifest_to_director():
   corrupt_signed_manifest = {k:v for (k,v) in most_recent_signed_ecu_manifest.items()}
 
   corrupt_signed_manifest['signed']['attacks_detected'] += 'Everything is great, I PROMISE!'
-  #corrupt_signed_manifest['signed']['ecu_serial'] = 'ecu22222'
 
   print(YELLOW + 'ATTACK: Corrupted Manifest (bad signature):' + ENDCOLORS)
   print('   Modified the signed manifest as a MITM, simply changing a value:')
@@ -421,14 +423,11 @@ def ATTACK_send_corrupt_manifest_to_director():
   import xmlrpc.client # for xmlrpc.client.Fault
 
   try:
-    secondary_ecu.submit_ecu_manifest_to_director(corrupt_signed_manifest)
+    submit_ecu_manifest_to_primary(corrupt_signed_manifest)
   except xmlrpc.client.Fault:
-    print(GREEN + 'Director service REJECTED the fraudulent ECU manifest.' + ENDCOLORS)
+    print(GREEN + 'Primary REJECTED the fraudulent ECU manifest.' + ENDCOLORS)
   else:
-    print(RED + 'Director service ACCEPTED the fraudulent ECU manifest!' + ENDCOLORS)
-  # (The Director, in its window, should now indicate that it has received this
-  # manifest. If signature checking for manifests is on, then the manifest is
-  # rejected. Otherwise, it is simply accepted.)
+    print(RED + 'Primary ACCEPTED the fraudulent ECU manifest!' + ENDCOLORS)
 
 
 
@@ -471,6 +470,26 @@ def ATTACK_send_manifest_with_wrong_sig_to_director():
   # (The Director, in its window, should now indicate that it has received this
   # manifest. If signature checking for manifests is on, then the manifest is
   # rejected. Otherwise, it is simply accepted.)
+
+
+
+
+
+def register_self_with_director():
+  """
+  Send the Director a message to register our ECU serial number and Public Key.
+  In practice, this would probably be done out of band, when the ECU is put
+  into the vehicle during assembly, not through the Secondary or Primary
+  themselves.
+  """
+  # Connect to the Director
+  server = xmlrpc.client.ServerProxy(
+    'http://' + str(demo.DIRECTOR_SERVER_HOST) + ':' +
+    str(demo.DIRECTOR_SERVER_PORT))
+
+  print('Registering Secondary ECU Serial and Key with Director.')
+  server.register_ecu_serial(secondary_ecu.ecu_serial, secondary_ecu.ecu_key)
+  print(GREEN + 'Secondary has been registered with the Director.' + ENDCOLORS)
 
 
 

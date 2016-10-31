@@ -10,7 +10,9 @@ import demo.demo_primary as dp
 dp.clean_slate() # also listens, xmlrpc
   At this point, separately, you will need to initialize at least one secondary.
   See demo_secondary use instructions.
-dp.
+dp.generate_signed_vehicle_manifest()
+dp.submit_vehicle_manifest_to_director()
+
 
 
 
@@ -107,17 +109,17 @@ def clean_slate(
   #   nonce,
   #   manifest)
   #
-  # 
-
   #
-
 
 
   if listener_thread is None:
     listener_thread = threading.Thread(target=listen)
     listener_thread.setDaemon(True)
     listener_thread.start()
+  print('\n' + GREEN + 'Primary is now listening for messages from ' +
+      'Secondaries.' + ENDCOLORS)
 
+  register_self_with_director()
 
   print(GREEN + '\n Now simulating a Primary that rolled off the assembly line'
       '\n and has never seen an update.' + ENDCOLORS)
@@ -333,9 +335,6 @@ def generate_signed_vehicle_manifest():
       primary_ecu.generate_signed_vehicle_manifest()
 
 
-  print('Submitting the Primary\'s manifest to the Director.')
-  primary_ecu.submit_ecu_manifest_to_director(most_recent_signed_ecu_manifest)
-  print('Submission successful.')
 
 
 
@@ -359,16 +358,42 @@ def submit_vehicle_manifest_to_director(signed_vehicle_manifest=None):
   #if not server.system.listMethods():
   #  raise Exception('Unable to connect to server.')
 
+  print("Submitting the Primary's manifest to the Director.")
+
   server.submit_vehicle_manifest(
       primary_ecu.vin,
       primary_ecu.ecu_serial,
-      primary_ecu.nonce_next,
-      signed_ecu_manifest)
-
-  secondary_ecu.rotate_nonces()
+      signed_vehicle_manifest)
 
 
+  print(GREEN + 'Submission of Vehicle Manifest complete.' + ENDCOLORS)
 
+
+
+
+
+def register_self_with_director():
+  """
+  Send the Director a message to register our ECU serial number and Public Key.
+  """
+  # Connect to the Director
+  server = xmlrpc.client.ServerProxy(
+    'http://' + str(demo.DIRECTOR_SERVER_HOST) + ':' +
+    str(demo.DIRECTOR_SERVER_PORT))
+
+  print('Registering Primary ECU Serial and Key with Director.')
+  server.register_ecu_serial(primary_ecu.ecu_serial, primary_ecu.primary_key)
+  print(GREEN + 'Primary has been registered with the Director.' + ENDCOLORS)
+
+
+
+# This wouldn't be how we'd do it in practice. ECUs would probably be registered
+# when put into a vehicle, directly rather than through the Primary.
+# def register_secondaries_with_director():
+#   """
+#   For each of the Secondaries that this Primary is in charge of, send the
+#   Director a message registering that Secondary's ECU Serial and public key.
+#   """
 
 
 

@@ -25,7 +25,8 @@ class UnknownECU(Error):
 class Spoofing(Error):
   """
   Received a message from an ECU that contains conflicting indications of
-  what the source ECU's unique identifier is.
+  what the source ECU's unique identifier is, or received an attempt to register
+  an ECU that was already registered.
   """
   pass
 

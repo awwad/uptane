@@ -39,6 +39,9 @@ import tuf.repository_tool as rt
 from uptane import GREEN, RED, YELLOW, ENDCOLORS
 
 log = uptane.logging.getLogger('director')
+log.addHandler(uptane.file_handler)
+log.addHandler(uptane.console_handler)
+log.setLevel(uptane.logging.DEBUG)
 
 
 
@@ -94,9 +97,11 @@ class Director:
     tuf.formats.ANYKEY_SCHEMA.check_match(ecu_key)
 
     if ecu_serial in self.ecu_public_keys:
-      # TODO: Pick a class for this exception later.
-      raise Exception('This ecu_serial has already been registered. Rejecting '
-          'registration request.')
+      log.error(RED + ' Rejecting an attempt to register a public key to\n '
+          'an ECU Serial when that ECU Serial already has a public key '
+          'registered to it.' + ENDCOLORS)
+      raise uptane.Spoofing('This ecu_serial has already been registered. '
+          'Rejecting registration request.')
 
     else:
       self.ecu_public_keys[ecu_serial] = ecu_key
@@ -119,24 +124,22 @@ class Director:
     # If it doesn't match expectations, error out here.
 
     if ecu_serial != signed_ecu_manifest['signed']['ecu_serial']:
-      # TODO: Choose an exception class.
-      raise Exception('Received a spoofed or mistaken manifest: supposed '
+      raise uptane.Spoofing('Received a spoofed or mistaken manifest: supposed '
           'origin ECU (' + repr(ecu_serial) + ') is not the same as what is '
           'signed in the manifest itself (' +
           repr(signed_ecu_manifest['signed']['ecu_serial']) + ').')
 
     # TODO: Consider mechanism for fetching keys from inventorydb itself,
-    # rather than registering them after Director svc starts up.
+    # rather than always registering them after Director svc starts up.
     if ecu_serial not in self.ecu_public_keys:
-      # Print to Director svc window:
       log.error(
-          '\n' + RED + ' Rejecting a manifest from an ECU whose key is not'
+          '\n' + RED + ' Rejecting a manifest from an ECU whose key is not '
           'registered.' + ENDCOLORS)
       # Raise a fault for the offending ECU's XMLRPC request.
-      # TODO: Choose an exception class.
-      raise Exception('The Director is not aware of the given ECU SERIAL (' +
-          repr(ecu_serial) + '. Manifest rejected. Register the new ECU with '
-          'its key in order to be able to check its manifests.')
+      raise uptane.UnknownECU('The Director is not aware of the given ECU '
+          'SERIAL (' + repr(ecu_serial) + '. Manifest rejected. If the ECU is '
+          'new, Register the new ECU with its key in order to be able to '
+          'submit its manifests.')
 
     ecu_public_key = self.ecu_public_keys[ecu_serial]
 
@@ -146,7 +149,6 @@ class Director:
         signed_ecu_manifest['signed'])
 
     if not valid:
-      # Print to Director svc window:
       log.error(
           '\n' + RED + ' Rejecting a manifest because its signature is '
           'not valid.\n It must be correctly signed by the expected key for '
@@ -196,10 +198,18 @@ class Director:
 
     # Process Primary's signature on full manifest here.
     # If it doesn't match expectations, error out here.
-    # TODO: <~> COMPLETE ME.
-    log.warning(
-        RED + 'Validation of manifests not yet fully implemented.' + ENDCOLORS)
+    self.validate_primary_certification_in_vehicle_manifest(
+        vin, primary_ecu_serial, signed_vehicle_manifest)
 
+    # If the Primary's signature is valid, save the whole vehicle manifest to
+    # the inventorydb.
+    inventorydb.save_vehicle_manifest(vin, signed_vehicle_manifest)
+
+    log.debug(GREEN + ' Received a Vehicle Manifest from Primary ECU ' +
+        repr(primary_ecu_serial) + ', with a valid signature from that ECU.' +
+        ENDCOLORS)
+    # TODO: Note that the above hasn't checked that the signature was from
+    # a Primary, just from an ECU. Fix.
 
 
     # Validate signatures on and register all individual ECU manifests for each
@@ -216,18 +226,77 @@ class Director:
           self.register_ecu_manifest(vin, ecu_serial, manifest)
         except uptane.Spoofing as e:
           log.warning(
-              RED + 'Discarding a spoofed or malformed ECU Manifest. ECU '
-              'Serial in the signed manifest and ECU Serial sent beside the '
-              'manifest do not match.' + ENDCOLORS)
+              RED + 'Discarding a spoofed or malformed ECU Manifest. Error '
+              ' from validating that ECU manifest follows:\n' + ENDCOLORS +
+              YELLOW + repr(e) + ENDCOLORS)
         except uptane.UnknownECU as e:
           log.warning(
-              RED + 'Discarding an ECU Manifest from an unknown ECU.' +
+              RED + 'Discarding an ECU Manifest from unknown ECU. Error from '
+              'validation attempt follows:\n' + ENDCOLORS + YELLOW + repr(e) +
               ENDCOLORS)
         except tuf.BadSignatureError as e:
           log.warning(
-              RED + 'Discarding an ECU Manifest whose signature is invalid.' +
-              ENDCOLORS)
+              RED + 'Discarding an ECU Manifest whose signature is invalid. '
+              'Error from validation attempt follows:\n' + ENDCOLORS + YELLOW +
+              repr(e) + ENDCOLORS)
 
+
+
+
+
+  def validate_primary_certification_in_vehicle_manifest(
+      self, vin, primary_ecu_serial, vehicle_manifest):
+    """
+    Check the Primary's signature on the Vehicle Manifest and any other data
+    the Primary is certifying, without diving into the individual ECU Manifests
+    in the Vehicle Manifest.
+
+    Raises an exception if there is an issue with the Primary's signature.
+    No return value.
+    """
+    # If args don't match expectations, error out here.
+    log.info('Beginning validate_primary_certification_in_vehicle_manifest')
+    uptane.formats.VIN_SCHEMA.check_match(vin)
+    uptane.formats.ECU_SERIAL_SCHEMA.check_match(primary_ecu_serial)
+    uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
+        vehicle_manifest)
+
+
+    if primary_ecu_serial != vehicle_manifest['signed']['primary_ecu_serial']:
+      raise uptane.Spoofing('Received a spoofed or mistaken vehicle manifest: '
+          'the supposed origin Primary ECU (' + repr(primary_ecu_serial) + ') '
+          'is not the same as what is signed in the vehicle manifest itself ' +
+          '(' + repr(vehicle_manifest['signed']['primary_ecu_serial']) + ').')
+
+    # TODO: Consider mechanism for fetching keys from inventorydb itself,
+    # rather than always registering them after Director svc starts up.
+    if primary_ecu_serial not in self.ecu_public_keys:
+      log.error(
+          '\n' + RED + ' Rejecting a vehicle manifest from a Primary ECU whose '
+          'key is not registered.' + ENDCOLORS)
+      # Raise a fault for the offending ECU's XMLRPC request.
+      raise uptane.UnknownECU('The Director is not aware of the given Primary '
+          'ECU Serial (' + repr(primary_ecu_serial) + '. Manifest rejected. If '
+          'the ECU is new, Register the new ECU with its key in order to be '
+          'able to submit its manifests.')
+
+    ecu_public_key = self.ecu_public_keys[primary_ecu_serial]
+
+    valid = tuf.keys.verify_signature(
+        ecu_public_key,
+        vehicle_manifest['signatures'][0], # TODO: Fix assumptions.
+        vehicle_manifest['signed'])
+
+    if not valid:
+      log.error(
+          '\n' + RED + ' Rejecting a vehicle manifest because the Primary '
+          'signature on it is not valid.\n It must be correctly signed by the '
+          'expected Primary ECU key.' + ENDCOLORS)
+      # Raise a fault for the offending ECU's XMLRPC request.
+      raise tuf.BadSignatureError('Sender supplied an invalid signature. '
+          'Vehicle Manifest is questionable; discarding. If you see this '
+          'persistently, it is possible that there is a man in the middle '
+          'attack or misconfiguration.')
 
 
 

@@ -30,7 +30,7 @@
 """
 
 import os.path
-join = os.path.join
+#join = os.path.join
 import uptane
 import uptane.formats
 import tuf
@@ -65,7 +65,9 @@ def get_vehicle_manifest(vin):
   # Perform trivial validation. NOT TO BE TRUSTED.
   scrubbed_vin = scrub_filename(vin, INVENTORY_DB_DIR)
 
-  return json.load(open(scrubbed_vin, 'r'))
+  fname = os.path.join(scrubbed_vin, 'vehicle')
+
+  return json.load(open(fname, 'r'))
 
 
 
@@ -81,41 +83,59 @@ def save_vehicle_manifest(vin, signed_vehicle_manifest):
   uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
       signed_vehicle_manifest)
 
+  print('Saving Vehicle Manifest...')
+
   scrubbed_vin = scrub_filename(vin, INVENTORY_DB_DIR)
 
-  json.dump(signed_vehicle_manifest, open(scrubbed_vin, 'w'))
+  if not os.path.exists(scrubbed_vin):
+    os.mkdir(scrubbed_vin)
 
-  ecu_manifests = signed_vehicle_manifest['signed']['ecu_version_manifests']
+  fname = os.path.join(scrubbed_vin, 'vehicle')
 
-  for ecu_serial in ecu_manifests:
-    save_ecu_manifest(vin, ecu_serial, ecu_manifests[ecu_serial])
+  json.dump(signed_vehicle_manifest, open(fname, 'w'))
+
+  print('Saved Vehicle Manifest.')
 
 
 
 
 
 def get_ecu_manifest(vin, ecu_serial):
+  #uptane.formats.VIN_SCHEMA.check_match(vin)
   uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial) # Check arg format
   # This is obviously EXTREMELY insecure and the 'vin' passed in should be
   # scrubbed.
   # Perform trivial validation. NOT TO BE TRUSTED.
+  scrubbed_vin = scrub_filename(vin, INVENTORY_DB_DIR)
   scrubbed_ecu_serial = scrub_filename(ecu_serial, INVENTORY_DB_DIR)
 
-  return json.load(open(scrubbed_ecu_serial, 'r'))
+  fname = os.path.join(scrubbed_vin, ecu_serial) # Note non-scrubbed.
+
+  return json.load(open(fname, 'r'))
 
 
 
 
 
 def save_ecu_manifest(vin, ecu_serial, signed_ecu_manifest):
+  #uptane.formats.VIN_SCHEMA.check_match(vin)
   uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial)
   uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
       signed_ecu_manifest)
 
+  print('Saving ECU Manifest...')
+
+  scrubbed_vin = scrub_filename(vin, INVENTORY_DB_DIR)
+  if not os.path.exists(scrubbed_vin):
+    os.mkdir(scrubbed_vin)
+
   scrubbed_ecu_serial = scrub_filename(ecu_serial, INVENTORY_DB_DIR)
 
-  json.dump(signed_ecu_manifest, open(scrubbed_ecu_serial, 'w'))
+  fname = os.path.join(scrubbed_vin, ecu_serial) # Note non-scrubbed.
 
+  json.dump(signed_ecu_manifest, open(fname, 'w'))
+
+  print('Saved ECU Manifest for ECU ' + str(ecu_serial) + ' at ' + fname)
 
 
 

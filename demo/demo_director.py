@@ -10,11 +10,11 @@
   metadata.
 
   Use:
-    import demo_director
-    demo_director.clean_slate()
-    demo_director.write_to_live()
-    demo_director.host()
-    demo_director.listen()
+import demo.demo_director as dd
+dd.clean_slate()
+dd.write_to_live()
+dd.host()
+dd.listen()
 
     # Cleanup: (Note that this kills the metadata http hosting process, but does
     #           not stop the XMLRPC-serving thread.)

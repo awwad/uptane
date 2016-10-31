@@ -122,7 +122,7 @@ class Secondary(object):
     self.most_recent_timeserver_time = time
 
     if not self.partial_verifying and self.director_public_key is not None:
-      raise Exception('Secondary not set as partial verifying, but a director ' # TODO: Choose error class.
+      raise uptane.Error('Secondary not set as partial verifying, but a director ' # TODO: Choose error class.
           'key was still provided. Full verification secondaries employ the '
           'normal TUF verifications rooted at root metadata files.')
 
@@ -296,7 +296,11 @@ class Secondary(object):
 
 
 
-
+  def receive_msg_from_primary(self, message):
+    """
+    Call this from the Primary.
+    """
+    raise NotImplementedError('Not yet implemented: message receipt at Secondary.')
 
 
   # def validate_new_image(self):

@@ -12,8 +12,30 @@ import os # for getcwd only
 WORKING_DIR = os.getcwd()
 
 ### Exceptions
+class Error(Exception):
+  """
+  Base class for all Uptane-specific exceptions.
+  """
+  pass
 
+class UnknownECU(Error):
+  """Received a message from an ECU with an unrecognized ECU Serial."""
+  pass
 
+class Spoofing(Error):
+  """
+  Received a message from an ECU that contains conflicting indications of
+  what the source ECU's unique identifier is.
+  """
+  pass
+
+class BadTimeAttestation(Error):
+  """
+  Received a time attestation from a Timeserver that is not as expected. It may
+  be missing an expected nonce in the nonce list, or it may be signed by am
+  unrecognized key, for example.
+  """
+  pass
 
 
 # Logging configuration
@@ -32,7 +54,7 @@ file_handler.setFormatter(logging.Formatter(_FORMAT_STRING, _TIME_STRING))
 
 ## Console logging configuration:
 console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
+console_handler.setLevel(logging.DEBUG)
 console_handler.setFormatter(logging.Formatter(_FORMAT_STRING, _TIME_STRING))
 
 ## Logger instantiation
@@ -46,3 +68,4 @@ RED = '\033[41m\033[30m' # black on red
 GREEN = '\033[42m\033[30m' # black on green
 YELLOW = '\033[93m' # yellow on black
 ENDCOLORS = '\033[0m'
+

@@ -24,6 +24,9 @@ import random # for nonces
 from uptane import GREEN, RED, YELLOW, ENDCOLORS
 
 log = uptane.logging.getLogger('primary')
+log.addHandler(uptane.file_handler)
+log.addHandler(uptane.console_handler)
+log.setLevel(uptane.logging.DEBUG)
 
 
 
@@ -38,6 +41,10 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     ecu_serial:
       The identification string for this Primary ECU.
       Compliant with uptane.formats.ECU_SERIAL_SCHEMA
+
+    primary_key:
+      The signing key that the Primary ECU will use to sign the Vehicle Version
+      Manifest before sending it to the Primary.
 
     ecu_manifests:
       A dictionary containing the manifests provided by all ECUs. Will include
@@ -130,6 +137,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     ecu_serial,       # 'ecu00000'
     fname_root_from_mainrepo,
     fname_root_from_directorrepo,
+    primary_key,
     time,
     timeserver_public_key,
     my_secondaries=dict()):
@@ -146,6 +154,9 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     uptane.formats.VIN_SCHEMA.check_match(vin)
     uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial)
     tuf.formats.ANYKEY_SCHEMA.check_match(timeserver_public_key)
+    tuf.formats.ANYKEY_SCHEMA.check_match(primary_key)
+    # TODO: Should also check that primary_key is a private key, not a
+    # public key.
 
     self.vin = vin
     self.ecu_serial = ecu_serial
@@ -154,6 +165,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     self.all_valid_timeserver_attestations = []
     self.timeserver_public_key = timeserver_public_key
     self.nonces_sent = []
+    self.primary_key = primary_key
 
     # Initialize the dictionary of manifests. This is a dictionary indexed
     # by ECU serial and with value being a list of manifests from that ECU, to
@@ -279,22 +291,16 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
   def generate_signed_vehicle_manifest(self, use_json=False):
     """
-    Spool ECU manifests together into a vehicle manifest and sign it.
+    Put ECU manifests into a vehicle manifest and sign it.
     Support multiple manifests from the same ECU.
     Output will comply with uptane.formats.VEHICLE_VERSION_MANIFEST_SCHEMA.
     """
-    spooled_ecu_manifests = []
-
-    for ecu_serial in self.ecu_manifests:
-      for manifest in self.ecu_manifests[ecu_serial]:
-        spooled_ecu_manifests.append(manifest)
-
 
     # Create the vv manifest:
     vehicle_manifest = {
         'vin': self.vin,
         'primary_ecu_serial': self.ecu_serial,
-        'ecu_version_manifests': spooled_ecu_manifests
+        'ecu_version_manifests': self.ecu_manifests
     }
 
     uptane.formats.VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(vehicle_manifest)
@@ -338,12 +344,12 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     is bundled together in a single vehicle report to the Director service.
     """
     # Check argument format.
-    uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
-        signed_vehicle_manifest)
+    uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
+        signed_ecu_manifest)
 
     if ecu_serial != signed_ecu_manifest['signed']['ecu_serial']:
       # TODO: Choose an exception class.
-      raise Exception('Received a spoofed or mistaken manifest: supposed '
+      raise uptane.Spoofing('Received a spoofed or mistaken manifest: supposed '
           'origin ECU (' + repr(ecu_serial) + ') is not the same as what is '
           'signed in the manifest itself (' +
           repr(signed_ecu_manifest['signed']['ecu_serial']) + ').')
@@ -429,10 +435,11 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
         # to indicate this problem. It's probably not certain enough? But perhaps
         # we should err on the side of reporting.
         # TODO: Create a new class for this Exception in this file.
-        raise Exception('Timeserver returned a time attestation that did not '
-            'include one of the expected nonces. This time is questionable and'
-            ' will not be registered. If you see this attack persistently, it '
-            'is possible that there is a Man in the Middle attack underway.')
+        raise uptane.BadTimeAttestation('Timeserver returned a time attestation'
+            ' that did not include one of the expected nonces. This time is '
+            'questionable and will not be registered. If you see this attack '
+            'persistently, it is possible that there is a Man in the Middle '
+            'attack underway.')
 
 
     # Extract actual time from the timeserver's signed attestation.

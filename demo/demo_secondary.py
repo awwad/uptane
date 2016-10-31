@@ -2,6 +2,26 @@
 demo_secondary.py
 
 Demonstration code handling a full verification secondary client.
+
+
+Use:
+
+import demo.demo_secondary as ds
+ds.clean_slate()
+ds.listen()
+ds.generate_signed_ecu_manifest()   # saved as ds.most_recent_signed_manifest
+ds.submit_ecu_manifest_to_primary() # optionally takes different signed manifest
+
+
+(Behind the scenes, that results in a call to this:
+      primary_ecu.register_ecu_manifest(
+        ds.secondary_ecu.vin,
+        ds.secondary_ecu.ecu_serial,
+        nonce,
+        manifest)
+
+
+
 """
 
 import demo
@@ -32,6 +52,8 @@ ecu_key = None
 nonce = None
 
 listener_thread = None
+
+most_recent_signed_ecu_manifest = None
 
 
 def clean_slate(
@@ -104,15 +126,17 @@ class RequestHandler(xmlrpc.server.SimpleXMLRPCRequestHandler):
   rpc_paths = ('/RPC2',)
 
 
-# Demo code.
+
 def listen():
   """
   Listens on SECONDARY_SERVER_PORT for xml-rpc calls to functions
   """
 
+  global listener_thread
+
   # Create server
   server = xmlrpc.server.SimpleXMLRPCServer(
-      (SECONDARY_SERVER_HOST, SECONDARY_SERVER_PORT),
+      (demo.SECONDARY_SERVER_HOST, demo.SECONDARY_SERVER_PORT),
       requestHandler=RequestHandler, allow_none=True)
   #server.register_introspection_functions()
 
@@ -121,7 +145,7 @@ def listen():
   server.register_function(
       secondary_ecu.receive_msg_from_primary, 'receive_msg_from_primary')
 
-  print(' Secondary will now listen on port ' + str(SECONDARY_SERVER_PORT))
+  print(' Secondary will now listen on port ' + str(demo.SECONDARY_SERVER_PORT))
 
   if listener_thread is not None:
     print('Sorry - there is already a Secondary thread listening.')
@@ -137,7 +161,12 @@ def listen():
 
 
 
-def submit_ecu_manifest_to_primary(signed_ecu_manifest):
+def submit_ecu_manifest_to_primary(signed_ecu_manifest=None):
+
+  global most_recent_signed_ecu_manifest
+  if signed_ecu_manifest is None:
+    signed_ecu_manifest = most_recent_signed_ecu_manifest
+
 
   uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
       signed_ecu_manifest)
@@ -146,8 +175,8 @@ def submit_ecu_manifest_to_primary(signed_ecu_manifest):
 
 
   server = xmlrpc.client.ServerProxy(
-      'http://' + str(PRIMARY_SERVER_HOST) + ':' +
-      str(PRIMARY_SERVER_PORT))
+      'http://' + str(demo.PRIMARY_SERVER_HOST) + ':' +
+      str(demo.PRIMARY_SERVER_PORT))
   #if not server.system.listMethods():
   #  raise Exception('Unable to connect to server.')
 
@@ -361,20 +390,15 @@ def update_cycle():
 
 
 
-def generate_and_send_manifest_to_director():
+def generate_signed_ecu_manifest():
 
   global secondary_ecu
   global most_recent_signed_ecu_manifest
 
   # Generate and sign a manifest indicating that this ECU has a particular
   # version/hash/size of file2.txt as its firmware.
-  most_recent_signed_ecu_manifest = secondary_ecu.generate_signed_ecu_manifest(
-      current_firmware_fileinfo, [ecu_key])
+  most_recent_signed_ecu_manifest = secondary_ecu.generate_signed_ecu_manifest()
 
-
-  print('Submitting the Primary\'s manifest to the Director.')
-  secondary_ecu.submit_ecu_manifest_to_director(most_recent_signed_ecu_manifest)
-  print('Submission successful.')
 
 
 

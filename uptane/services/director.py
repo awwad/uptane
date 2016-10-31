@@ -160,22 +160,74 @@ class Director:
 
 
 
-  def validate_vehicle_manifest(self, vin, signed_vehicle_manifest):
+  def register_vehicle_manifest(
+      self, vin, primary_ecu_serial, signed_vehicle_manifest):
     """
+    Saves the vehicle manifest in the InventoryDB, validating first the
+    Primary's key on the full vehicle manifest, then each individual ECU
+    Manifest's signature.
+
+    If the Primary's signature over the whole Vehicle Manifest is invalid, then
+    this raises an error (either tuf.BadSignatureError, uptane.Spoofing, or
+    uptane.UnknownECU).
+
+    Otherwise, if any of the individual ECU Manifests are invalid, those
+    individual ECU Manifests are discarded, and others are processed. (No
+    error is raised - only a warning.)
+
     Arguments:
-      vin: uptane.formats.VIN
-      manifest: uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA
+      vin: vehicle's unique identifier, uptane.formats.VIN_SCHEMA
+      primary_ecu_serial: Primary ECU's unique identifier,
+                          uptane.formats.ECU_SERIAL_SCHEMA
+      manifest: the vehicle manifest, as specified in the implementation
+                specification and compliant with
+                uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA
+
+    Exceptions:
+      If the Primary's signature on the vehicle manifest is invalid or the
+      listed Primary ECU's serial is not recognized, raises one of the following
+      as appropriate:
+        tuf.BadSignatureError
+        uptane.Spoofing
+        uptane.UnknownECU
     """
     uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
         signed_vehicle_manifest)
 
-    # TODO: <~> COMPLETE ME.
-    log.warning('Validation of manifests not yet fully implemented.')
-
     # Process Primary's signature on full manifest here.
     # If it doesn't match expectations, error out here.
+    # TODO: <~> COMPLETE ME.
+    log.warning(
+        RED + 'Validation of manifests not yet fully implemented.' + ENDCOLORS)
 
-    # Validate individual ECU signatures on their version attestations.
+
+
+    # Validate signatures on and register all individual ECU manifests for each
+    # ECU (may have multiple manifests per ECU).
+    all_ecu_manifests = \
+        signed_vehicle_manifest['signed']['ecu_version_manifests']
+
+    for ecu_serial in all_ecu_manifests:
+      ecu_manifests = all_ecu_manifests[ecu_serial]
+      for manifest in ecu_manifests:
+        try:
+          # This calls validate_ecu_manifest and raises appropriate errors,
+          # caught below.
+          self.register_ecu_manifest(vin, ecu_serial, manifest)
+        except uptane.Spoofing as e:
+          log.warning(
+              RED + 'Discarding a spoofed or malformed ECU Manifest. ECU '
+              'Serial in the signed manifest and ECU Serial sent beside the '
+              'manifest do not match.' + ENDCOLORS)
+        except uptane.UnknownECU as e:
+          log.warning(
+              RED + 'Discarding an ECU Manifest from an unknown ECU.' +
+              ENDCOLORS)
+        except tuf.BadSignatureError as e:
+          log.warning(
+              RED + 'Discarding an ECU Manifest whose signature is invalid.' +
+              ENDCOLORS)
+
 
 
 
@@ -206,16 +258,22 @@ class Director:
 
 
 
-  # This is called by the primary through an XMLRPC interface, currently.
-  def register_vehicle_manifest(self, vin, signed_vehicle_manifest):
+  # Replacing this: don't need separate validate and register calls for
+  # vehicle manifests: it's too redundant and not useful enough.
+  # # This is called by the primary through an XMLRPC interface, currently.
+  # def register_vehicle_manifest(self,
+  #     vin, primary_ecu_serial, signed_vehicle_manifest):
 
-    # Check argument format.
+  #   # Check argument format.
+  #   uptane.formats.VIN_SCHEMA.check_match(vin)
+  #   uptane.formats.ECU_SERIAL_SCHEMA.check_match(primary_ecu_serial)
 
-    # Error out if the signature isn't valid and from the expected party.
-    # Also checks argument format.
-    self.validate_vehicle_manifest(vin, signed_vehicle_manifest)
+  #   # Error out if the signature isn't valid and from the expected party.
+  #   # This call also checks argument format.
+  #   self.validate_vehicle_manifest(
+  #       vin, primary_ecu_serial, signed_vehicle_manifest)
 
-    inventorydb.save_vehicle_manifest(vin, signed_vehicle_manifest)
+  #   inventorydb.save_vehicle_manifest(vin, signed_vehicle_manifest)
 
 
 

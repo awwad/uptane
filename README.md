@@ -19,11 +19,11 @@ If you're going to be running the ASN.1 encoding scripts once they are ready, yo
 
 ## Running
 The code below is intended to be run IN FIVE PANES:
-- Python shell for the OEM. This serves HTTP (repository files).
-- Python shell for the Director (Repository and Service). This serves metadata and image files via HTTP receives manifests from the Primary via XMLRPC (manifests).
-- Bash shell for the Timeserver. This serves signed times in response to requests from the Primary via XMLRPC.
-- Python shell for a Primary client in the vehicle. This fetches images and metadata from the repositories via HTTP, and communicates with the Director service, Timeserver, and any Secondaries via XMLRPC.
-- (At least one) Python shell for a Secondary in the vehicle. This communicates directly only with the Primary via XMLRPC, and will perform full metadata verification.
+- WINDOW 1: Python shell for the OEM. This serves HTTP (repository files).
+- WINDOW 2: Python shell for the Director (Repository and Service). This serves metadata and image files via HTTP receives manifests from the Primary via XMLRPC (manifests).
+- WINDOW 3: Bash shell for the Timeserver. This serves signed times in response to requests from the Primary via XMLRPC.
+- WINDOW 4: Python shell for a Primary client in the vehicle. This fetches images and metadata from the repositories via HTTP, and communicates with the Director service, Timeserver, and any Secondaries via XMLRPC.
+- WINDOW 5: (At least one) Python shell for a Secondary in the vehicle. This communicates directly only with the Primary via XMLRPC, and will perform full metadata verification.
 
 
 ###*WINDOW 1: the OEM Repository*
@@ -98,11 +98,19 @@ ds.submit_ecu_manifest_to_primary() # optionally takes different signed manifest
 At this point, some attacks can be performed here, such as:
 
 ####Attack: MITM without Secondary's key changes ECU manifest:
+The next command simulates a Man in the Middle attack that attempts to modify
+the ECU Manifest from this Secondary to issue a false report. In this simple
+attack, we simulate the Man in the Middle modifying the ECU Manifest without
+modifying the signature (which, without the ECU's private key, it cannot
+produce).
 ```python
+# Send the Primary a signed ECU manifest that has been modified after the signature.
 ds.ATTACK_send_corrupt_manifest_to_primary()
 ```
-Then run this in Window 4 (the Primary's window):
+Then run this in Window 4 (the Primary's window), to cause the Primary to bundle
+this ECU Manifest in its Vehicle Manifest and send it off to the Director:
 ```python
+dp.generate_signed_vehicle_manifest()
 dp.submit_vehicle_manifest_to_director()
 ```
 The Director should then discard the bad ECU Manifest and keep the rest of the Vehicle Manifest.
@@ -114,6 +122,9 @@ ds.ATTACK_send_manifest_with_wrong_sig_to_primary()
 ```
 Then run this in Window 4 (the Primary's window):
 ```python
+dp.generate_signed_vehicle_manifest()
 dp.submit_vehicle_manifest_to_director()
 ```
-The Director should then discard the bad ECU Manifest and keep the rest of the Vehicle Manifest.
+As you can now see from the output in Window 2, the Director discards the bad
+ECU Manifest from this Secondary, and retains the rest of the Vehicle Manifest
+from the Primary.

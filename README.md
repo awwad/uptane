@@ -27,18 +27,30 @@ The code below is intended to be run IN FIVE PANES:
 
 
 ###*WINDOW 1: the OEM Repository*
+These instructions start a demonstration version of an OEM's main repository
+for software, hosting images and the metadata Uptane requires.
+
 ```python
 import demo.demo_oem_repo as do
 do.clean_slate()
 do.write_to_live()
 do.host()
-# See instructions in uptane_test_instructions for examples of how to manipulate further.
-# After the demo, to end hosting:
+```
+After the demo, to end hosting:
+```python
 do.kill_server()
 ```
 
 
 ###*WINDOW 2: the Director*
+The following starts a Director server, which generates metadata for specific
+vehicles indicating which ECUs should install what firmware (validated against
+and obtained from the OEM's main repository). It also receives and validates
+Vehicle Manifests from Primaries, and the ECU Manifests from Secondaries
+within the Vehicle Manifests, which capture trustworthy information about what
+software is running on the ECUs, along with signed reports of any attacks
+observed by those ECUs.
+
 ```python
 import demo.demo_director as dd
 dd.clean_slate()
@@ -66,6 +78,11 @@ dd.kill_server()
 
 
 ###*WINDOW 3: the Timeserver:*
+The following starts a simple Timeserver, which receives requests for signed
+times, bundled by the Primary, and produces a signed attestation that includes
+the nonces each Secondary ECU sent the Primary to include along with the
+time request, so that each ECU can better establish that it is not being tricked
+into accepting a false time.
 ```shell
 #!/bin/bash
 python demo/demo_timeserver.py
@@ -73,6 +90,12 @@ python demo/demo_timeserver.py
 
 ###*WINDOW 4: the Primary client:*
 (ONLY AFTER THE OTHERS HAVE FINISHED STARTING UP AND ARE HOSTING)
+The Primary client started below is likely to run on a more capable and
+connected ECU in the vehicle - potentially the head unit / infotainment. It will
+obtain metadata and images from the OEM Repository as instructed by the Director
+and distribute them appropriately to other, Secondary ECUs in the vehicle,
+and it will receive ECU Manifests indicating the software on each Secondary ECU,
+and bundle these into a Vehicle Manifest which it will send to the Director.
 ```python
 import demo.demo_primary as dp
 dp.clean_slate() # also listens, xmlrpc
@@ -87,6 +110,9 @@ dp.submit_vehicle_manifest_to_director()
 
 ###*WINDOW 5+: the Secondary client(s):*
 (ONLY AFTER THE OTHERS HAVE FINISHED STARTING UP AND ARE HOSTING)
+Here, we start a single Secondary ECU and generate a signed ECU Manifest
+with information about the "firmware" that it is running, which we send to the
+Primary.
 ```python
 import demo.demo_secondary as ds
 ds.clean_slate()
@@ -113,10 +139,16 @@ this ECU Manifest in its Vehicle Manifest and send it off to the Director:
 dp.generate_signed_vehicle_manifest()
 dp.submit_vehicle_manifest_to_director()
 ```
-The Director should then discard the bad ECU Manifest and keep the rest of the Vehicle Manifest.
-
+As you can now see from the output in Window 2, the Director discards the bad
+ECU Manifest from this Secondary, and retains the rest of the Vehicle Manifest
+from the Primary.
 
 ####Attack: MITM modifies ECU manifest and signs with another ECU's key:
+The next command also simulates a Man in the Middle attack that attempts to modify
+the ECU Manifest from this Secondary to issue a false report. In this attack,
+we simulate the Man in the Middle modifying the ECU Manifest and replacing the
+signature with a valid signature from a *different* key (obtained, say, from
+another vehicle's analogous ECU after reverse-engineering).
 ```python
 ds.ATTACK_send_manifest_with_wrong_sig_to_primary()
 ```

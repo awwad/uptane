@@ -4,6 +4,10 @@ uptane_test_instructions.py
 
 This is demonstration code for Uptane.
 
+PLEASE SEE THE README.md FILE INSTEAD OF THIS.
+
+
+
 The code below is intended to be run IN FIVE OR MORE PYTHON SHELLS:
 - One for the OEM Repository, speaking HTTP
 - One for the Director (Repository and Service), speaking HTTP and XMLRPC

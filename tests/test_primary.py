@@ -90,12 +90,15 @@ def setUpModule():
   clock = clock.isoformat() + 'Z'
   tuf.formats.ISO8601_DATETIME_SCHEMA.check_match(clock)
 
-  import demo.demo_timeserver as dt
-  import demo.demo_oem_repo as do
-  import demo.demo_director as dd
+  # Currently in development.
 
+  # Start the timeserver, director, and oem repo for this test,
+  # using subprocesses, and saving those processes as:
+  #process_timeserver
+  #process_director
+  #process_oemrepo
+  # to be stopped in tearDownModule below.
 
-  dt.listen()
 
 
 

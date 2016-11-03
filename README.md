@@ -106,7 +106,6 @@ Then run this in Window 4 (the Primary's window):
 dp.submit_vehicle_manifest_to_director()
 ```
 The Director should then discard the bad ECU Manifest and keep the rest of the Vehicle Manifest.
-```
 
 ####Attack: MITM modifies ECU manifest and signs with another ECU's key:
 ```python

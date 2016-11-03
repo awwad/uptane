@@ -5,14 +5,16 @@ Early demonstration code for UPTANE. Python 3 is preferred during development.
 ### Installation
 (As usual, virtual environments are recommended for development and testing, but not necessary.)
 
-To install, run the following from this directory (uptane/):
+To download and install the Uptane code, run the following:
 ```
+git clone https://github.com/uptane/uptane
+cd uptane
 pip install cffi==1.7.0 pycrypto==2.6.1 pynacl==1.0.1 cryptography
 pip install git+git://github.com/awwad/tuf.git@pinning
 pip install -e .
 ```
 
-If you're going to be running the ASN.1 encoding scripts, you'll also need to `pip install pyasn1`
+If you're going to be running the ASN.1 encoding scripts once they are ready, you'll also need to `pip install pyasn1`
 
 
 ### Running

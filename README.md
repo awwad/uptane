@@ -6,7 +6,7 @@ Early demonstration code for UPTANE. Python 3 is preferred during development.
 (As usual, virtual environments are recommended for development and testing, but not necessary.)
 
 To download and install the Uptane code, run the following:
-```
+```shell
 git clone https://github.com/uptane/uptane
 cd uptane
 pip install cffi==1.7.0 pycrypto==2.6.1 pynacl==1.0.1 cryptography
@@ -106,6 +106,7 @@ Then run this in Window 4 (the Primary's window):
 dp.submit_vehicle_manifest_to_director()
 ```
 The Director should then discard the bad ECU Manifest and keep the rest of the Vehicle Manifest.
+
 
 ####Attack: MITM modifies ECU manifest and signs with another ECU's key:
 ```python

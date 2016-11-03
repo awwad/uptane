@@ -2,6 +2,17 @@
 demo_oem_repo.py
 
 Demonstration code handling an OEM repository.
+
+Use:
+
+import demo.demo_oem_repo as do
+do.clean_slate()
+do.write_to_live()
+do.host()
+
+# Later:
+do.kill_server()
+
 """
 
 import demo

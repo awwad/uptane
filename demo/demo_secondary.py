@@ -7,13 +7,13 @@ Demonstration code handling a full verification secondary client.
 Use:
 
 import demo.demo_secondary as ds
-ds.clean_slate()
+ds.clean_slate() # Director and Primary should be listening first
 ds.listen()
 ds.generate_signed_ecu_manifest()   # saved as ds.most_recent_signed_manifest
 ds.submit_ecu_manifest_to_primary() # optionally takes different signed manifest
 
 
-(Behind the scenes, that results in a call to this:
+(Behind the scenes, that results in a few interactions, ultimately leading to:
       primary_ecu.register_ecu_manifest(
         ds.secondary_ecu.vin,
         ds.secondary_ecu.ecu_serial,
@@ -39,7 +39,7 @@ import threading # for the demo listener
 import time
 import xmlrpc.client
 import xmlrpc.server
-
+import copy # for copying manifests before corrupting them during attacks
 
 # Globals
 _client_directory_name = 'temp_secondary' # name for this secondary's directory
@@ -115,6 +115,7 @@ def clean_slate(
   # secondary_ecu.update_time_from_timeserver(nonce)
 
 
+  register_self_with_primary()
   register_self_with_director()
 
 
@@ -406,19 +407,21 @@ def generate_signed_ecu_manifest():
 
 
 
-def ATTACK_send_corrupt_manifest_to_director():
+def ATTACK_send_corrupt_manifest_to_primary():
   """
   Attack: MITM w/o key modifies ECU manifest.
   Modify the ECU manifest without updating the signature.
   """
   # Copy the most recent signed ecu manifest.
-  corrupt_signed_manifest = {k:v for (k,v) in most_recent_signed_ecu_manifest.items()}
+  import copy
+  corrupt_signed_manifest = copy.copy(most_recent_signed_ecu_manifest)
 
   corrupt_signed_manifest['signed']['attacks_detected'] += 'Everything is great, I PROMISE!'
 
   print(YELLOW + 'ATTACK: Corrupted Manifest (bad signature):' + ENDCOLORS)
   print('   Modified the signed manifest as a MITM, simply changing a value:')
-  print('   The attacks_detected field now reads ' + RED + '"Everything is great, I PROMISE!' + ENDCOLORS)
+  print('   The attacks_detected field now reads "' + RED +
+      repr(corrupt_signed_manifest['signed']['attacks_detected']) + ENDCOLORS)
 
   import xmlrpc.client # for xmlrpc.client.Fault
 
@@ -428,18 +431,23 @@ def ATTACK_send_corrupt_manifest_to_director():
     print(GREEN + 'Primary REJECTED the fraudulent ECU manifest.' + ENDCOLORS)
   else:
     print(RED + 'Primary ACCEPTED the fraudulent ECU manifest!' + ENDCOLORS)
+  # (Next, on the Primary, one would generate the vehicle manifest and submit
+  # that to the Director. The Director, in its window, should then indicate that
+  # it has received this manifest and rejected it because the signature isn't
+  # a valid signature over the changed ECU manifest.)
 
 
 
 
-def ATTACK_send_manifest_with_wrong_sig_to_director():
+def ATTACK_send_manifest_with_wrong_sig_to_primary():
   """
   Attack: MITM w/o key modifies ECU manifest and signs with a different ECU's
   key.
   """
   # Discard the signatures and copy the signed contents of the most recent
   # signed ecu manifest.
-  corrupt_manifest = {k:v for (k,v) in most_recent_signed_ecu_manifest['signed'].items()}
+  import copy
+  corrupt_manifest = copy.copy(most_recent_signed_ecu_manifest['signed'])
 
   corrupt_manifest['attacks_detected'] += 'Everything is great; PLEASE BELIEVE ME THIS TIME!'
 
@@ -462,14 +470,15 @@ def ATTACK_send_manifest_with_wrong_sig_to_director():
   #import xmlrpc.client # for xmlrpc.client.Fault
 
   try:
-    secondary_ecu.submit_ecu_manifest_to_director(signed_corrupt_manifest)
+    submit_ecu_manifest_to_primary(signed_corrupt_manifest)
   except xmlrpc.client.Fault as e:
-    print('Director service REJECTED the fraudulent ECU manifest.')
+    print('Primary REJECTED the fraudulent ECU manifest.')
   else:
-    print('Director service ACCEPTED the fraudulent ECU manifest!')
-  # (The Director, in its window, should now indicate that it has received this
-  # manifest. If signature checking for manifests is on, then the manifest is
-  # rejected. Otherwise, it is simply accepted.)
+    print('Primary ACCEPTED the fraudulent ECU manifest!')
+  # (Next, on the Primary, one would generate the vehicle manifest and submit
+  # that to the Director. The Director, in its window, should then indicate that
+  # it has received this manifest and rejected it because the signature doesn't
+  # match what is expected.)
 
 
 
@@ -490,6 +499,25 @@ def register_self_with_director():
   print('Registering Secondary ECU Serial and Key with Director.')
   server.register_ecu_serial(secondary_ecu.ecu_serial, secondary_ecu.ecu_key)
   print(GREEN + 'Secondary has been registered with the Director.' + ENDCOLORS)
+
+
+
+
+
+def register_self_with_primary():
+  """
+  Send the Primary a message to register our ECU serial number.
+  In practice, this would probably be done out of band, when the ECU is put
+  into the vehicle during assembly, not by the Secondary itself.
+  """
+  # Connect to the Primary
+  server = xmlrpc.client.ServerProxy(
+    'http://' + str(demo.PRIMARY_SERVER_HOST) + ':' +
+    str(demo.PRIMARY_SERVER_PORT))
+
+  print('Registering Secondary ECU Serial and Key with Primary.')
+  server.register_new_secondary(secondary_ecu.ecu_serial)
+  print(GREEN + 'Secondary has been registered with the Primary.' + ENDCOLORS)
 
 
 

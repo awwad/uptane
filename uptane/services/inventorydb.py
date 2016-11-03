@@ -101,7 +101,7 @@ def save_vehicle_manifest(vin, signed_vehicle_manifest):
 
 
 def get_ecu_manifest(vin, ecu_serial):
-  #uptane.formats.VIN_SCHEMA.check_match(vin)
+  uptane.formats.VIN_SCHEMA.check_match(vin)
   uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial) # Check arg format
   # This is obviously EXTREMELY insecure and the 'vin' passed in should be
   # scrubbed.
@@ -118,7 +118,7 @@ def get_ecu_manifest(vin, ecu_serial):
 
 
 def save_ecu_manifest(vin, ecu_serial, signed_ecu_manifest):
-  #uptane.formats.VIN_SCHEMA.check_match(vin)
+  uptane.formats.VIN_SCHEMA.check_match(vin)
   uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial)
   uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
       signed_ecu_manifest)

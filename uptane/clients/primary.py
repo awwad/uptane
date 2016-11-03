@@ -66,17 +66,20 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
       The public key matching the private key that we expect the timeserver to
       use when signing attestations. Validation is against this key.
 
-    # TODO: <~> This next field makes assumptions that are not in the Uptane
-    #           specification, to handle some Sam code. Remove the assumption
-    #           at some point. (The Primary config enum is outside the spec.)
     my_secondaries:
-      This is a dictionary with an entry for every Secondary that this Primary
-      communicates with.
-      The dictionary maps ecu_serial to that ECU's number in the enumeration
-      in the Primary's config file, for communication purposes.
-      e.g. {
-          'ecuserial1234': 0,
-          'ecuserial5678': 1}
+      This is a list of all ECU Serials belonging to Secondaries of this
+      Primary.
+
+      # # TODO: <~> This next field makes assumptions that are not in the Uptane
+      # #           specification, to handle some Sam code. Remove the assumption
+      # #           at some point. (The Primary config enum is outside the spec.)
+      # This is a dictionary with an entry for every Secondary that this Primary
+      # communicates with.
+      # The dictionary maps ecu_serial to that ECU's number in the enumeration
+      # in the Primary's config file, for communication purposes.
+      # e.g. {
+      #     'ecuserial1234': 0,
+      #     'ecuserial5678': 1}
 
     nonces_to_send:
       The list of nonces sent to us from Secondaries and not yet sent to the
@@ -140,7 +143,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     primary_key,
     time,
     timeserver_public_key,
-    my_secondaries=dict()):
+    my_secondaries=[]):
 
     """
     See class docstring.
@@ -151,6 +154,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     tuf.formats.PATH_SCHEMA.check_match(pinning_filename)
     tuf.formats.PATH_SCHEMA.check_match(fname_root_from_mainrepo)
     tuf.formats.PATH_SCHEMA.check_match(fname_root_from_directorrepo)
+    tuf.formats.ISO8601_DATETIME_SCHEMA.check_match(time)
     uptane.formats.VIN_SCHEMA.check_match(vin)
     uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial)
     tuf.formats.ANYKEY_SCHEMA.check_match(timeserver_public_key)
@@ -164,8 +168,10 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     self.all_valid_timeserver_times = [time]
     self.all_valid_timeserver_attestations = []
     self.timeserver_public_key = timeserver_public_key
+    self.nonces_to_send = []
     self.nonces_sent = []
     self.primary_key = primary_key
+    self.my_secondaries = my_secondaries
 
     # Initialize the dictionary of manifests. This is a dictionary indexed
     # by ECU serial and with value being a list of manifests from that ECU, to
@@ -234,10 +240,15 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
 
   def get_target_list_from_director(self):
-    # TODO: <~> MUST FIX FOR PRODUCTION! Note that this assumes that the
+    # TODO: <~> SHOULD FIX FOR PRODUCTION! Note that this assumes that the
     # Director is conveying information directly in its "targets" role.
     # This is not something we can assume - Director repo structure is not
-    # required to be that flat.
+    # required to be that flat. We could pull all targets from all roles and
+    # then retrieve all Director-validated target info (that step to ensure
+    # that we're not including targets listed by roles that haven't been
+    # delegated control over those filepaths).
+    # For the time being, the design here requires that the Director role
+    # structure have no delegations in it.
     directed_targets = self.updater.targets_of_role(
         rolename='targets', repo_name='director')
 
@@ -267,11 +278,11 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
 
 
-  def send_image_to_secondary(self):
-    """
-    Send target file to the secondary through C intermediate
-    """
-    pass
+  # def send_image_to_secondary(self):
+  #   """
+  #   Send target file to the secondary through C intermediate
+  #   """
+  #   pass
 
 
 
@@ -339,19 +350,47 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
 
 
+  def register_new_secondary(self, ecu_serial):
+    """
+    Currently called by Secondaries, but one would expect that this would happen
+    through some other mechanism when a new Secondary ECU is installed in the
+    vehicle.
+    """
+    uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial)
+
+    if ecu_serial in self.my_secondaries:
+      log.info('ECU Serial ' + repr(ecu_serial) + ' already registered with '
+          'this Primary.')
+      return
+
+    self.my_secondaries.append(ecu_serial)
+
+
+
+
 
   def register_ecu_manifest(self, vin, ecu_serial, nonce, signed_ecu_manifest):
     """
-    Called by Secondaries through an XMLRPC interface, currently (or through
-    another interface and passed through to this one).
+    Called by Secondaries (in the demo, this is via an XMLRPC interface, or
+    through another interface and passed through the XMLRPC interface).
 
     The Primary need not track ECU serials, so calling this doesn't result in a
     verification of the ECU's signature on the ECU manifest. This information
     is bundled together in a single vehicle report to the Director service.
+
+    Exceptions:
+      uptane.Spoofing     if ECU Serials within the manifest are inconsistent
+      uptane.UnknownECU   if the manifest is from an ECU that is not one of our
+                          Secondaries
+      uptane.Error        if the VIN for the report is not the same as our VIN
     """
     # Check argument format.
     uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
         signed_ecu_manifest)
+
+    if vin != self.vin:
+      raise uptane.Error('Received an ECU Manifest supposedly hailing from a '
+          'different vehicle....')
 
     if ecu_serial != signed_ecu_manifest['signed']['ecu_serial']:
       # TODO: Choose an exception class.
@@ -360,6 +399,10 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
           'signed in the manifest itself (' +
           repr(signed_ecu_manifest['signed']['ecu_serial']) + ').')
 
+    if ecu_serial not in self.my_secondaries:
+      raise uptane.UnknownECU('Received an ECU Manifest purportedly from an '
+          'ECU with a serial that is not in our list of Secondaries.')
+
     # If we haven't errored out above, then the format is correct, so save
     # the manifest to the Primary's dictionary of manifests.
     if ecu_serial in self.ecu_manifests:
@@ -367,9 +410,13 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     else:
       self.ecu_manifests[ecu_serial] = [signed_ecu_manifest]
 
+    # And add the nonce the Secondary provided to the list of nonces to send
+    # in the next Timeserver request.
+    self.nonces_to_send.append(nonce)
+
 
     log.debug(GREEN + ' Primary received an ECU manifest from ECU ' +
-        repr(ecu_serial) + ENDCOLORS)
+        repr(ecu_serial) + ', along with nonce ' + repr(nonce) + ENDCOLORS)
 
     # Alert if there's been a detected attack.
     if signed_ecu_manifest['signed']['attacks_detected']:

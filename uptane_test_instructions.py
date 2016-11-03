@@ -4,12 +4,12 @@ uptane_test_instructions.py
 
 This is demonstration code for Uptane.
 
-The code below is intended to be run IN FIVE PYTHON SHELLS:
+The code below is intended to be run IN FIVE OR MORE PYTHON SHELLS:
 - One for the OEM Repository, speaking HTTP
-- One for the Director Repository, speaking HTTP
-- One for the Director Services, speaking XMLRPC (receives manifests)
+- One for the Director (Repository and Service), speaking HTTP and XMLRPC
 - One for the Timeserver, speaking XMLRPC (receives requests for signed times)
-- One for the client
+- One for the Primary client in the vehicle, speaking XMLRPC and consuming HTTP
+- One (or more) for Secondary clients in the vehicle, speaking XMLRPC
 
 Each shell should be run in a python environment (the same environment is
 fine) that has the awwad/tuf:pinning version of TUF installed. In order to

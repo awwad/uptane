@@ -18,6 +18,7 @@ import tuf.repository_tool as rt
 #import asn1_conversion as asn1
 #from uptane import GREEN, RED, YELLOW, ENDCOLORS
 
+import time
 #log = uptane.logging.getLogger('timeserver')
 
 timeserver_key = None

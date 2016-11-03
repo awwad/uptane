@@ -97,9 +97,9 @@ class Director:
     tuf.formats.ANYKEY_SCHEMA.check_match(ecu_key)
 
     if ecu_serial in self.ecu_public_keys:
-      log.error(RED + ' Rejecting an attempt to register a public key to\n '
-          'an ECU Serial when that ECU Serial already has a public key '
-          'registered to it.' + ENDCOLORS)
+      log.error(RED + 'Rejecting an attempt to register a public key to an ECU '
+          'Serial when that ECU Serial already has a public key registered to '
+          'it.' + ENDCOLORS)
       raise uptane.Spoofing('This ecu_serial has already been registered. '
           'Rejecting registration request.')
 
@@ -109,6 +109,8 @@ class Director:
           GREEN + ' Registered a new ECU:\n    ECU Serial: ' +
           repr(ecu_serial) + '\n    ECU Key: ' + repr(ecu_key) + '\n' +
           ENDCOLORS)
+
+
 
 
 
@@ -132,9 +134,9 @@ class Director:
     # TODO: Consider mechanism for fetching keys from inventorydb itself,
     # rather than always registering them after Director svc starts up.
     if ecu_serial not in self.ecu_public_keys:
-      log.error(
-          '\n' + RED + ' Rejecting a manifest from an ECU whose key is not '
-          'registered.' + ENDCOLORS)
+      log.info(
+          'Validation failed on an ECU Manifest: ECU ' + repr(ecu_serial) +
+          ' is not registered.')
       # Raise a fault for the offending ECU's XMLRPC request.
       raise uptane.UnknownECU('The Director is not aware of the given ECU '
           'SERIAL (' + repr(ecu_serial) + '. Manifest rejected. If the ECU is '
@@ -149,15 +151,15 @@ class Director:
         signed_ecu_manifest['signed'])
 
     if not valid:
-      log.error(
-          '\n' + RED + ' Rejecting a manifest because its signature is '
-          'not valid.\n It must be correctly signed by the expected key for '
-          'that ECU.' + ENDCOLORS)
+      log.info(
+          'Validation failed on an ECU Manifest: signature is not valid. It'
+          'It must be correctly signed by the expected key for that ECU.')
       # Raise a fault for the offending ECU's XMLRPC request.
       raise tuf.BadSignatureError('Sender supplied an invalid signature. '
-          'ECU Manifest is questionable; discarding. If you see this '
-          'persistently, it is possible that the Primary is compromised or '
-          'that there is a man in the middle attack or misconfiguration.')
+          'ECU Manifest is unacceptable. If you see this persistently, it is'
+          'possible that the Primary is compromised or that there is a man in '
+          'the middle attack or misconfiguration.')
+
 
 
 
@@ -205,7 +207,7 @@ class Director:
     # the inventorydb.
     inventorydb.save_vehicle_manifest(vin, signed_vehicle_manifest)
 
-    log.debug(GREEN + ' Received a Vehicle Manifest from Primary ECU ' +
+    log.info(GREEN + ' Received a Vehicle Manifest from Primary ECU ' +
         repr(primary_ecu_serial) + ', with a valid signature from that ECU.' +
         ENDCOLORS)
     # TODO: Note that the above hasn't checked that the signature was from
@@ -228,17 +230,16 @@ class Director:
           log.warning(
               RED + 'Discarding a spoofed or malformed ECU Manifest. Error '
               ' from validating that ECU manifest follows:\n' + ENDCOLORS +
-              YELLOW + repr(e) + ENDCOLORS)
+              repr(e))
         except uptane.UnknownECU as e:
           log.warning(
               RED + 'Discarding an ECU Manifest from unknown ECU. Error from '
-              'validation attempt follows:\n' + ENDCOLORS + YELLOW + repr(e) +
-              ENDCOLORS)
+              'validation attempt follows:\n' + ENDCOLORS + repr(e))
         except tuf.BadSignatureError as e:
           log.warning(
-              RED + 'Discarding an ECU Manifest whose signature is invalid. '
-              'Error from validation attempt follows:\n' + ENDCOLORS + YELLOW +
-              repr(e) + ENDCOLORS)
+              RED + 'Rejecting an ECU Manifest whose signature is invalid, '
+              'from within an otherwise valid Vehicle Manifest. Error from '
+              'validation attempt follows:\n' + ENDCOLORS + repr(e))
 
 
 
@@ -271,9 +272,9 @@ class Director:
     # TODO: Consider mechanism for fetching keys from inventorydb itself,
     # rather than always registering them after Director svc starts up.
     if primary_ecu_serial not in self.ecu_public_keys:
-      log.error(
-          '\n' + RED + ' Rejecting a vehicle manifest from a Primary ECU whose '
-          'key is not registered.' + ENDCOLORS)
+      log.debug(
+          'Rejecting a vehicle manifest from a Primary ECU whose '
+          'key is not registered.')
       # Raise a fault for the offending ECU's XMLRPC request.
       raise uptane.UnknownECU('The Director is not aware of the given Primary '
           'ECU Serial (' + repr(primary_ecu_serial) + '. Manifest rejected. If '
@@ -288,10 +289,10 @@ class Director:
         vehicle_manifest['signed'])
 
     if not valid:
-      log.error(
-          '\n' + RED + ' Rejecting a vehicle manifest because the Primary '
-          'signature on it is not valid.\n It must be correctly signed by the '
-          'expected Primary ECU key.' + ENDCOLORS)
+      log.debug(
+          'Rejecting a vehicle manifest because the Primary signature on it is '
+          'not valid.It must be correctly signed by the expected Primary ECU '
+          'key.')
       # Raise a fault for the offending ECU's XMLRPC request.
       raise tuf.BadSignatureError('Sender supplied an invalid signature. '
           'Vehicle Manifest is questionable; discarding. If you see this '
@@ -315,14 +316,13 @@ class Director:
     # Otherwise, we save it:
     inventorydb.save_ecu_manifest(vin, ecu_serial, signed_ecu_manifest)
 
-    log.debug(GREEN + ' Received a valid ECU manifest from ECU ' +
-        repr(ecu_serial) + ENDCOLORS)
+    log.debug('Stored a valid ECU manifest from ECU ' + repr(ecu_serial))
 
     # Alert if there's been a detected attack.
     if signed_ecu_manifest['signed']['attacks_detected']:
       log.warning(
-          YELLOW + ' Attacks have been reported by the Secondary!\n '
-          'Attacks listed by ECU ' + repr(ecu_serial) + ':\n ' +
+          YELLOW + 'Attacks have been reported by the Secondary ECU ' +
+          repr(ecu_serial) + ':\n' +
           signed_ecu_manifest['signed']['attacks_detected'] + ENDCOLORS)
 
 
@@ -407,6 +407,9 @@ class Director:
     repodirector.snapshot.load_signing_key(self.key_dirsnap_pri)
     repodirector.targets.load_signing_key(self.key_dirtarg_pri)
 
+    # TODO: <~> Continue when course is decided. This may be outside of the
+    # scope of the reference implementation, and best to put in the demo code.
+
 
 
 
@@ -417,6 +420,9 @@ class Director:
     For example, try to detect freeze attacks and mix-and-match attacks.
     """
     pass
+
+
+
 
 
   def write_metadata(self):
@@ -434,9 +440,3 @@ class Director:
     #     # Call repository_tool internal functions to produce metadata
     #     # file.  /:  Ugly.
     #     #
-
-
-
-  def create_keypair(self):
-    raise NotImplementedError('Not yet written.')
-    # Create a key pair or be provided one.

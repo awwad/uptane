@@ -22,7 +22,6 @@ import demo
 import uptane
 import uptane.common # for canonical key construction and signing
 import uptane.clients.primary as primary
-#import uptane.clients.secondary as secondary
 from uptane import GREEN, RED, YELLOW, ENDCOLORS
 import tuf.keys
 import tuf.repository_tool as rt
@@ -95,21 +94,6 @@ def clean_slate(
       primary_key=ecu_key,
       time=clock,
       timeserver_public_key=key_timeserver_pub)
-
-
-  # Initialize some secondaries.
-  # TODO
-  # import demo.demo_secondary as ds
-  # ds.clean_slate()
-  # manifest = ds.secondary_ecu.generate_signed_ecu_manifest()
-  # nonce = ds.secondary_ecu.nonce_next
-  # primary_ecu.register_ecu_manifest(
-  #   ds.secondary_ecu.vin,
-  #   ds.secondary_ecu.ecu_serial,
-  #   nonce,
-  #   manifest)
-  #
-  #
 
 
   if listener_thread is None:
@@ -236,6 +220,12 @@ def update_cycle():
   # if os.path.exists(os.path.join(client_directory_name, 'file2.txt')):
   #   os.remove(os.path.join(client_directory_name, 'file2.txt'))
 
+  # TODO: Review the targets here and assign them to ECUs?
+  # Or do after they're downloaded below?
+
+  #for target in verified_targets
+  # TODO: <~> CURRENTLY WORKING HERE
+
 
   # For each target for which we have verified metadata:
   for target in verified_targets:
@@ -293,15 +283,19 @@ def update_cycle():
       print(GREEN + 'Successfully downloaded a trustworthy ' + repr(filepath) +
           ' image.' + ENDCOLORS)
 
-      # If this is our firmware, "install".
-      if filepath.startswith('/') and filepath[1:] == firmware_filename or \
-        not filepath.startswith('/') and filepath == firmware_filename:
 
-        print()
-        print(GREEN + 'Provided firmware "installed"; metadata for this new '
-            'firmware is stored for reporting back to the Director.' + ENDCOLORS)
-        print()
-        current_firmware_fileinfo = target
+      # TODO: <~> Distribute this file to the appropriate Secondary:
+
+
+      # # If this is our firmware, "install".
+      # if filepath.startswith('/') and filepath[1:] == firmware_filename or \
+      #   not filepath.startswith('/') and filepath == firmware_filename:
+
+      #   print()
+      #   print(GREEN + 'Provided firmware "installed"; metadata for this new '
+      #       'firmware is stored for reporting back to the Director.' + ENDCOLORS)
+      #   print()
+      #   current_firmware_fileinfo = target
 
 
 
@@ -516,7 +510,10 @@ def listen():
   # register_vehicle_manifest. For now, during development, however, this is
   # exposed.
   server.register_function(
-    primary_ecu.register_ecu_manifest, 'submit_ecu_manifest')
+      primary_ecu.register_ecu_manifest, 'submit_ecu_manifest')
+
+  server.register_function(
+      primary_ecu.register_new_secondary, 'register_new_secondary')
 
   print('Primary will now listen on port ' + str(demo.PRIMARY_SERVER_PORT))
   server.serve_forever()

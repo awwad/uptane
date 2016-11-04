@@ -156,7 +156,7 @@ class Director:
           'It must be correctly signed by the expected key for that ECU.')
       # Raise a fault for the offending ECU's XMLRPC request.
       raise tuf.BadSignatureError('Sender supplied an invalid signature. '
-          'ECU Manifest is unacceptable. If you see this persistently, it is'
+          'ECU Manifest is unacceptable. If you see this persistently, it is '
           'possible that the Primary is compromised or that there is a man in '
           'the middle attack or misconfiguration.')
 

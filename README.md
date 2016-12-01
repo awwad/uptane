@@ -1,9 +1,11 @@
 # uptanedemo
-Early demonstration code for UPTANE. Python 3 is preferred during development.
+The Reference Implementation and Demonstration code for [UPTANE](https://uptane.umtri.umich.edu/).
 
 Please note that extensive documentation on design can be found in the following documents:
 - [Uptane Design Overview](https://docs.google.com/document/d/13XXQZ6KXCK_MiZj_Q84PQyMDmBiHnhEfgJgj8drKWRI/edit#heading=h.8swqb4rerhs3)
 - [Uptane Implementation Specification](https://docs.google.com/document/d/1noDyg2t5jB6y3R5-Y3TXXj1tocv_y24NjmOw8rAcaAc/edit?pli=1#)
+
+Python 3 is preferred during development.
 
 
 # Instructions on use of the Uptane demonstration code

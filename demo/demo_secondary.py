@@ -390,7 +390,6 @@ def update_cycle():
 
   # Now tell the Secondary reference implementation code where the archive file
   # is and let it expand and validate the metadata.
-  # secondary_ecu.expand_metadata_archive('metadata_archive.zip')
   secondary_ecu.process_metadata(archive_fname)
 
 

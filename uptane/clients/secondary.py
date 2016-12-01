@@ -84,13 +84,22 @@ class Secondary(object):
 
     __init__(...)
 
-    change_nonce()
+    Nonce handling:
+      set_nonce_as_sent()
+      change_nonce()
+      _create_nonce()
 
-    generate_signed_ecu_manifest()
+    Manifest handling:
+      generate_signed_ecu_manifest()
 
-    _create_nonce()
+    Metadata handling and validation of metadata and data
+      validate_time_attestation(timeserver_attestation)
+      process_metadata(metadata_archive_fname)
+      _expand_metadata_archive(metadata_archive_fname)
+      fully_validate_metadata()
+      get_validated_target_info(target_filepath)
+      validate_image(image_fname)
 
-    # TODO: Complete this list and provide this in other modules as well.
 
 
   """
@@ -299,6 +308,7 @@ class Secondary(object):
 
 
 
+
   def fully_validate_metadata(self):
     """
     Treats the unvalidated metadata obtained from the Primary (which the
@@ -397,7 +407,7 @@ class Secondary(object):
 
   def process_metadata(self, metadata_archive_fname):
     """
-    Expand the metadata archive using expand_metadata_archive()
+    Expand the metadata archive using _expand_metadata_archive()
     Validate metadata files using fully_validate_metadata()
     Select the Director targets.json file
     Pick out the target file(s) with our ECU serial listed
@@ -406,7 +416,7 @@ class Secondary(object):
     #
     tuf.formats.RELPATH_SCHEMA.check_match(metadata_archive_fname)
 
-    self.expand_metadata_archive(metadata_archive_fname)
+    self._expand_metadata_archive(metadata_archive_fname)
 
     # This entails using the local metadata files as a repository.
     self.fully_validate_metadata()
@@ -415,7 +425,7 @@ class Secondary(object):
 
 
 
-  def expand_metadata_archive(self, metadata_archive_fname):
+  def _expand_metadata_archive(self, metadata_archive_fname):
     """
     """
     tuf.formats.RELPATH_SCHEMA.check_match(metadata_archive_fname)

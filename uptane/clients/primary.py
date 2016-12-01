@@ -117,6 +117,37 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
       place (renamed) after it has been fully written, to avoid race conditions.
 
 
+  Methods, as called: ("self" arguments excluded):
+
+    __init__(...)
+
+    refresh_toplevel_metadata_from_repositories()
+
+    Methods for OEM/Supplier Primary code to use:
+      primary_update_cycle()
+      generate_signed_vehicle_manifest()
+      get_nonces_to_send_and_rotate()
+      save_distributable_metadata_files()
+
+    Retrieval and validation of metadata and data from central services:
+      refresh_toplevel_metadata_from_repositories()
+      get_target_list_from_director()
+      get_validated_target_info()
+      validate_time_attestation(timeserver_attestation)
+
+    Components of the interface available to a Secondary client:
+      register_ecu_manifest(vin, ecu_serial, nonce, signed_ecu_manifest)
+      get_last_timeserver_attestation()
+      update_exists_for_ecu(ecu_serial)
+      get_image_fname_for_ecu(ecu_serial)
+      get_full_metadata_archive_fname()
+      get_partial_metadata_fname()
+      register_new_secondary(ecu_serial)
+
+    Private methods:
+      _check_ecu_serial(ecu_serial)
+
+
   Use:
     import uptane.clients.primary as primary
     p = primary.Primary(
@@ -575,15 +606,6 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
 
 
-  # No longer part of the interface. See 'get' methods below.
-  # def send_image_to_secondary(self):
-  #   """
-  #   Send target file to the secondary through C intermediate
-  #   """
-  #   pass
-
-
-
 
 
   def get_image_fname_for_ecu(self, ecu_serial):
@@ -643,80 +665,6 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     cycle, it will not exist yet.
     """
     return self.distributable_partial_metadata_fname
-
-
-
-
-
-  # Going to go with a different approach instead.
-  # def get_metadata_for_ecu(self, ecu_serial, partial_verifier=False):
-  #   """
-  #   Returns the filenames for the current validated metadata.
-  #   Unless partial_verifier is True (in which case we provide only the
-  #   Director's targets file), this includes the full contents of the
-  #   Primary's current client metadata for all repositories.
-
-  #   This is similar to the contents of (directory names depend on the
-  #   repository name):
-  #     .../metadata/<oem repo name>/current/
-  #                        root.json, targets.json, timestamp.json, snapshot.json
-  #     .../metadata/<director repo name>/current/
-  #                        root.json, targets.json, timestamp.json, snapshot.json
-
-  #     along with any additional delegated targets role files in the OEM repo.
-
-  #   We are not copying the files themselves, but the in-memory validated
-  #   metadata, so orphaned files (no longer part of the repository) will
-  #   (happily) not be included.
-
-  #   If there has been no update, returns None.
-
-  #   If partial_verifier is True, returns only the Director repository's targets
-  #   metadata file, for use by an ECU that only validates Director signature
-  #   from the Director's targets metadata file.
-
-  #   Only call this after all needed metadata has been downloaded!
-  #   This will use the metadata from the updater's roledb, which is populated
-  #   by self.primary_update_cycle(), or in part by
-  #   self.refresh_toplevel_metadata_from_repositories (which only updates the
-  #   four top-level roles, not any delegated roles), or by calling e.g.
-  #   self.updater.all_targets()
-  #   """
-
-
-  #   if not self.update_exists_for_ecu(ecu_serial):
-  #     return None
-
-  #   # Else, there is data to provide to the Secondary.
-  #   # Pluck the necessary information from self.updater or from the filesystem.
-  #   # There may be race conditions in either circumstance, whether we use
-  #   # on-disk files in the client metadata directory or the dict in
-  #   # self.updater.repositories[self.director_repo_name].
-  #   # For example, if for some reason
-  #   # self.updater.repositories[self.director_repo_name].refresh is called on
-  #   # a single repository (director or main), and an update has occurred on
-  #   # both, we may no longer have matching data for the two repositories.
-  #   # It seems an unlikely edge case, though: why would we do that?
-  #   # On the other hand, buffering on embedded devices could cause the files to
-  #   # be out of sync if we use the files rather than the dicts...?
-
-  #   # TODO: <~> Complete me.
-
-  #   full_metadata_dict = dict()
-
-  #   for repo_name in self.updater.repositories:
-
-  #     full_metadata_dict[repo_name] = self.updater.get_metadata(
-  #         repo_name, 'current')
-
-
-  #   if partial_verifier:
-  #     # Return only the Director's targets role metadata.
-  #     return full_metadata_dict[self.director_repo_name]['targets']
-
-  #   else:
-  #     # Return all role metadata.
-  #     return full_metadata_dict
 
 
 
@@ -827,6 +775,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
 
 
+
   def register_new_secondary(self, ecu_serial):
     """
     Currently called by Secondaries, but one would expect that this would happen
@@ -848,8 +797,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
 
 
-
-  def check_ecu_serial(self, ecu_serial):
+  def _check_ecu_serial(self, ecu_serial):
     """
     Make sure the given ecu_serial is correctly formatted and known.
 
@@ -888,7 +836,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
       uptane.Error        if the VIN for the report is not the same as our VIN
     """
     # check arg format and that serial is registered
-    self.check_ecu_serial(ecu_serial)
+    self._check_ecu_serial(ecu_serial)
 
     if vin != self.vin:
       raise uptane.Error('Received an ECU Manifest supposedly hailing from a '
@@ -1068,10 +1016,6 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     os.rename(
         self.temp_full_metadata_archive_fname,
         self.distributable_full_metadata_archive_fname)
-
-
-
-
 
 
 

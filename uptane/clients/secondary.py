@@ -90,18 +90,17 @@ class Secondary(object):
 
     _create_nonce()
 
+    # TODO: Complete this list and provide this in other modules as well.
+
 
   """
 
   def __init__(
     self,
     full_client_dir,
-    pinning_filename,
     director_repo_name, # e.g. 'director'; value must appear in pinning file
     vin,
     ecu_serial,
-    fname_root_from_mainrepo,
-    fname_root_from_directorrepo,
     ecu_key,
     time,
     timeserver_public_key,
@@ -111,9 +110,6 @@ class Secondary(object):
 
     # Check arguments:
     tuf.formats.PATH_SCHEMA.check_match(full_client_dir)
-    tuf.formats.PATH_SCHEMA.check_match(pinning_filename)
-    tuf.formats.PATH_SCHEMA.check_match(fname_root_from_mainrepo)
-    tuf.formats.PATH_SCHEMA.check_match(fname_root_from_directorrepo)
     tuf.formats.PATH_SCHEMA.check_match(director_repo_name)
     uptane.formats.VIN_SCHEMA.check_match(vin)
     uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial)
@@ -139,51 +135,6 @@ class Secondary(object):
           'key was still provided. Full verification secondaries employ the '
           'normal TUF verifications rooted at root metadata files.')
 
-    # TODO: <~> Strip out these variables.
-
-    CLIENT_METADATA_DIR_MAINREPO_CURRENT = os.path.join(self.full_client_dir, 'metadata', 'mainrepo', 'current')
-    CLIENT_METADATA_DIR_MAINREPO_PREVIOUS = os.path.join(self.full_client_dir, 'metadata', 'mainrepo', 'previous')
-    CLIENT_METADATA_DIR_DIRECTOR_CURRENT = os.path.join(self.full_client_dir, 'metadata', 'director', 'current')
-    CLIENT_METADATA_DIR_DIRECTOR_PREVIOUS = os.path.join(self.full_client_dir, 'metadata', 'director', 'previous')
-
-    # Note that the hosts and ports for the repositories are drawn from
-    # pinned.json now. The services (timeserver and the director's
-    # submit-manifest service) are still addressed here, though, currently
-    # by pulling the constants from their modules directly
-    # e.g. timeserver.TIMESERVER_PORT and director.DIRECTOR_SERVER_PORT).
-    # Note that despite the vague name, the latter is not the director
-    # repository, but a service that receives manifests.
-
-
-    # Set up the TUF client directories for the two repositories.
-    if os.path.exists(self.full_client_dir):
-      shutil.rmtree(self.full_client_dir)
-
-    for d in [
-        CLIENT_METADATA_DIR_MAINREPO_CURRENT,
-        CLIENT_METADATA_DIR_MAINREPO_PREVIOUS,
-        CLIENT_METADATA_DIR_DIRECTOR_CURRENT,
-        CLIENT_METADATA_DIR_DIRECTOR_PREVIOUS]:
-      os.makedirs(d)
-
-    # Get the root.json file from the mainrepo (would come with this client).
-    shutil.copyfile(
-        fname_root_from_mainrepo,
-        os.path.join(CLIENT_METADATA_DIR_MAINREPO_CURRENT, 'root.json'))
-
-    # Get the root.json file from the director repo (would come with this client).
-    shutil.copyfile(
-        fname_root_from_directorrepo,
-        os.path.join(CLIENT_METADATA_DIR_DIRECTOR_CURRENT, 'root.json'))
-
-    # Add a pinned.json to this client (softlink it from a saved copy).
-    os.symlink(
-        pinning_filename,
-        os.path.join(self.full_client_dir, 'metadata', 'pinned.json'))
-
-    # Configure tuf with the client's metadata directories (where it stores the
-    # metadata it has collected from each repository, in subdirectories).
-    tuf.conf.repository_directory = self.full_client_dir # This setting should probably be called client_directory instead, post-TAP4.
 
     # Create a TAP-4-compliant updater object. This will read pinning.json
     # and create single-repository updaters within it to handle connections to

@@ -22,6 +22,7 @@ import tuf.repository_tool as rt
 import tuf.keys
 import random # for nonces
 from uptane import GREEN, RED, YELLOW, ENDCOLORS
+import zipfile
 
 log = uptane.logging.getLogger('primary')
 log.addHandler(uptane.file_handler)
@@ -81,6 +82,10 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
       #     'ecuserial1234': 0,
       #     'ecuserial5678': 1}
 
+    assigned_targets:
+      A dict mapping ECU Serial to the target file info that the Director has
+      instructed that ECU to install.
+
     nonces_to_send:
       The list of nonces sent to us from Secondaries and not yet sent to the
       Timeserver.
@@ -99,6 +104,18 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
       A list of all times extracted from all Timeserver attestations that have
       been validated by validate_time_attestation.
       Items are appended to the end.
+
+    distributable_full_metadata_archive_fname:
+      The filename at which the full metadata archive is stored after each
+      update cycle. Path is relative to uptane.WORKING_DIR. This is atomically
+      moved into place (renamed) after it has been fully written, to avoid
+      race conditions.
+
+    distributable_partial_metadata_fname:
+      The filename at which the Director's targets metadata file is stored after
+      each update cycle, once it is safe to use. This is atomically moved into
+      place (renamed) after it has been fully written, to avoid race conditions.
+
 
   Use:
     import uptane.clients.primary as primary
@@ -136,6 +153,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     self,
     full_client_dir,  # '/Users/s/w/uptane/temp_primarymetadata'
     pinning_filename, # '/Users/s/w/uptane/pinned.json'
+    director_repo_name, # e.g. 'director'; value must appear in pinning file
     vin,              # 'vin11111'
     ecu_serial,       # 'ecu00000'
     fname_root_from_mainrepo,
@@ -168,16 +186,32 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     self.all_valid_timeserver_times = [time]
     self.all_valid_timeserver_attestations = []
     self.timeserver_public_key = timeserver_public_key
-    self.nonces_to_send = []
-    self.nonces_sent = []
     self.primary_key = primary_key
     self.my_secondaries = my_secondaries
+    self.director_repo_name = director_repo_name
+
+    self.temp_full_metadata_archive_fname = os.path.join(
+        full_client_dir, 'metadata', 'temp_full_metadata_archive.zip')
+    self.distributable_full_metadata_archive_fname = os.path.join(
+        full_client_dir, 'metadata', 'full_metadata_archive.zip')
+
+    self.temp_partial_metadata_fname = os.path.join(
+        full_client_dir, 'metadata', 'temp_director_targets.json')
+    self.distributable_partial_metadata_fname = os.path.join(
+        full_client_dir, 'metadata', 'director_targets.json')
+
+    # Initializations not directly related to arguments.
+    self.nonces_to_send = []
+    self.nonces_sent = []
+    self.assigned_targets = dict()
 
     # Initialize the dictionary of manifests. This is a dictionary indexed
     # by ECU serial and with value being a list of manifests from that ECU, to
     # support the case in which multiple manifests have come from that ECU.
     self.ecu_manifests = {}
 
+    # TODO: <~> Remove old hack assumption about number and name of
+    # repositories. Use pinned.json, if anything even still has to be done here.
     CLIENT_DIR = full_client_dir
     CLIENT_METADATA_DIR_MAINREPO_CURRENT = os.path.join(CLIENT_DIR, 'metadata', 'mainrepo', 'current')
     CLIENT_METADATA_DIR_MAINREPO_PREVIOUS = os.path.join(CLIENT_DIR, 'metadata', 'mainrepo', 'previous')
@@ -192,10 +226,11 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     # Note that despite the vague name, the latter is not the director
     # repository, but a service that receives manifests.
 
-    # Set up the TUF client directories for the two repositories.
+    # Set up the TUF client directories for each repository.
     if os.path.exists(CLIENT_DIR):
       shutil.rmtree(CLIENT_DIR)
 
+    # TODO: <~> Remove assumption about number of repositories. Use pinned.json?
     for d in [
         CLIENT_METADATA_DIR_MAINREPO_CURRENT,
         CLIENT_METADATA_DIR_MAINREPO_PREVIOUS,
@@ -220,13 +255,17 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
     # Configure tuf with the client's metadata directories (where it stores the
     # metadata it has collected from each repository, in subdirectories).
-    tuf.conf.repository_directory = CLIENT_DIR # This setting should probably be called client_directory instead, post-TAP4.
+    tuf.conf.repository_directory = CLIENT_DIR # TODO for TUF: This setting should probably be called client_directory instead, post-TAP4.
 
     # Create a TUF-TAP-4-compliant updater object. This will read pinning.json
     # and create single-repository updaters within it to handle connections to
     # each repository.
     self.updater = tuf.client.updater.Updater('updater')
 
+    if director_repo_name not in self.updater.pinned_metadata['repositories']:
+      raise uptane.Error('Given name for the Director repository is not a '
+          'known repository, according to the pinned metadata from file ' +
+          pinning_filename)
 
 
 
@@ -249,8 +288,13 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     # delegated control over those filepaths).
     # For the time being, the design here requires that the Director role
     # structure have no delegations in it.
+
+    # TODO: This will have to be changed (along with the functions that depend
+    # on this function's output) once multi-role delegations can yield multiple
+    # targetfile_info objects. (Currently, we only yield more than one at the
+    # multi-repository delegation level.)
     directed_targets = self.updater.targets_of_role(
-        rolename='targets', repo_name='director')
+        rolename='targets', repo_name=self.director_repo_name)
 
     return directed_targets
 
@@ -260,24 +304,334 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
   def get_validated_target_info(self, target_filepath):
     """
-    Returns trustworthy target information for the given target file
-    (specified by its file path). This information has been cleared according
-    to the trust requirements of the pinning file (pinned.json) that this
-    client is equipped with. In general, this means that the Director repository
-    and the Supplier (mainrepo) repository have agreed on the file information
-    (cryptographic hash and length).
-    Raises tuf.UnknownTargetError if a given filepath is not listed by the
-    consensus of Director and Supplier (or through whichever trusted path is
-    specified by this client's pinned.json file.) If info is returned, it
-    will match tuf.formats.TARGETFILE_SCHEMA and will have been validated by
-    all required parties.
+    (Could be called: get Director's version of the fully validated target info)
+
+    <Purpose>
+
+      Returns trustworthy target information for the given target file
+      (specified by its file path), from the Director, validated against the
+      OEM Repository (or whichever repositories are required per the
+      pinned.json file).
+
+      The returned information has been cleared according to the trust
+      requirements of the pinning file (pinned.json) that this client is
+      equipped with. Assuming typical pinned.json configuration for Uptane,
+      this means that there is a multi-repository delegation to [the Director
+      Repository plus the OEM Repository]. The target file info received within
+      this method is that from all repositories in the multi-repository
+      delegation, and each is guaranteed to be identical to the others in all
+      respects (e.g. crytographic hash and length) except for the "custom"
+      metadata field, since the Director includes an additional piece of
+      information in the fileinfo: the ECU Serial to which the target file is
+      assigned.
+
+      This method returns only the Director's version of this target file info,
+      which includes that "custom" field with ECU Serial assignments.
+
+    <Returns>
+      Target file info compliant with tuf.formats.TARGETFILE_INFO_SCHEMA,
+
+
+    <Exceptions>
+
+      tuf.UnknownTargetError
+        if a given filepath is not listed by the consensus of Director and
+        Supplier (or through whichever trusted path is specified by this
+        client's pinned.json file.) If info is returned, it will match
+        tuf.formats.TARGETFILE_SCHEMA and will have been validated by all
+        required parties.
+
+      tuf.NoWorkingMirrorError
+        will be raised by the updater.target() call here if we are unable to
+        validate reliable target info for the target file specified (if the
+        repositories do not agree, or we could not reach them, or so on).
     """
     tuf.formats.RELPATH_SCHEMA.check_match(target_filepath)
-    return self.updater.target(target_filepath)
+
+    validated_target_info = self.updater.target(
+        target_filepath, multi_custom=True)
+
+    # validated_target_info will now look something like this:
+    # {
+    #   'Director': {
+    #     filepath: 'django/django.1.9.3.tgz',
+    #     fileinfo: {hashes: ..., length: ..., custom: {'ecu_serial': 'ECU1010101'} } },
+    #   'OEMRepo': {
+    #     filepath: 'django/django.1.9.3.tgz',
+    #     fileinfo: {hashes: ..., length: ... } } }
+    # }
+
+    # We expect there to be an entry in the dict with key name equal to the
+    # name of the Director repository (specified in pinned.json).
+
+    if self.director_repo_name not in validated_target_info:
+      # TODO: Consider a different exception class. This seems more like an
+      # assert statement, though.... If this happens, something is wrong in
+      # code, or pinned.json is misconfigured (to allow target validation
+      # whereby the Director is not specified in some multi-repository
+      # delegations) or the value of director_repo_name passed to the
+      # initialization of this object was wrong. Those are the edge cases I can
+      # come up with that could cause this.
+
+      # If the Director repo specified as self.director_repo_name is not in
+      # pinned.json at all, we'd have thrown an error during __init__. If the
+      # repos couldn't provide validated target file info, we'd have caught an
+      # error earlier instead.
+
+      raise tuf.Error('Unexpected behavior: did not receive target info from '
+          'Director repository (' + repr(self.director_repo_name) + ') for '
+          'a target (' + repr(target_filepath) + '). Is pinned.json configured '
+          'to allow some targets to validate without Director approval, or is'
+          'the wrong repository specified as the Director repository in the '
+          'initialization of this primary object?')
+
+    # Defensive coding: this should already have been checked.
+    tuf.formats.TARGETFILE_SCHEMA.check_match(
+        validated_target_info[self.director_repo_name])
+
+    return validated_target_info[self.director_repo_name]
 
 
 
 
+
+  def primary_update_cycle(self):
+    """
+    Download fresh metadata and images for this vehicle, as instructed by the
+    Director and validated by the OEM Repository.
+
+    Begin by obtaining trustworthy target file metadata from the repositories,
+    then instruct TUF to download matching files.
+
+    Assign the target files to ECUs and keep that mapping in memory for
+    later distribution.
+
+    Package up the validated metadata into a zip archive for distribution.
+    (Normally, we wouldn't want to include such details as packaging in the
+    reference implementation, but in this case, it is the most convenient way
+    to maintain the existing interfaces with TUF and with demonstration code.)
+
+
+    <Exceptions>
+      uptane.Error
+        - If Director repo fails to include an ECU Serial in the custom metadata
+          for a given target file.
+        - If a non-'.json' metadata file exists in the metadata directory in
+          which validated files are deposited by TUF.
+
+    """
+    log.debug('Refreshing top level metadata from all repositories.')
+    self.refresh_toplevel_metadata_from_repositories()
+
+    # Get the list of targets the director expects us to download and update to.
+    # Note that at this line, this target info is not yet validated with the
+    # supplier repo: that is done a few lines down.
+    directed_targets = self.get_target_list_from_director()
+
+    if not directed_targets:
+      log.info('A correctly signed statement from the Director indicates that '
+          'this vehicle has NO updates to install.')
+    else:
+      log.info('A correctly signed statement from the Director indicates that '
+          'this vehicle has updates to install:' +
+          repr([targ['filepath'] for targ in directed_targets]))
+
+
+    log.debug('Retrieving validated image file metadata from Director and OEM '
+      'Repositories.')
+
+    # This next block employs get_validated_target_info calls to determine what
+    # the right fileinfo (hash, length, etc) for each target file is. This
+    # begins by matching paths/patterns in pinned.json to determine which
+    # repository to connect to. Since pinned.json will generally assigns all
+    # targets to a multi-repository delegation requiring consensus between the
+    # two repositories, one for the Director and one for the OEM's main
+    # repository, this call will retrieve metadata from both repositories and
+    # compare it to each other, and only return fileinfo if it can be retrieved
+    # from both repositories and is identical (the metadata in the "custom"
+    # fileinfo field need not match, and should not, since the Director will
+    # include ECU IDs in this field, and the mainrepo cannot.
+
+    # This will contain a list of tuf.formats.TARGETFILE_SCHEMA objects.
+    verified_targets = []
+    for targetinfo in directed_targets:
+      target_filepath = targetinfo['filepath']
+      try:
+        # targetinfos = self.get_validated_target_info(target_filepath)
+        # for repo in targetinfos:
+        #   tuf.formats.TARGETFILE_SCHEMA.check_match(targetinfos[repo])
+        verified_targets.append(self.get_validated_target_info(target_filepath))
+
+      except tuf.UnknownTargetError:
+        log.warning(RED + 'Director has instructed us to download a target (' +
+            target_filepath + ') that is not validated by the combination of '
+            'Director + OEM repositories. Such an unvalidated file must not and'
+            ' WILL NOT be downloaded, so IT IS BEING SKIPPED. It may be that '
+            'files have changed in the last few moments on the repositories. '
+            'Try again, but if this happens often, you may be connecting to an '
+            'untrustworthy Director, or the Director and OEM Repository may be '
+            'out of sync.' + ENDCOLORS)
+
+    # Have instead decided to have get_validated_target_info() call above return
+    # only one fileinfo, that from the Director (after validating it fully as
+    # configured in pinned.json, i.e. with the OEM Repo or whatever else is
+    # specified there, of course). Thus, we don't need to deal with a dict of
+    # fileinfos here.
+    # # Grab a filepath from each of the dicts of target file infos. (Each dict
+    # # corresponds to one file, and the filepaths in all the infos in that dict
+    # # will be the same - only the 'custom' field can differ within a given
+    # # dict).
+    # verified_target_filepaths = \
+    #     [next(six.itervalues(targ))['filepath'] for targ in verified_targets]
+    verified_target_filepaths = [targ['filepath'] for targ in verified_targets]
+
+
+
+
+    log.info('Metadata for the following Targets has been validated by both '
+        'the Director and the OEM repository. They will now be downloaded:' +
+        repr(verified_target_filepaths))
+
+
+    # For each target for which we have verified metadata:
+    for target in verified_targets:
+
+      # No longer need this.
+      # # We work with the fileinfo from the Director repository, since the
+      # # fileinfos returned are guaranteed to be identical in all regards except
+      # # for the custom field, and the only custom field we care about is from
+      # # the Director. Grab that targetfile info.
+      # # TODO: Clean up this assertion so that an appropriate error is raised.
+      # assert self.director_repo_name in target_dict, \
+      #     'Programming error: expected target info from repository: ' + \
+      #     self.director_repo_name
+      # target = target_dict[self.director_repo_name]
+
+      tuf.formats.TARGETFILE_SCHEMA.check_match(target) # redundant, defensive
+
+      if 'custom' not in target['fileinfo'] or \
+          'ecu_serial' not in target['fileinfo']['custom']:
+        raise uptane.Error('Director repo failed to include an ECU Serial for '
+            'a target. Target metadata was: ' + repr(target))
+
+      # Get the ECU Serial listed in the custom file data.
+      assigned_ecu_serial = target['fileinfo']['custom']['ecu_serial']
+
+      # Make sure it's actually an ECU we know about.
+      if assigned_ecu_serial not in self.my_secondaries:
+        log.warning(RED + 'Received a target from the Director with '
+            'instruction to provide it to a Secondary ECU that is not known '
+            'to this Primary! Disregarding / not downloading target or saving '
+            'fileinfo!' + ENDCOLORS)
+        continue
+
+      # Save the target info as an update assigned to that ECU.
+      self.assigned_targets[assigned_ecu_serial] = target
+
+
+      # Make sure the resulting filename is actually in the client directory.
+      # (In other words, enforce a jail.)
+      # TODO: Do a proper review of this, and determine if it's necessary and
+      # how to do it properly.
+      full_targets_directory = os.path.abspath(os.path.join(
+          self.full_client_dir, 'targets'))
+      filepath = target['filepath']
+      if filepath[0] == '/':
+        filepath = filepath[1:]
+      full_fname = os.path.join(full_targets_directory, filepath)
+      enforce_jail(filepath, full_targets_directory)
+
+      # TODO: Remove this. It's here for convenience during dev & testing.
+      # Considerations on the ground by implementers / users of the reference
+      # implementation will decide what to do with target files after they've
+      # been used.
+      # Delete existing targets.
+      if os.path.exists(full_fname):
+        os.remove(full_fname)
+
+      # Download each target.
+      # Now that we have fileinfo for all targets listed by both the Director and
+      # the Supplier (mainrepo) -- which should include file2.txt in this test --
+      # we can download the target files and only keep each if it matches the
+      # verified fileinfo. This call will try every mirror on every repository
+      # within the appropriate delegation in pinned.json until one of them works.
+      # In this case, both the Director and OEM Repo are hosting the
+      # file, just for my convenience in setup. If you remove the file from the
+      # Director before calling this, it will still work (assuming OEM still
+      # has it). (The second argument here is just where to put the files.)
+      # This should include file2.txt.
+      try:
+        self.updater.download_target(target, full_targets_directory)
+
+      except tuf.NoWorkingMirrorError as e:
+        print('')
+        print(YELLOW + 'In downloading target ' + repr(filepath) + ', am unable '
+            'to find a mirror providing a trustworthy file.\nChecking the mirrors'
+            ' resulted in these errors:')
+        for mirror in e.mirror_errors:
+          print('    ' + type(e.mirror_errors[mirror]).__name__ + ' from ' + mirror)
+        print(ENDCOLORS)
+
+        # If this was our firmware, notify that we're not installing.
+        if filepath.startswith('/') and filepath[1:] == firmware_filename or \
+          not filepath.startswith('/') and filepath == firmware_filename:
+
+          print()
+          print(YELLOW + ' While the Director and OEM provided consistent metadata'
+              ' for new firmware,')
+          print(' mirrors we contacted provided only untrustworthy images. ')
+          print(GREEN + 'We have rejected these. Firmware not updated.\n' + ENDCOLORS)
+
+      else:
+        assert(os.path.exists(full_fname)), 'Programming error: no download ' + \
+            'error, but file still does not exist.'
+        print(GREEN + 'Successfully downloaded a trustworthy ' + repr(filepath) +
+            ' image.' + ENDCOLORS)
+
+
+        # TODO: <~> There is an attack vector here, potentially, for a minor
+        # attack, but it's pretty strange. Finish thinking through it with a
+        # test case later. If the Director specifies two target files with the
+        # same path (which shouldn't really be possible with TUF, but people
+        # will be reimplementing things), the second one to be downloaded can
+        # replace the first file, and then we may distribute that to both
+        # Secondaries (which will still validate the files and catch the
+        # mistake, but... we will still potentially have disrupted one of them
+        # if it receives an update that wasn't right in the first place.... It
+        # may perhaps end up in limp-home mode or something....)
+
+        # In any case, there may also be race conditions. The point is that
+        # we are storing a downloaded file and we are also, separately storing
+        # the verified file info. Perhaps we should check the file against the
+        # fileinfo at the last moment, before we send it on to the Secondary.
+        # That should provide some prophylaxis?
+
+
+
+
+    # Package the consistent and validated metadata we have now into two
+    # locations for Secondaries that will request it.
+    # For Full-Verification Secondaries, we keep an archive of all the valid
+    # metadata, in a separate location that we only move (rename) files to
+    # when we have validated all the files and have a self-consistent set.
+    # For Partial-Verification Secondaries, we save just the Director's targets
+    # metadata file in a separate location.
+
+
+    # Copy the Director's targets file and then rapidly move it into place,
+    # since requests for this file from Secondaries will arrive asynchronously.
+
+    # Put the new metadata into place for distribution.
+    # This entails archiving all metadata for full-metadata-verifying
+    # Secondaries and copying just the Director's targets.json metadata file
+    # for partial-verifying Secondaries. In both cases, the files are swapped
+    # into place atomically after being constructed or copied. Secondaries
+    # may be requesting these files live.
+    self.save_distributable_metadata_files()
+
+
+
+  # No longer part of the interface. See 'get' methods below.
   # def send_image_to_secondary(self):
   #   """
   #   Send target file to the secondary through C intermediate
@@ -286,16 +640,195 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
 
 
-  def get_image_for_ecu(self, ecu_serial):
 
 
-    pass
+  def get_image_fname_for_ecu(self, ecu_serial):
+    """
+    Given an ECU serial, returns:
+      - None if there is no image file to be distributed to that ECU
+      - Else, a filename for the image file to distribute to that ECU
+    """
+
+    if not self.update_exists_for_ecu(ecu_serial):
+      return None
+
+    # Else, there is data to provide to the Secondary.
+
+    # Get the full filename of the image file on disk.
+    filepath = self.assigned_targets[ecu_serial]['filepath']
+    if filepath[0] == '/': # Prune / at start. It's relative to the targets dir.
+      filepath = filepath[1:]
+
+    return os.path.join(self.full_client_dir, 'targets', filepath)
 
 
-  def get_metadata_for_ecu(self, ecu_serial):
 
 
-    pass
+
+  def get_full_metadata_archive_fname(self):
+    """
+    Returns the absolute-path filename of an archive file (currently zip)
+    containing all metadata from repositories necessary for a Full-Verification
+    Secondary ECU to validate target files.
+
+    The file is continuously available to asynchronous requests; it is
+    replaced by atomic rename on POSIX-compliant systems, only once a new
+    file is completely written. If this Primary has never completed an update
+    cycle, it will not exist yet.
+
+    Normally, for a reference implementation, it would be preferable to deal in
+    the data itself, in memory, but for the time being, it is more convenient in
+    maintaining the interfaces with TUF and demonstration code to do this with
+    an archive file.
+    """
+    return self.distributable_full_metadata_archive_fname
+
+
+
+
+
+  def get_partial_metadata_fname(self):
+    """
+    Returns the absolute-path filename of the Director's targets.json metadata
+    file, necessary for performing partial validation of target files (as a
+    weak - "partial validation" - Secondary ECU would.
+
+    The file is continuously available to asynchronous requests; it is
+    replaced by atomic rename on POSIX-compliant systems, only once a new
+    file is completely written. If this Primary has never completed an update
+    cycle, it will not exist yet.
+    """
+    return self.distributable_partial_metadata_fname
+
+
+
+
+
+  # Going to go with a different approach instead.
+  # def get_metadata_for_ecu(self, ecu_serial, partial_verifier=False):
+  #   """
+  #   Returns the filenames for the current validated metadata.
+  #   Unless partial_verifier is True (in which case we provide only the
+  #   Director's targets file), this includes the full contents of the
+  #   Primary's current client metadata for all repositories.
+
+  #   This is similar to the contents of (directory names depend on the
+  #   repository name):
+  #     .../metadata/<oem repo name>/current/
+  #                        root.json, targets.json, timestamp.json, snapshot.json
+  #     .../metadata/<director repo name>/current/
+  #                        root.json, targets.json, timestamp.json, snapshot.json
+
+  #     along with any additional delegated targets role files in the OEM repo.
+
+  #   We are not copying the files themselves, but the in-memory validated
+  #   metadata, so orphaned files (no longer part of the repository) will
+  #   (happily) not be included.
+
+  #   If there has been no update, returns None.
+
+  #   If partial_verifier is True, returns only the Director repository's targets
+  #   metadata file, for use by an ECU that only validates Director signature
+  #   from the Director's targets metadata file.
+
+  #   Only call this after all needed metadata has been downloaded!
+  #   This will use the metadata from the updater's roledb, which is populated
+  #   by self.primary_update_cycle(), or in part by
+  #   self.refresh_toplevel_metadata_from_repositories (which only updates the
+  #   four top-level roles, not any delegated roles), or by calling e.g.
+  #   self.updater.all_targets()
+  #   """
+
+
+  #   if not self.update_exists_for_ecu(ecu_serial):
+  #     return None
+
+  #   # Else, there is data to provide to the Secondary.
+  #   # Pluck the necessary information from self.updater or from the filesystem.
+  #   # There may be race conditions in either circumstance, whether we use
+  #   # on-disk files in the client metadata directory or the dict in
+  #   # self.updater.repositories[self.director_repo_name].
+  #   # For example, if for some reason
+  #   # self.updater.repositories[self.director_repo_name].refresh is called on
+  #   # a single repository (director or main), and an update has occurred on
+  #   # both, we may no longer have matching data for the two repositories.
+  #   # It seems an unlikely edge case, though: why would we do that?
+  #   # On the other hand, buffering on embedded devices could cause the files to
+  #   # be out of sync if we use the files rather than the dicts...?
+
+  #   # TODO: <~> Complete me.
+
+  #   full_metadata_dict = dict()
+
+  #   for repo_name in self.updater.repositories:
+
+  #     full_metadata_dict[repo_name] = self.updater.get_metadata(
+  #         repo_name, 'current')
+
+
+  #   if partial_verifier:
+  #     # Return only the Director's targets role metadata.
+  #     return full_metadata_dict[self.director_repo_name]['targets']
+
+  #   else:
+  #     # Return all role metadata.
+  #     return full_metadata_dict
+
+
+
+
+
+  def update_exists_for_ecu(self, ecu_serial):
+    """
+    Returns True if the Director has sent us instructions for the Secondary ECU
+    specified, else returns False.
+
+    <Exceptions>
+      uptane.UnknownECU
+        if the ecu_serial specified is not one known to this Primary (i.e. is
+        not in self.my_secondaries).
+
+      tuf.FormatError
+        if ecu_serial does not match uptane.formats.ECU_SERIAL_SCHEMA
+
+    <Side-effects>
+      Ensures that ecu_serial has the right format.
+    """
+
+    uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial)
+
+    if ecu_serial not in self.my_secondaries:
+      raise uptane.UnknownECU(
+          'Received a request for an update for a Secondary ECU (' +
+          repr(ecu_serial) + ') of which this Primary is not aware.')
+
+    elif ecu_serial not in self.assigned_targets:
+      log.info(
+          'Received request for an update for a Secondary ECU (' +
+          repr(ecu_serial) + ') for which this Primary has no update '
+          'instructions from the Director.')
+      return False
+
+    else:
+      return True
+
+
+
+
+
+
+  def get_last_timeserver_attestation(self):
+    """
+    Returns the most recent validated timeserver attestation.
+    If the Primary has never received a valid timeserver attestation, this
+    returns None.
+    """
+    if not self.all_valid_timeserver_attestations:
+      return None
+
+    else:
+      return self.all_valid_timeserver_attestations[-1]
+
 
 
 
@@ -364,7 +897,33 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
       return
 
     self.my_secondaries.append(ecu_serial)
+    log.debug('ECU Serial ' + repr(ecu_serial) + ' has been registered as '
+        'a Secondary with this Primary.')
 
+
+
+
+
+
+  def check_ecu_serial(self, ecu_serial):
+    """
+    Make sure the given ecu_serial is correctly formatted and known.
+
+    <Exceptions>
+
+      tuf.FormatError
+        if the given ecu_serial is not of the correct format
+
+      uptane.UnknownECU
+        if the given ecu_serial is not registered with this Primary
+
+    """
+    # Check argument format.
+    uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial)
+
+    if ecu_serial not in self.my_secondaries:
+      raise uptane.UnknownECU("The given ECU is not in this Primary's list of "
+          "known Secondary ECUs. Register the ECU with this Primary first.")
 
 
 
@@ -384,9 +943,8 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
                           Secondaries
       uptane.Error        if the VIN for the report is not the same as our VIN
     """
-    # Check argument format.
-    uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
-        signed_ecu_manifest)
+    # check arg format and that serial is registered
+    self.check_ecu_serial(ecu_serial)
 
     if vin != self.vin:
       raise uptane.Error('Received an ECU Manifest supposedly hailing from a '
@@ -398,10 +956,6 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
           'origin ECU (' + repr(ecu_serial) + ') is not the same as what is '
           'signed in the manifest itself (' +
           repr(signed_ecu_manifest['signed']['ecu_serial']) + ').')
-
-    if ecu_serial not in self.my_secondaries:
-      raise uptane.UnknownECU('Received an ECU Manifest purportedly from an '
-          'ECU with a serial that is not in our list of Secondaries.')
 
     # If we haven't errored out above, then the format is correct, so save
     # the manifest to the Primary's dictionary of manifests.
@@ -423,9 +977,6 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
       log.warning(YELLOW + ' Attacks have been reported by the Secondary! \n '
           'Attacks listed by ECU ' + repr(ecu_serial) + ':\n ' +
           signed_ecu_manifest['signed']['attacks_detected'] + ENDCOLORS)
-
-
-
 
 
 
@@ -490,7 +1041,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
         # TODO: Create a new class for this Exception in this file.
         raise uptane.BadTimeAttestation('Timeserver returned a time attestation'
             ' that did not include one of the expected nonces. This time is '
-            'questionable and will not be registered. If you see this attack '
+            'questionable and will not be registered. If you see this '
             'persistently, it is possible that there is a Man in the Middle '
             'attack underway.')
 
@@ -509,70 +1060,90 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
 
 
+  def save_distributable_metadata_files(self):
+    """
+    # TODO: Docstring.
+    """
+
+    metadata_base_dir = os.path.join(self.full_client_dir, 'metadata')
+
+
+    # Save a gzipped version of all of the metadata.
+    # TODO: <~> Update this for ASN.1 / BER.
+    # Note that some stale metadata may be retained, but should never affect
+    # security. Worth confirming.
+    # What we want here, basically, is:
+    #  <full_client_dir>/metadata/*/current/*.json
+    with zipfile.ZipFile(self.temp_full_metadata_archive_fname, 'w') \
+        as archive:
+      # For each repository directory within the client metadata directory
+      for repo_dir in os.listdir(metadata_base_dir):
+        # Construct path to "current" metadata directory for that repository in
+        # the client metadata directory, relative to Uptane working directory.
+        abs_repo_dir = os.path.join(metadata_base_dir, repo_dir, 'current')
+        if not os.path.isdir(abs_repo_dir):
+          continue
+
+        # Add each role metadata file to the archive.
+        for role_fname in os.listdir(abs_repo_dir):
+          # Reconstruct file path relative to Uptane working directory.
+          role_abs_fname = os.path.join(abs_repo_dir, role_fname)
+
+          # Make sure it's the right type of file. Should be a file, not a
+          # directory. Symlinks are OK. Should end in '.json'.
+          if not os.path.isfile(role_abs_fname) or not role_abs_fname.endswith('.json'):
+            # Consider special error type.
+            raise uptane.Error('Unexpected file type in a metadata '
+              'directory: ' + repr(role_abs_fname) + ' Expecting only .json files.')
+
+          # Write the file to the archive, adjusting the path in the archive so
+          # that when expanded, it resembles repository structure rather than
+          # a client directory structure.
+          archive.write(
+              role_abs_fname,
+              os.path.join(repo_dir, 'metadata', role_fname))
+
+
+    # Copy the Director's targets file to a temp location for partial-verifying
+    # Secondaries.
+    director_targets_file = os.path.join(
+        self.full_client_dir,
+        'metadata',
+        self.director_repo_name,
+        'current',
+        'targets.json')
+    if os.path.exists(self.temp_partial_metadata_fname):
+      os.remove(self.temp_partial_metadata_fname)
+    shutil.copyfile(director_targets_file, self.temp_partial_metadata_fname)
+
+    # Now move both files into place. For each file, this happens atomically
+    # on POSIX-compliant systems and replaces any existing file.
+    os.rename(
+        self.temp_partial_metadata_fname,
+        self.distributable_partial_metadata_fname)
+    os.rename(
+        self.temp_full_metadata_archive_fname,
+        self.distributable_full_metadata_archive_fname)
 
 
 
 
 
 
-  # def generate_timeserver_request(self):
-  #   """
-  #   Returns a request for a time attestation, to be sent to the Timeserver.
-  #   This includes any nonces that Secondaries have sent to us.
-
-  #   If we have no nonces from Secondaries, we abort and return None.
-  #   """
-
-
-  #   if not self.nonces_to_send:
-  #     return None
 
 
 
+def enforce_jail(fname, expected_containing_dir):
+  """
+  DO NOT ASSUME THAT THIS TEMPORARY FUNCTION IS SECURE.
+  """
+  # Make sure it's in the expected directory.
+  #print('provided arguments: ' + repr(fname) + ' and ' + repr(expected_containing_dir))
+  abs_fname = os.path.abspath(os.path.join(expected_containing_dir, fname))
+  if not abs_fname.startswith(os.path.abspath(expected_containing_dir)):
+    raise ValueError('Expected a filename in directory ' +
+        repr(expected_containing_dir) + '. When appending ' + repr(fname) +
+        ' to the given directory, the result was not in the given directory.')
 
-
-
-
-
-  #   server = xmlrpc.client.ServerProxy(
-  #       'http://' + str(timeserver.TIMESERVER_HOST) + ':' +
-  #       str(timeserver.TIMESERVER_PORT))
-
-  #   new_timeserver_attestation = server.get_signed_time([nonce]) # Primary
-
-  #   # Check format.
-  #   uptane.formats.SIGNABLE_TIMESERVER_ATTESTATION_SCHEMA.check_match(
-  #       new_timeserver_attestation)
-
-  #   # Assume there's only one signature.
-  #   assert len(new_timeserver_attestation['signatures']) == 1
-
-
-  #   # TODO: <~> Check timeserver signature using self.timeserver_public_key!
-  #   valid = tuf.keys.verify_signature(
-  #       self.timeserver_public_key,
-  #       new_timeserver_attestation['signatures'][0],
-  #       new_timeserver_attestation['signed'])
-
-  #   if not valid:
-  #     raise tuf.BadSignatureError('Timeserver returned an invalid signature. '
-  #         'Time is questionable. If you see this persistently, it is possible '
-  #         'that the Primary is compromised.')
-
-  #   if not nonce in new_timeserver_attestation['signed']['nonces']:
-  #     # TODO: Determine whether or not to add something to self.attacks_detected
-  #     # to indicate this problem. It's probably not certain enough? But perhaps
-  #     # we should err on the side of reporting.
-  #     # TODO: Create a new class for this Exception in this file.
-  #     raise Exception('Timeserver returned a time attestation that did not '
-  #         'include our nonce. This time is questionable. Report to Primary '
-  #         'may have been missed. If you see this persistently, it is possible '
-  #         'that the Primary or Timeserver is compromised.')
-
-
-  #   # Extract actual time from the timeserver's signed attestation.
-  #   new_timeserver_time = new_timeserver_attestation['signed']['time']
-
-  #   # Rotate last recorded times and save new time.
-  #   self.previous_timeserver_time = self.most_recent_timeserver_time
-  #   self.most_recent_timeserver_time = new_timeserver_time
+  else:
+    return abs_fname

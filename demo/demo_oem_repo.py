@@ -17,10 +17,13 @@ do.kill_server()
 
 import demo
 import uptane
+import uptane.formats
+import tuf.formats
 import os
 import sys, subprocess, time # For hosting and arguments
 import tuf.repository_tool as rt
 import shutil # for rmtree
+from uptane import GREEN, RED, YELLOW, ENDCOLORS
 
 
 repo = None
@@ -99,6 +102,10 @@ def clean_slate(use_new_keys=False):
   repo.targets('role1').load_signing_key(key_role1_pri)
 
 
+  host()
+  write_to_live()
+
+
 
 
 
@@ -122,9 +129,37 @@ def write_to_live():
 
 
 
+def add_target_to_oemrepo(target_fname):
+  """
+  For use in attacks and more specific demonstration.
+
+  Given a filename pointing to a file in the targets directory, adds that file
+  as a target file (calculating its cryptographic hash and length)
+
+  <Arguments>
+    target_fname
+      The full filename of the file to be added as a target to the OEM's
+      targets role metadata. This file should be in the targets subdirectory of
+      the repository directory.
+      This doesn't employ delegations, which would have to be done manually.
+  """
+  global repo
+
+  tuf.formats.RELPATH_SCHEMA.check_match(target_fname)
+
+  repo.targets.add_target(target_fname)
+
+
+
+
+
 def host():
 
   global server_process
+
+  if server_process is not None:
+    print('Sorry, there is already a server process running.')
+    return
 
   # Prepare to host the main repo contents
 

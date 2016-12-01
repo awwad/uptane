@@ -1,11 +1,16 @@
 # uptanedemo
 Early demonstration code for UPTANE. Python 3 is preferred during development.
 
-# Instructions on use of the uptane demo code
+Please note that extensive documentation on design can be found in the following documents:
+- [Uptane Design Overview](https://docs.google.com/document/d/13XXQZ6KXCK_MiZj_Q84PQyMDmBiHnhEfgJgj8drKWRI/edit#heading=h.8swqb4rerhs3)
+- [Uptane Implementation Specification](https://docs.google.com/document/d/1noDyg2t5jB6y3R5-Y3TXXj1tocv_y24NjmOw8rAcaAc/edit?pli=1#)
+
+
+# Instructions on use of the Uptane demonstration code
 ## Installation
 (As usual, virtual environments are recommended for development and testing, but not necessary.)
 
-To download and install the Uptane code, run the following:
+To download and install the Uptane code and its dependencies, run the following:
 ```shell
 git clone https://github.com/uptane/uptane
 cd uptane
@@ -33,8 +38,6 @@ for software, hosting images and the metadata Uptane requires.
 ```python
 import demo.demo_oem_repo as do
 do.clean_slate()
-do.write_to_live()
-do.host()
 ```
 After the demo, to end hosting:
 ```python
@@ -54,19 +57,17 @@ observed by those ECUs.
 ```python
 import demo.demo_director as dd
 dd.clean_slate()
-dd.write_to_live()
-dd.host()
-dd.listen()
 ```
 
 After that, proceed to the following Windows to prepare clients.
-Once those are ready,  you can perform a variety of modifications / attacks.
+Once those are ready, you can perform a variety of modifications / attacks.
 
-For example, to try to have the director list a file not validated by the oem:
+For example, to try to have the director list a new file not validated by the
+oem:
 ```python
 new_target_fname = dd.demo.DIRECTOR_REPO_TARGETS_DIR + '/file5.txt'
 open(new_target_fname, 'w').write('Director-created target')
-dd.repo.targets.add_target(new_target_fname)
+dd.add_target_to_director(new_target_fname, ecu_serial='<ecu serial>')
 dd.write_to_live()
 ```
 
@@ -98,14 +99,17 @@ and it will receive ECU Manifests indicating the software on each Secondary ECU,
 and bundle these into a Vehicle Manifest which it will send to the Director.
 ```python
 import demo.demo_primary as dp
-dp.clean_slate() # also listens, xmlrpc
+dp.clean_slate() # sets up a fresh Primary that has never been updated
+dp.update_cycle()
 ```
-AFTER at least one Secondary client has been set up and submitted
-(next window's section), you can try out normal operation:
-```python
-dp.generate_signed_vehicle_manifest()
-dp.submit_vehicle_manifest_to_director()
-```
+
+The Primary's update_cycle() call:
+- fetches and validates all signed metadata for the vehicle, from the Director and Supplier repositories
+- fetches all images that the Director instructs this vehicle to install, excluding any that do not exactly match corresponding images on the Supplier repository. Any images fetched from the repositories that do not match validated metadata are discarded.
+- queries the Timeserver for a signed attestation about the current time, including in it any nonces sent by Secondaries, so that Secondaries may trust that the time returned is at least as recent as their sent nonce
+- generates a Vehicle Version Manifest with some vehicle metadata and all ECU Version Manifests received from Secondaries, describing currently installed images, most recent times available to each ECU, and reports of any attacks observed by Secondaries (can also be called directly: `dp.generate_signed_vehicle_manifest()`)
+- sends that Vehicle Version Manifest to the Director (can also be called directly: `dp.submit_vehicle_manifest_to_director()`)
+
 
 
 ###*WINDOW 5+: the Secondary client(s):*
@@ -116,10 +120,18 @@ Primary.
 ```python
 import demo.demo_secondary as ds
 ds.clean_slate()
-ds.listen()
-ds.generate_signed_ecu_manifest()   # saved as ds.most_recent_signed_manifest
-ds.submit_ecu_manifest_to_primary() # optionally takes different signed manifest
+ds.update_cycle()
 ```
+
+Note that multiple windows with different Secondary clients can be run simultaneously. In each additional window, run the same calls as above, but with the clean_slate() call modified to include a distinct ECU Serial. e.g. `ds.clean_slate(ecu_serial='33333')`
+
+The Secondary's update_cycle() call:
+- fetches and validates the signed metadata for the vehicle from the Primary
+- fetches any image that the Primary assigns us, validating that against the instructions of the Director in the Director's metadata, and against file info available in the Supplier's metadata. If the image from the Primary does not match validated metadata, it is discarded.
+- fetches the latest Timeserver attestation from the Primary, checking for the nonce this Secondary last sent. If that nonce is included in the signed attestation from the Timeserver and the signature checks out, this time is saved as valid and reasonably recent.
+- generates an ECU Version Manifest that indicates the secure hash of the image currently installed on this Secondary, the latest validated times, and a string describing attacks detected (can also be called directly: `ds.generate_signed_ecu_manifest()`)
+- submits the ECU Version Manifest to the Primary (can also be called directly: `ds.submit_ecu_manifest_to_primary()`)
+
 
 At this point, some attacks can be performed here, such as:
 

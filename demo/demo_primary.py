@@ -33,21 +33,46 @@ import threading # for the demo listener
 import time
 import xmlrpc.client
 import xmlrpc.server
+import six
+
+# Import a CAN communications module for partial-verification Secondaries
+import ctypes
+libuptane_lib = None # will be loaded later if we are communicating via CAN
+# You can ignore this unless you're communicating via CAN
+LIBUPTANE_LIBRARY_FNAME = os.path.join(
+    uptane.WORKING_DIR, '..', 'libuptane', 'libuptane.so')
+
 
 
 # Globals
 _client_directory_name = 'temp_primary' # name for this Primary's directory
 _vin = '111'
 _ecu_serial = '11111'
-firmware_filename = 'infotainment_firmware.txt'
+# firmware_filename = 'infotainment_firmware.txt'
+
+
+# If True, we will employ the C interface for CAN communications.
+use_can_interface = False
+# This will be used for the Partial Verification Secondaries that are
+# communicating via the CAN bus and running in C.
+# Any PV Secondary running in C and communicating across CAN must be listed
+# here, or it will be assumed to be a FV Secondary running in Python across IP.
+partial_verification_secondaries = {
+  # A map of ECU Serial to Secondary ID for Sam's CAN code.
+  # This must map correctly to the config file settings on the Primary in Sam's
+  # CAN code that specify how to contact the c-Secondaries.
+  '30000': 1, # Sam's first PV C Secondary
+  '30001': 2  # Sam's second PV C Secondary
+}
+DATATYPE_IMAGE = 0
+DATATYPE_METADATA = 1
+
+# Dynamic globals
 current_firmware_fileinfo = {}
 primary_ecu = None
 ecu_key = None
-
 director_proxy = None
-
 listener_thread = None
-
 most_recent_signed_vehicle_manifest = None
 
 
@@ -55,7 +80,8 @@ def clean_slate(
     use_new_keys=False,
     client_directory_name=_client_directory_name,
     vin=_vin,
-    ecu_serial=_ecu_serial):
+    ecu_serial=_ecu_serial,
+    c_interface=False):
   """
   """
 
@@ -64,10 +90,12 @@ def clean_slate(
   global _vin
   global _ecu_serial
   global listener_thread
+  global use_can_interface
 
   _client_directory_name = client_directory_name
   _vin = vin
   _ecu_serial = ecu_serial
+  use_can_interface = c_interface
 
 
   # Load the public timeserver key.
@@ -87,6 +115,7 @@ def clean_slate(
   primary_ecu = primary.Primary(
       full_client_dir=os.path.join(uptane.WORKING_DIR, _client_directory_name),
       pinning_filename=demo.DEMO_PINNING_FNAME,
+      director_repo_name=demo.DIRECTOR_REPO_NAME,
       vin=_vin,
       ecu_serial=_ecu_serial,
       fname_root_from_mainrepo=demo.MAIN_REPO_ROOT_FNAME,
@@ -103,10 +132,56 @@ def clean_slate(
   print('\n' + GREEN + 'Primary is now listening for messages from ' +
       'Secondaries.' + ENDCOLORS)
 
-  register_self_with_director()
+
+  try:
+    register_self_with_director()
+  except xmlrpc.client.Fault:
+    print('Registration with Director failed. Now assuming this Primary is '
+        'already registered.')
+
+
+  if use_can_interface:
+    # If we're on a device with a CAN interface that we're going to be using
+    # to communicate with Secondaries, then load Sam's libuptane C module.
+    # (We use this on the Raspberry Pis with a PiCAN card.)
+
+    global libuptane_lib
+
+    libuptane_lib = ctypes.cdll.LoadLibrary('LIBUPTANE_ROOT_DIR/libuptane.so')
+
+    # Start up the CAN communications client for the Primary.
+    libuptane_lib.uptane_init_wrapper()
+
+    status = libuptane_lib.check_status_wrapper()
+    print('After initialization, status of c-uptane PV Secondary client is: ' +
+        repr(status))
+
 
   print(GREEN + '\n Now simulating a Primary that rolled off the assembly line'
       '\n and has never seen an update.' + ENDCOLORS)
+
+  print("Generating this Primary's first Vehicle Version Manifest and sending "
+      "it to the Director.")
+
+  generate_signed_vehicle_manifest()
+  submit_vehicle_manifest_to_director()
+
+
+
+
+
+def close_can_primary():
+  """Only necessary if use_can_interface is True."""
+  assert use_can_interface, 'This is only of use if use_can_interface is True.'
+  assert libuptane_lib is not None, 'Have not yet loaded libuptane_lib. ' + \
+      'Run clean_slate().'
+
+  import libuptane_lib
+
+  libuptane_lib.uptane_finish_wrapper()
+  print('C CAN module for Primary has shut down.')
+
+
 
 
 
@@ -127,12 +202,55 @@ def load_or_generate_key(use_new_keys=False):
 
 
 
+
 def update_cycle():
   """
   """
 
   global primary_ecu
-  global current_firmware_fileinfo
+
+
+  #
+  # FIRST: TIME
+  #
+
+  # First, we'll send the Timeserver a request for a signed time, with the
+  # nonces Secondaries have sent us since last time. (This also saves these
+  # nonces as "sent" and empties the Primary's list of nonces to send.)
+  nonces_to_send = primary_ecu.get_nonces_to_send_and_rotate()
+
+  tserver = xmlrpc.client.ServerProxy(
+      'http://' + str(demo.TIMESERVER_HOST) + ':' + str(demo.TIMESERVER_PORT))
+  #if not server.system.listMethods():
+  #  raise Exception('Unable to connect to server.')
+
+  print('Submitting a request for a signed time to the Timeserver.')
+
+  time_attestation = tserver.get_signed_time(nonces_to_send)
+
+  # This validates the attestation and also saves the time therein (if the
+  # attestation was valid). Secondaries can request this from the Primary at
+  # will.
+  primary_ecu.validate_time_attestation(time_attestation)
+
+  print('Time attestation validated. New time registered.')
+
+
+
+  #
+  # SECOND: VEHICLE VERSION MANIFEST
+  #
+
+  # Generate and send.
+  vehicle_manifest = generate_signed_vehicle_manifest()
+  submit_vehicle_manifest_to_director(vehicle_manifest)
+
+
+
+
+  #
+  # THIRD: DOWNLOAD METADATA AND IMAGES
+  #
 
   # Starting with just the root.json files for the director and mainrepo, and
   # pinned.json, the client will now use TUF to connect to each repository and
@@ -143,176 +261,21 @@ def update_cycle():
   print(' Now updating top-level metadata from the Director and OEM Repositories'
       '\n    (timestamp, snapshot, root, targets)')
   print('\n' + ENDCOLORS)
-  primary_ecu.refresh_toplevel_metadata_from_repositories()
-
-
-  # Get the list of targets the director expects us to download and update to.
-  # Note that at this line, this target info is not yet validated with the
-  # supplier repo: that is done a few lines down.
-  directed_targets = primary_ecu.get_target_list_from_director()
-
-  print()
-  print(YELLOW + ' A correctly signed statement from the Director indicates that')
-
-  if not directed_targets:
-    print(' we have no updates to install.\n' + ENDCOLORS)
-    return
-
-  else:
-    print(' that we should install these files:\n')
-    for targ in directed_targets:
-      print('    ' + targ['filepath'])
-    print(ENDCOLORS)
-
-  # This call determines what the right fileinfo (hash, length, etc) for
-  # target file file2.txt is. This begins by matching paths/patterns in
-  # pinned.json to determine which repository to connect to. Since pinned.json
-  # in this case assigns all targets to a multi-repository delegation requiring
-  # consensus between the two repos "director" and "mainrepo", this call will
-  # retrieve metadata from both repositories and compare it to each other, and
-  # only return fileinfo if it can be retrieved from both repositories and is
-  # identical (the metadata in the "custom" fileinfo field need not match, and
-  # should not, since the Director will include ECU IDs in this field, and the
-  # mainrepo cannot.
-  # In this particular case, fileinfo will match and be stored, since both
-  # repositories list file2.txt as a target, and they both have matching metadata
-  # for it.
-  print(' Retrieving validated image file metadata from Director and OEM '
-      'Repositories.')
-  verified_targets = []
-  for targetinfo in directed_targets:
-    target_filepath = targetinfo['filepath']
-    try:
-      verified_targets.append(
-        primary_ecu.get_validated_target_info(target_filepath))
-    except tuf.UnknownTargetError:
-      print(RED + 'Director has instructed us to download a target (' +
-          target_filepath + ') that is not validated by the combination of '
-          'Director + Supplier repositories. Such an unvalidated file MUST NOT'
-          ' and WILL NOT be downloaded, so IT IS BEING SKIPPED. It may be that'
-          ' files have changed in the last few moments on the repositories. '
-          'Try again, but if this happens often, you may be connecting to an '
-          'untrustworthy Director, or the Director and Supplier may be out of '
-          'sync.' + ENDCOLORS)
-
-
-  verified_target_filepaths = [targ['filepath'] for targ in verified_targets]
-
-  print(GREEN + '\n')
-  print('Metadata for the following Targets has been validated by both '
-      'the Director and the OEM repository.\nThey will now be downloaded:')
-  for vtf in verified_target_filepaths:
-    print('    ' + vtf)
-  print(ENDCOLORS)
-
-  # # Insist that file2.txt is one of the verified targets.
-  # assert True in [targ['filepath'] == '/file2.txt' for targ in \
-  #     verified_targets], 'I do not see /file2.txt in the verified targets.' + \
-  #     ' Test has changed or something is wrong. The targets are: ' + \
-  #     repr(verified_targets)
-
-  # If you execute the following, commented-out command, you'll get a not found
-  # error, because while the mainrepo specifies file1.txt, the Director does not.
-  # Anything the Director doesn't also list can't be validated.
-  # file1_trustworthy_info = secondary.updater.target('file1.txt')
-
-  # # Delete file2.txt if it already exists. We're about to download it.
-  # if os.path.exists(os.path.join(client_directory_name, 'file2.txt')):
-  #   os.remove(os.path.join(client_directory_name, 'file2.txt'))
-
-  # TODO: Review the targets here and assign them to ECUs?
-  # Or do after they're downloaded below?
-
-  #for target in verified_targets
-  # TODO: <~> CURRENTLY WORKING HERE
-
-
-  # For each target for which we have verified metadata:
-  for target in verified_targets:
-
-    # Make sure the resulting filename is actually in the client directory.
-    # (In other words, enforce a jail.)
-    full_targets_directory = os.path.abspath(os.path.join(
-        client_directory_name, 'targets'))
-    filepath = target['filepath']
-    if filepath[0] == '/':
-      filepath = filepath[1:]
-    full_fname = os.path.join(full_targets_directory, filepath)
-    enforce_jail(filepath, full_targets_directory)
-
-    # Delete existing targets.
-    if os.path.exists(full_fname):
-      os.remove(full_fname)
-
-    # Download each target.
-    # Now that we have fileinfo for all targets listed by both the Director and
-    # the Supplier (mainrepo) -- which should include file2.txt in this test --
-    # we can download the target files and only keep each if it matches the
-    # verified fileinfo. This call will try every mirror on every repository
-    # within the appropriate delegation in pinned.json until one of them works.
-    # In this case, both the Director and OEM Repo are hosting the
-    # file, just for my convenience in setup. If you remove the file from the
-    # Director before calling this, it will still work (assuming OEM still
-    # has it). (The second argument here is just where to put the files.)
-    # This should include file2.txt.
-    try:
-      primary_ecu.updater.download_target(target, full_targets_directory)
-
-    except tuf.NoWorkingMirrorError as e:
-      print('')
-      print(YELLOW + 'In downloading target ' + repr(filepath) + ', am unable '
-          'to find a mirror providing a trustworthy file.\nChecking the mirrors'
-          ' resulted in these errors:')
-      for mirror in e.mirror_errors:
-        print('    ' + type(e.mirror_errors[mirror]).__name__ + ' from ' + mirror)
-      print(ENDCOLORS)
-
-      # If this was our firmware, notify that we're not installing.
-      if filepath.startswith('/') and filepath[1:] == firmware_filename or \
-        not filepath.startswith('/') and filepath == firmware_filename:
-
-        print()
-        print(YELLOW + ' While the Director and OEM provided consistent metadata'
-            ' for new firmware,')
-        print(' mirrors we contacted provided only untrustworthy images. ')
-        print(GREEN + 'We have rejected these. Firmware not updated.\n' + ENDCOLORS)
-
-    else:
-      assert(os.path.exists(full_fname)), 'Programming error: no download ' + \
-          'error, but file still does not exist.'
-      print(GREEN + 'Successfully downloaded a trustworthy ' + repr(filepath) +
-          ' image.' + ENDCOLORS)
-
-
-      # TODO: <~> Distribute this file to the appropriate Secondary:
-
-
-      # # If this is our firmware, "install".
-      # if filepath.startswith('/') and filepath[1:] == firmware_filename or \
-      #   not filepath.startswith('/') and filepath == firmware_filename:
-
-      #   print()
-      #   print(GREEN + 'Provided firmware "installed"; metadata for this new '
-      #       'firmware is stored for reporting back to the Director.' + ENDCOLORS)
-      #   print()
-      #   current_firmware_fileinfo = target
 
 
 
+  # This will update the Primary's metadata and download images from the
+  # Director and OEM Repositories, and create a mapping of assignments from
+  # each Secondary ECU to its Director-intended target.
+  primary_ecu.primary_update_cycle()
 
   # All targets have now been downloaded.
 
-  if not len(verified_target_filepaths):
-    print(YELLOW + 'No updates are required: the Director and OEM did'
-        ' not agree on any updates.' + ENDCOLORS)
-    return
 
-  # # If we get here, we've tried all filepaths in the verified targets and not
-  # # found something matching our expected firmware filename.
-  # print('Targets were provided by the Director and OEM and were downloaded, '
-  #     'but this Secondary expects its firmware filename to be ' +
-  #     repr(firmware_filename) + ' and no such file was listed.')
-  return
+  # Generate and submit vehicle manifest.
+  generate_signed_vehicle_manifest()
+  submit_vehicle_manifest_to_director()
+
 
 
 
@@ -483,11 +446,248 @@ def enforce_jail(fname, expected_containing_dir):
 
 
 
+def get_image_for_ecu(ecu_serial):
+  """
+  Behaves differently for partial-verification Secondaries communicating across
+  CAN and full-verification Secondaries communicating via xmlrpc.
 
-# Restrict director requests to a particular path.
+  For PV Secondaries on CAN:
+    Employs C-based libuptane library to send the image binary data to the
+    CAN ID noted in configuration as matching the given ECU Serial.
+
+  For FV Secondaries via XMLRPC:
+    Returns:
+     - filename of the image, relative to the targets directory
+     - binary image data in xmlrpc.Binary format
+  """
+
+  # Ensure serial is correct format & registered
+  primary_ecu.check_ecu_serial(ecu_serial)
+
+  image_fname = primary_ecu.get_image_fname_for_ecu(ecu_serial)
+
+  if image_fname is None:
+    print('ECU Serial ' + repr(ecu_serial) + ' requested an image, but this '
+        'Primary has no update for that ECU.')
+    return None
+
+  # If the given ECU is a Partial Verification Secondary operating across a
+  # CAN bus, we send the image via an external C CAN library, libuptane.
+  if use_can_interface and ecu_serial in SECONDARY_ID_ENUM:
+
+    assert libuptane_lib is not None, 'Have not yet loaded libuptane_lib. ' + \
+        'Run clean_slate().'
+
+    can_id = SECONDARY_ID_ENUM[ecu_serial]
+
+    print('Treating requester as partial-verification Secondary. ECU Serial '
+        '(' + repr(ecu_serial) + ') appears in mapping of ECUs to CAN IDs. '
+        'Corresponding CAN ID is ' + repr(can_id) + '.')
+
+    status = None
+    for i in range(3): # Try checking CAN status a few times.
+      status = libuptane_lib.check_status_wrapper()
+      if status == 1:
+        break
+
+    if status != 1:
+      raise uptane.Error('Unable to connect via CAN interface after several '
+          'tries. Status is ' + repr(status))
+
+    print('Status is ' + repr(status) + '. Sending file.')
+
+    libuptane_lib.send_isotp_file_wrapper(
+        can_id, # enum
+        DATATYPE_IMAGE,
+        image_fname)
+
+    return
+
+
+  else:
+    print('Treating requester as full-verification Secondary without a CAN '
+        'interface because the C CAN interface is off or the ECU Serial (' +
+        repr(ecu_serial) + ') does not appear in the mapping of ECU Serials '
+        'to CAN IDs.')
+
+    assert os.path.exists(image_fname), 'File ' + repr(image_fname) + \
+        ' does not exist....'
+    binary_data = xmlrpc.client.Binary(open(image_fname, 'rb').read())
+
+    print('Distributing image to ECU ' + repr(ecu_serial))
+
+    # Get relative filename (relative to the client targets directory) so that
+    # it can be used as a TUF-style filepath within the targets namespace by
+    # the Secondary.
+    relative_fname = os.path.relpath(
+        image_fname, os.path.join(primary_ecu.full_client_dir, 'targets'))
+    return (relative_fname, binary_data)
+
+
+
+
+
+def get_metadata_for_ecu(ecu_serial, force_partial_verification=False):
+  """
+  Send a zip archive of the most recent consistent set of the Primary's client
+  metadata directory, containing the current, consistent metadata from all
+  repositories used.
+
+  If force_partial_verification is True, then even if the request is coming
+  from a client that is not on a CAN interface and configured to communicate
+  with this Primary via CAN, we will still send partial verification data (just
+  the Director's targets.json file).
+
+  <Exceptions>
+    uptane.Error
+      - if we are set to communicate via CAN interface, but CAN interface is
+        not ready
+
+    ... fill in more
+  """
+  # Ensure serial is correct format & registered
+  primary_ecu.check_ecu_serial(ecu_serial)
+
+  # The filename of the file to return.
+  fname = None
+
+  # TODO: <~> NO: We can't do it this way. The updater's metadata stored in
+  # this fashion is post-validation and without signatures.
+  # I may have to just transfer files. Is there not somewhere where I can grab
+  # the signed metadata from TUF?
+  # See updater.py _update_metadata 2189-2192?
+  # The more I look at this, the more it looks like I just need to copy all
+  # the files....
+  # I'll use zipfile. In Python 2.7.4 and later, it should prevent files from
+  # being created outside of the target extraction directory.
+
+
+
+  # If we're responding with the file via this XMLRPC call, not across a CAN:
+  if not use_can_interface or ecu_serial not in SECONDARY_ID_ENUM:
+
+    if force_partial_verification:
+      print('Treating request as a partial-verification Secondary because '
+          'force_partial_verification is True, even though the client is not '
+          'on a CAN interface.')
+      fname = primary_ecu.get_partial_metadata_fname()
+    else:
+      # If this is a Full Verification Secondary not running on a CAN network,
+      # select the full metadata archive.
+      print('Treating requester as full-verification Secondary without a CAN '
+          'interface because the C CAN interface is off or the ECU Serial (' +
+          repr(ecu_serial) + ') does not appear in the mapping of ECU Serials '
+          'to CAN IDs.')
+      fname = primary_ecu.get_full_metadata_archive_fname()
+
+    if not os.path.exists(fname):
+      raise uptane.Error('This Primary does not have a collection of metadata '
+          'to distribute to Secondaries.')
+
+    print('Distributing metadata to ECU ' + repr(ecu_serial))
+
+    binary_data = xmlrpc.client.Binary(open(fname, 'rb').read())
+
+    print('Distributing image to ECU ' + repr(ecu_serial))
+    return binary_data
+
+
+
+
+  # Otherwise, we're dealing with a Partial Verification Secondary that is
+  # running on a CAN network, so it's time to get messy.
+  assert use_can_interface and ecu_serial in SECONDARY_ID_ENUM, 'Programming error.'
+  assert libuptane_lib is not None, 'Have not yet loaded libuptane_lib. ' + \
+      'Run clean_slate().'
+
+  can_id = SECONDARY_ID_ENUM[ecu_serial]
+
+  print('Treating requester as partial-verification Secondary. ECU Serial '
+      '(' + repr(ecu_serial) + ') appears in mapping of ECUs to CAN IDs. '
+      'Corresponding CAN ID is ' + repr(can_id) + '.')
+
+  fname = primary_ecu.get_partial_metadata_fname()
+
+  print('Trying to send ' + repr(fname) + ' to Secondary with CAN ID ' +
+      repr(can_id) + ' and ECU Serial ' + repr(ecu_serial) + ' via CAN '
+      'interface.')
+
+  status = None
+  for i in range(3): # Try checking CAN status a few times.
+    status = libuptane_lib.check_status_wrapper()
+    if status == 1:
+      break
+
+  if status != 1:
+    raise uptane.Error('Unable to connect via CAN interface after several '
+        'tries: check_status has not returned 1. Status is ' + repr(status))
+
+  print('Status is ' + repr(status) + '. Sending file.')
+  libuptane_lib.send_isotp_file_wrapper(
+      can_id, # enum
+      DATATYPE_IMAGE,
+      fname)
+  status = libuptane_lib.check_status_wrapper()
+  print('After sending file ' + repr(fname) + ', status of c-uptane PV '
+      'Secondary client (' + repr(ecu_serial) + ') is: ' + repr(status))
+
+  return
+
+
+
+
+
+def get_time_attestation_for_ecu(ecu_serial):
+  """
+  """
+  # Ensure serial is correct format & registered
+  primary_ecu.check_ecu_serial(ecu_serial)
+
+  attestation = primary_ecu.get_last_timeserver_attestation()
+
+  if use_can_interface and ecu_serial in SECONDARY_ID_ENUM:
+
+    assert libuptane_lib is not None, 'Have not yet loaded libuptane_lib. ' + \
+        'Run clean_slate() to load library and initialize CAN interface.'
+
+    can_id = SECONDARY_ID_ENUM[ecu_serial]
+
+    print('Treating requester as partial-verification Secondary. ECU Serial '
+        '(' + repr(ecu_serial) + ') appears in mapping of ECUs to CAN IDs. '
+        'Corresponding CAN ID is ' + repr(can_id) + '.')
+
+    #
+    #
+    # TODO: <~> Right now, the partial verification demo client in C that uses
+    # the CAN interface, libuptane, doesn't support sending timeserver
+    # attestations over CAN, so we'll skip this until it does.
+    #
+    #
+
+    print('Skipping send of timeserver attestation via CAN interface because '
+        'the CAN code does not support it.')
+
+
+  else:
+    print('Treating requester as full-verification Secondary without a CAN '
+        'interface because the C CAN interface is off or the ECU Serial (' +
+        repr(ecu_serial) + ') does not appear in the mapping of ECU Serials '
+        'to CAN IDs. Sending time attestation back.')
+
+    print('Distributing metadata to ECU ' + repr(ecu_serial))
+    return attestation
+
+
+
+
+
+# Restrict Primary requests to a particular path.
 # Must specify RPC2 here for the XML-RPC interface to work.
 class RequestHandler(xmlrpc.server.SimpleXMLRPCRequestHandler):
   rpc_paths = ('/RPC2',)
+
+
+
 
 
 def listen():
@@ -501,19 +701,24 @@ def listen():
       requestHandler=RequestHandler, allow_none=True)
   #server.register_introspection_functions()
 
-  # # Register function that can be called via XML-RPC, allowing a Primary to
-  # # submit a vehicle version manifest.
-  # server.register_function(
-  #     self.register_vehicle_manifest, 'submit_vehicle_manifest')
+  # Register functions that can be called via XML-RPC, allowing Secondaries to
+  # submit ECU Version Manifests, requests timeserver attestations, etc.
 
-  # In the longer term, this won't be exposed: it will only be reached via
-  # register_vehicle_manifest. For now, during development, however, this is
-  # exposed.
   server.register_function(
       primary_ecu.register_ecu_manifest, 'submit_ecu_manifest')
 
   server.register_function(
       primary_ecu.register_new_secondary, 'register_new_secondary')
 
+  server.register_function(
+      primary_ecu.get_last_timeserver_attestation,
+      'get_last_timeserver_attestation')
+
+  server.register_function(get_image_for_ecu, 'get_image')
+
+  server.register_function(get_metadata_for_ecu, 'get_metadata')
+
+
   print('Primary will now listen on port ' + str(demo.PRIMARY_SERVER_PORT))
   server.serve_forever()
+

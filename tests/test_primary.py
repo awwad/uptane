@@ -5,6 +5,9 @@
 <Purpose>
   Unit testing for uptane/clients/primary.py
 
+  Currently, running this test requires that the demo Director and demo OEM
+  Repo be running.
+
 """
 
 import uptane
@@ -68,7 +71,9 @@ def setUpModule():
   """
   This is run once for the full module, before all tests.
   It prepares some globals, including a single Primary ECU client instance.
-  It also starts up an OEM Repository Server, Director Server, and Time Server.
+  When finished, it will also start up an OEM Repository Server,
+  Director Server, and Time Server. Currently, it requires them to be already
+  running.
   """
   global primary_ecu_key
   global key_timeserver_pub
@@ -137,6 +142,7 @@ class TestPrimary(unittest.TestCase):
       p = primary.Primary(
           full_client_dir=os.path.join(TEST_DATA_DIR, client_directory_name),
           pinning_filename=TEST_OEM_ROOT_FNAME, # INVALID: WRONG TYPE OF FILE
+          director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vin,
           ecu_serial=primary_ecu_serial,
           fname_root_from_mainrepo=TEST_OEM_ROOT_FNAME,
@@ -145,11 +151,27 @@ class TestPrimary(unittest.TestCase):
           time=clock,
           timeserver_public_key=key_timeserver_pub)
 
+    # Director repo not specified in pinning file
+    with self.assertRaises(uptane.Error):
+      p = primary.Primary(
+          full_client_dir=os.path.join(TEST_DATA_DIR, client_directory_name),
+          pinning_filename=TEST_PINNING_FNAME,
+          director_repo_name='this_is_not_the_name_of_any_repository', # TODO: Should probably be a new exception class, uptane.UnknownRepository or something
+          vin=vin,
+          ecu_serial=primary_ecu_serial,
+          fname_root_from_mainrepo=TEST_OEM_ROOT_FNAME,
+          fname_root_from_directorrepo=TEST_DIRECTOR_ROOT_FNAME,
+          primary_key=primary_ecu_key,
+          time=clock,
+          timeserver_public_key=key_timeserver_pub)
+
+
     # Invalid VIN:
     with self.assertRaises(tuf.FormatError):
       p = primary.Primary(
           full_client_dir=os.path.join(TEST_DATA_DIR, client_directory_name),
           pinning_filename=TEST_PINNING_FNAME,
+          director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=5,  # INVALID
           ecu_serial=primary_ecu_serial,
           fname_root_from_mainrepo=TEST_OEM_ROOT_FNAME,
@@ -163,6 +185,7 @@ class TestPrimary(unittest.TestCase):
       p = primary.Primary(
           full_client_dir=os.path.join(TEST_DATA_DIR, client_directory_name),
           pinning_filename=TEST_PINNING_FNAME,
+          director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vin,
           ecu_serial=500, # INVALID
           fname_root_from_mainrepo=TEST_OEM_ROOT_FNAME,
@@ -176,6 +199,7 @@ class TestPrimary(unittest.TestCase):
       p = primary.Primary(
           full_client_dir=os.path.join(TEST_DATA_DIR, client_directory_name),
           pinning_filename=TEST_PINNING_FNAME,
+          director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vin,
           ecu_serial=primary_ecu_serial,
           fname_root_from_mainrepo=TEST_OEM_ROOT_FNAME,
@@ -189,6 +213,7 @@ class TestPrimary(unittest.TestCase):
       p = primary.Primary(
           full_client_dir=os.path.join(TEST_DATA_DIR, client_directory_name),
           pinning_filename=TEST_PINNING_FNAME,
+          director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vin,
           ecu_serial=primary_ecu_serial,
           fname_root_from_mainrepo=TEST_OEM_ROOT_FNAME,
@@ -202,6 +227,7 @@ class TestPrimary(unittest.TestCase):
       p = primary.Primary(
           full_client_dir=os.path.join(TEST_DATA_DIR, client_directory_name),
           pinning_filename=TEST_PINNING_FNAME,
+          director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vin,
           ecu_serial=primary_ecu_serial,
           fname_root_from_mainrepo=TEST_OEM_ROOT_FNAME,
@@ -218,6 +244,7 @@ class TestPrimary(unittest.TestCase):
     primary_instance = primary.Primary(
         full_client_dir=os.path.join(TEST_DATA_DIR, client_directory_name),
         pinning_filename=TEST_PINNING_FNAME,
+        director_repo_name=demo.DIRECTOR_REPO_NAME,
         vin=vin,
         ecu_serial=primary_ecu_serial,
         fname_root_from_mainrepo=TEST_OEM_ROOT_FNAME,
@@ -299,7 +326,7 @@ class TestPrimary(unittest.TestCase):
 
     # Try changing the Secondary's ECU Serial so that the ECU Serial argument
     # doesn't match the ECU Serial in the manifest.
-    with self.assertRaises(uptane.Spoofing):#UnknownECU):
+    with self.assertRaises(uptane.UnknownECU):
       primary_instance.register_ecu_manifest(
           vin=vin, # unexpected VIN
           ecu_serial='e689681291f', # unexpected ECU Serial

@@ -28,6 +28,7 @@ dd.listen()
 import demo
 import uptane
 import uptane.services.director as director
+import tuf.formats
 
 import threading # for the director services interface
 import xmlrpc.server # for the director services interface
@@ -36,7 +37,7 @@ import shutil # For copying directory trees
 import sys, subprocess, time # For hosting
 import tuf.repository_tool as rt
 import demo.demo_oem_repo as demo_oem_repo # for the main repo directory /:
-
+from uptane import GREEN, RED, YELLOW, ENDCOLORS
 
 # Dynamic global objects
 repo = None
@@ -127,14 +128,6 @@ def clean_slate(
   fobj.write('Contents of additional_file.txt')
   fobj.close()
 
-  repo.targets.add_target(
-      os.path.join(demo.DIRECTOR_REPO_TARGETS_DIR, 'infotainment_firmware.txt'),
-      custom={"ecu-serial-number": "ecu11111"})
-
-  #repo.targets.add_target(
-  #    os.path.join(demo.DIRECTOR_REPO_TARGETS_DIR, 'additional_file.txt'),
-  #    custom={"ecu-serial-number": "ecu11111"})
-
 
 
   # --------------
@@ -154,6 +147,21 @@ def clean_slate(
   test_ecu_serial = 'ecu11111'
   director_service_instance.register_ecu_serial(
       test_ecu_serial, test_ecu_public_key)
+
+
+
+  # Add a first target file, for use by Secondary ECU 22222
+  add_target_to_director(
+      os.path.join(demo.DIRECTOR_REPO_TARGETS_DIR, 'infotainment_firmware.txt'),
+      '22222')
+
+
+
+  write_to_live()
+
+  host()
+
+  listen()
 
 
 
@@ -183,6 +191,42 @@ def write_to_live():
 
 
 
+def add_target_to_director(target_fname, ecu_serial):
+  """
+  For use in attacks and more specific demonstration.
+
+  Given a filename pointing to a file in the targets directory, adds that file
+  as a target file (calculating its cryptographic hash and length)
+
+  <Arguments>
+    target_fname
+      The full filename of the file to be added as a target to the Director's
+      targets role metadata. This file should be in the targets subdirectory of
+      the repository directory.
+
+    ecu_serial
+      The ECU to assign this target to in the targets metadata.
+      Complies with uptane.formats.ECU_SERIAL_SCHEMA
+
+  """
+  global repo
+
+  tuf.formats.RELPATH_SCHEMA.check_match(target_fname)
+  uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial)
+
+  print('Adding target ' + repr(target_fname) + ' for ECU ' + repr(ecu_serial))
+
+  if ecu_serial not in director_service_instance.ecu_public_keys:
+    print(YELLOW + 'Warning: ECU ' + repr(ecu_serial) + ' is not a known ecu. '
+        'Adding target assignment in case the ECU is registered in the future, '
+        'but make sure the serial was correct.' + ENDCOLORS)
+
+  repo.targets.add_target(target_fname, custom={'ecu_serial': ecu_serial})
+
+
+
+
+
 def host():
   """
   Hosts the Director repository (http serving metadata files) as a separate
@@ -190,10 +234,17 @@ def host():
 
   Note that you must also run listen() to start the Director services (run on
   xmlrpc).
+
+  If this module already started a server process to host the repo, nothing will
+  be done.
   """
 
 
   global repo_server_process
+
+  if repo_server_process is not None:
+    print('Sorry, there is already a server process running.')
+    return
 
   # Prepare to host the director repo contents.
 
@@ -248,6 +299,10 @@ def listen():
 
   global director_service_thread
 
+  if director_service_thread is not None:
+    print('Sorry - there is already a Director service thread listening.')
+    return
+
   # Create server
   server = xmlrpc.server.SimpleXMLRPCServer(
       (demo.DIRECTOR_SERVER_HOST, demo.DIRECTOR_SERVER_PORT),
@@ -270,15 +325,11 @@ def listen():
       director_service_instance.register_ecu_serial, 'register_ecu_serial')
 
 
-  if director_service_thread is not None:
-    print('Sorry - there is already a Director service thread listening.')
-    return
-  else:
-    print(' Starting Director Services Thread: will now listen on port ' +
-        str(demo.DIRECTOR_SERVER_PORT))
-    director_service_thread = threading.Thread(target=server.serve_forever)
-    director_service_thread.setDaemon(True)
-    director_service_thread.start()
+  print(' Starting Director Services Thread: will now listen on port ' +
+      str(demo.DIRECTOR_SERVER_PORT))
+  director_service_thread = threading.Thread(target=server.serve_forever)
+  director_service_thread.setDaemon(True)
+  director_service_thread.start()
 
 
 

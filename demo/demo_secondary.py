@@ -31,7 +31,7 @@ import uptane.clients.secondary as secondary
 from uptane import GREEN, RED, YELLOW, ENDCOLORS
 import tuf.keys
 import tuf.repository_tool as rt
-import tuf.client.updater
+#import tuf.client.updater
 
 import os # For paths and makedirs
 import shutil # For copyfile
@@ -40,9 +40,11 @@ import time
 import xmlrpc.client
 import xmlrpc.server
 import copy # for copying manifests before corrupting them during attacks
+import json # for customizing the Secondary's pinnings file.
 
 # Globals
-_client_directory_name = 'temp_secondary' # name for this secondary's directory
+CLIENT_DIRECTORY_PREFIX = 'temp_secondary' # name for this secondary's directory
+client_directory = None
 _vin = '111'
 _ecu_serial = '22222'
 firmware_filename = 'secondary_firmware.txt'
@@ -58,23 +60,24 @@ most_recent_signed_ecu_manifest = None
 
 def clean_slate(
     use_new_keys=False,
-    client_directory_name=_client_directory_name,
+    #client_directory_name=None,
     vin=_vin,
     ecu_serial=_ecu_serial):
   """
   """
 
   global secondary_ecu
-  global _client_directory_name
   global _vin
   global _ecu_serial
   global nonce
   global listener_thread
+  global client_directory
 
-  _client_directory_name = client_directory_name
   _vin = vin
   _ecu_serial = ecu_serial
 
+  client_directory = os.path.join(
+      uptane.WORKING_DIR, CLIENT_DIRECTORY_PREFIX + demo.get_random_string(5))
 
   # Load the public timeserver key.
   key_timeserver_pub = demo.import_public_key('timeserver')
@@ -101,8 +104,9 @@ def clean_slate(
   # This also generates a nonce to use in the next time query, sets the initial
   # firmware fileinfo, etc.
   secondary_ecu = secondary.Secondary(
-      full_client_dir=os.path.join(uptane.WORKING_DIR, _client_directory_name),
-      pinning_filename=demo.DEMO_PINNING_FNAME,
+      full_client_dir=client_directory,
+      pinning_filename=create_secondary_pinning_file(),
+      director_repo_name=demo.DIRECTOR_REPO_NAME,
       vin=_vin,
       ecu_serial=_ecu_serial,
       fname_root_from_mainrepo=demo.MAIN_REPO_ROOT_FNAME,
@@ -115,12 +119,64 @@ def clean_slate(
   # secondary_ecu.update_time_from_timeserver(nonce)
 
 
-  register_self_with_primary()
-  register_self_with_director()
+  try:
+    register_self_with_director()
+  except xmlrpc.client.Fault:
+    print('Registration with Director failed. Now assuming this Secondary is '
+        'already registered.')
+
+  try:
+    register_self_with_primary()
+  except xmlrpc.client.Fault:
+    print('Registration with Primary failed. Now assuming this Secondary is '
+        'already registered.')
 
 
   print('\n' + GREEN + ' Now simulating a Secondary that rolled off the '
       'assembly line\n and has never seen an update.' + ENDCOLORS)
+  print("Generating this Secondary's first ECU Version Manifest and sending "
+      "it to the Primary.")
+
+  generate_signed_ecu_manifest()
+  submit_ecu_manifest_to_primary()
+
+
+
+
+
+def create_secondary_pinning_file():
+  """
+  Load the template pinned.json file and save a filled in version that points
+  to the client's own directory. (The TUF repository that a Secondary points
+  to is local, retrieved from the Primary and placed in the Secondary itself
+  to validate the file internally.)
+
+  Returns the filename of the created file.
+  """
+
+  pinnings = json.load(open(demo.DEMO_SECONDARY_PINNING_FNAME, 'r'))
+
+  fname_to_create = os.path.join(
+      demo.DEMO_DIR, 'pinned.json_' + demo.get_random_string(5))
+
+  for repo_name in pinnings['repositories']:
+
+    assert 1 == len(pinnings['repositories'][repo_name]['mirrors']), 'Config error.'
+
+    mirror = pinnings['repositories'][repo_name]['mirrors'][0]
+
+    mirror = mirror.replace('<full_client_dir>', client_directory)
+
+    pinnings['repositories'][repo_name]['mirrors'][0] = mirror
+
+
+  with open(fname_to_create, 'w') as fobj:
+    json.dump(pinnings, fobj)
+
+  return fname_to_create
+
+
+
 
 
 
@@ -134,6 +190,10 @@ class RequestHandler(xmlrpc.server.SimpleXMLRPCRequestHandler):
 def listen():
   """
   Listens on SECONDARY_SERVER_PORT for xml-rpc calls to functions
+
+  NOTE: At the time of this writing, Secondaries in the demo don't need to
+  listen for asynchronous messages from Primaries, as Secondaries do the
+  pulling and pushing themselves whenever they will.
   """
 
   global listener_thread
@@ -190,7 +250,10 @@ def submit_ecu_manifest_to_primary(signed_ecu_manifest=None):
       secondary_ecu.nonce_next,
       signed_ecu_manifest)
 
-  secondary_ecu.rotate_nonces()
+  # We don't switch to a new nonce for next time yet. That only happens when a
+  # time attestation using that nonce is validated.
+  # "Nonces" may be sent multiple times, but only validated once.
+  secondary_ecu.set_nonce_as_sent()
 
 
 
@@ -215,182 +278,232 @@ def load_or_generate_key(use_new_keys=False):
 
 def update_cycle():
   """
+  Updates our metadata and images from the Primary. Raises the appropriate
+  tuf and uptane errors if metadata or the image don't validate.
   """
 
   global secondary_ecu
   global current_firmware_fileinfo
 
-  # Starting with just the root.json files for the director and mainrepo, and
-  # pinned.json, the client will now use TUF to connect to each repository and
-  # download/update top-level metadata. This call updates metadata from both
-  # repositories.
-  # upd.refresh()
-  print(GREEN + '\n')
-  print(' Now updating top-level metadata from the Director and OEM Repositories'
-      '\n    (timestamp, snapshot, root, targets)')
-  print('\n' + ENDCOLORS)
-  secondary_ecu.refresh_toplevel_metadata_from_repositories()
+  # Connect to the Primary
+  pserver = xmlrpc.client.ServerProxy(
+    'http://' + str(demo.PRIMARY_SERVER_HOST) + ':' +
+    str(demo.PRIMARY_SERVER_PORT))
+
+  # Download the time attestation from the Primary.
+  time_attestation = pserver.get_last_timeserver_attestation()
+
+  # Download the metadata from the Primary in the form of an archive. This
+  # returns the binary data that we need to write to file.
+  metadata_archive = pserver.get_metadata(secondary_ecu.ecu_serial)
+
+  # Validate the time attestation and internalize the time. Continue
+  # regardless.
+  try:
+    secondary_ecu.validate_time_attestation(time_attestation)
+  except uptane.BadTimeAttestation as e:
+    print(RED + "Timeserver attestation from Primary did not check out! This "
+        "Secondary's nonce was not found. Not updating this Secondary's time." +
+        ENDCOLORS)
+  except tuf.BadSignatureError as e:
+    print(RED + "Timeserver attestation from Primary did not check out! Bad "
+        "signature. Not updating this Secondary's time." + ENDCOLORS)
+  #else:
+  #  print(GREEN + 'Official time has been updated successfully.' + ENDCOLORS)
 
 
-  # Get the list of targets the director expects us to download and update to.
-  # Note that at this line, this target info is not yet validated with the
-  # supplier repo: that is done a few lines down.
-  directed_targets = secondary_ecu.get_target_list_from_director()
+  # Not doing this anymore:
+  # # Write the metadata to files to use as a local TUF repository.
+  # # We'll use a directory in the client's directory, "unverified", with
+  # # subdirectories for each repository:
+  # #  client_directory/unverified/<reponame>/metadata
+  # # This function will do some minimal checks to make sure that the Primary
+  # # hasn't sent us a "repository name" that results in us writing files to
+  # # inappropriate places in our filesystem.
+  # # We'll use a directory in the client's directory, "unverified", with
+  # # subdirectories for each repository:
+  # #  client_directory/unverified/<reponame>/metadata
+  # # This has to match the pinned.json this Secondary client uses, which is
+  # # created from template demo/pinned_secondary_template.json by call
+  # # create_secondary_pinning_file above.
+  # write_multirepo_tuf_metadata_to_files(
+  #     metadata=metadata,
+  #     metadata_directory=os.path.join(client_directory, 'unverified'))
 
-  print()
-  print(YELLOW + ' A correctly signed statement from the Director indicates that')
+  # Instead, dump the archive file to disk.
+  archive_fname = os.path.join(
+      secondary_ecu.full_client_dir, 'metadata_archive.zip')
 
-  if not directed_targets:
-    print(' we have no updates to install.\n' + ENDCOLORS)
+  with open(archive_fname, 'wb') as fobj:
+    fobj.write(metadata_archive.data)
+
+  # Now tell the Secondary reference implementation code where the archive file
+  # is and let it expand and validate the metadata.
+  # secondary_ecu.expand_metadata_archive('metadata_archive.zip')
+  secondary_ecu.process_metadata(archive_fname)
+
+
+  # As part of the process_metadata call, the secondary will have saved
+  # validated target info for targets intended for it in
+  # secondary_ecu.validated_targets_for_this_ecu.
+
+  # For now, expect no more than 1 target for an ECU. I suspect that the
+  # reference implementation will eventually support more. For now, I've kept
+  # things flexible in a number of parts of the reference implementation, in
+  # this regard. The demo, though, doesn't have use for that tentative
+  # flexibility.
+
+  if len(secondary_ecu.validated_targets_for_this_ecu) == 0:
+    print(YELLOW + 'No validated targets were found. Either the Director '
+        'did not instruct this ECU to install anything, or the target info '
+        'the Director provided could not be validated.' + ENDCOLORS)
+    generate_signed_ecu_manifest()
+    submit_ecu_manifest_to_primary()
     return
 
-  else:
-    print(' that we should install these files:\n')
-    for targ in directed_targets:
-      print('    ' + targ['filepath'])
-    print(ENDCOLORS)
 
-  # This call determines what the right fileinfo (hash, length, etc) for
-  # target file file2.txt is. This begins by matching paths/patterns in
-  # pinned.json to determine which repository to connect to. Since pinned.json
-  # in this case assigns all targets to a multi-repository delegation requiring
-  # consensus between the two repos "director" and "mainrepo", this call will
-  # retrieve metadata from both repositories and compare it to each other, and
-  # only return fileinfo if it can be retrieved from both repositories and is
-  # identical (the metadata in the "custom" fileinfo field need not match, and
-  # should not, since the Director will include ECU IDs in this field, and the
-  # mainrepo cannot.
-  # In this particular case, fileinfo will match and be stored, since both
-  # repositories list file2.txt as a target, and they both have matching metadata
-  # for it.
-  print(' Retrieving validated image file metadata from Director and OEM '
-      'Repositories.')
-  verified_targets = []
-  for targetinfo in directed_targets:
-    target_filepath = targetinfo['filepath']
-    try:
-      verified_targets.append(
-        secondary_ecu.get_validated_target_info(target_filepath))
-    except tuf.UnknownTargetError:
-      print(RED + 'Director has instructed us to download a target (' +
-          target_filepath + ') that is not validated by the combination of '
-          'Director + Supplier repositories. Such an unvalidated file MUST NOT'
-          ' and WILL NOT be downloaded, so IT IS BEING SKIPPED. It may be that'
-          ' files have changed in the last few moments on the repositories. '
-          'Try again, but if this happens often, you may be connecting to an '
-          'untrustworthy Director, or the Director and Supplier may be out of '
-          'sync.' + ENDCOLORS)
+  elif len(secondary_ecu.validated_targets_for_this_ecu) > 1:
+    assert False, 'Multiple targets for an ECU not supported in this demo.'
 
 
-  verified_target_filepaths = [targ['filepath'] for targ in verified_targets]
+  expected_target_info = secondary_ecu.validated_targets_for_this_ecu[0]
 
-  print(GREEN + '\n')
-  print('Metadata for the following Targets has been validated by both '
-      'the Director and the OEM repository.\nThey will now be downloaded:')
-  for vtf in verified_target_filepaths:
-    print('    ' + vtf)
-  print(ENDCOLORS)
-
-  # # Insist that file2.txt is one of the verified targets.
-  # assert True in [targ['filepath'] == '/file2.txt' for targ in \
-  #     verified_targets], 'I do not see /file2.txt in the verified targets.' + \
-  #     ' Test has changed or something is wrong. The targets are: ' + \
-  #     repr(verified_targets)
-
-  # If you execute the following, commented-out command, you'll get a not found
-  # error, because while the mainrepo specifies file1.txt, the Director does not.
-  # Anything the Director doesn't also list can't be validated.
-  # file1_trustworthy_info = secondary.updater.target('file1.txt')
-
-  # # Delete file2.txt if it already exists. We're about to download it.
-  # if os.path.exists(os.path.join(client_directory_name, 'file2.txt')):
-  #   os.remove(os.path.join(client_directory_name, 'file2.txt'))
+  expected_image_fname = expected_target_info['filepath']
+  if expected_image_fname[0] == '/':
+    expected_image_fname = expected_image_fname[1:]
 
 
-  # For each target for which we have verified metadata:
-  for target in verified_targets:
+  # Since metadata validation worked out, download the image for this ECU from
+  # the Primary.
+  (image_fname, image) = pserver.get_image(secondary_ecu.ecu_serial)
 
-    # Make sure the resulting filename is actually in the client directory.
-    # (In other words, enforce a jail.)
-    full_targets_directory = os.path.abspath(os.path.join(
-        client_directory_name, 'targets'))
-    filepath = target['filepath']
-    if filepath[0] == '/':
-      filepath = filepath[1:]
-    full_fname = os.path.join(full_targets_directory, filepath)
-    enforce_jail(filepath, full_targets_directory)
-
-    # Delete existing targets.
-    if os.path.exists(full_fname):
-      os.remove(full_fname)
-
-    # Download each target.
-    # Now that we have fileinfo for all targets listed by both the Director and
-    # the Supplier (mainrepo) -- which should include file2.txt in this test --
-    # we can download the target files and only keep each if it matches the
-    # verified fileinfo. This call will try every mirror on every repository
-    # within the appropriate delegation in pinned.json until one of them works.
-    # In this case, both the Director and OEM Repo are hosting the
-    # file, just for my convenience in setup. If you remove the file from the
-    # Director before calling this, it will still work (assuming OEM still
-    # has it). (The second argument here is just where to put the files.)
-    # This should include file2.txt.
-    try:
-      secondary_ecu.updater.download_target(target, full_targets_directory)
-
-    except tuf.NoWorkingMirrorError as e:
-      print('')
-      print(YELLOW + 'In downloading target ' + repr(filepath) + ', am unable '
-          'to find a mirror providing a trustworthy file.\nChecking the mirrors'
-          ' resulted in these errors:')
-      for mirror in e.mirror_errors:
-        print('    ' + type(e.mirror_errors[mirror]).__name__ + ' from ' + mirror)
-      print(ENDCOLORS)
-
-      # If this was our firmware, notify that we're not installing.
-      if filepath.startswith('/') and filepath[1:] == firmware_filename or \
-        not filepath.startswith('/') and filepath == firmware_filename:
-
-        print()
-        print(YELLOW + ' While the Director and OEM provided consistent metadata'
-            ' for new firmware,')
-        print(' mirrors we contacted provided only untrustworthy images. ')
-        print(GREEN + 'We have rejected these. Firmware not updated.\n' + ENDCOLORS)
-
-    else:
-      assert(os.path.exists(full_fname)), 'Programming error: no download ' + \
-          'error, but file still does not exist.'
-      print(GREEN + 'Successfully downloaded a trustworthy ' + repr(filepath) +
-          ' image.' + ENDCOLORS)
-
-      # If this is our firmware, "install".
-      if filepath.startswith('/') and filepath[1:] == firmware_filename or \
-        not filepath.startswith('/') and filepath == firmware_filename:
-
-        print()
-        print(GREEN + 'Provided firmware "installed"; metadata for this new '
-            'firmware is stored for reporting back to the Director.' + ENDCOLORS)
-        print()
-        current_firmware_fileinfo = target
-
-
-
-
-  # All targets have now been downloaded.
-
-  if not len(verified_target_filepaths):
-    print(YELLOW + 'No updates are required: the Director and OEM did'
-        ' not agree on any updates.' + ENDCOLORS)
+  if image is None:
+    print(YELLOW + 'Requested image from Primary but received none. Update '
+        'terminated.' + ENDCOLORS)
+    generate_signed_ecu_manifest()
+    submit_ecu_manifest_to_primary()
     return
 
-  # # If we get here, we've tried all filepaths in the verified targets and not
-  # # found something matching our expected firmware filename.
-  # print('Targets were provided by the Director and OEM and were downloaded, '
-  #     'but this Secondary expects its firmware filename to be ' +
-  #     repr(firmware_filename) + ' and no such file was listed.')
-  return
+  elif not secondary_ecu.validated_targets_for_this_ecu:
+    print(RED + 'Requested and received image from Primary, but metadata '
+        'indicates no valid targets from the Director intended for this ECU. '
+        'Update terminated.' + ENDCOLORS)
+    generate_signed_ecu_manifest()
+    submit_ecu_manifest_to_primary()
+    return
+
+  elif image_fname != expected_image_fname:
+    # Make sure that the image name provided by the Primary actually matches
+    # the name of a validated target for this ECU, otherwise we don't need it.
+    print(RED + 'Requested and received image from Primary, but this '
+        'Secondary has not validated any target info that matches the given ' +
+        'filename. Aborting "install".' + ENDCOLORS)
+    generate_signed_ecu_manifest()
+    submit_ecu_manifest_to_primary()
+    return
+
+  # Write the downloaded image binary data to disk.
+  unverified_targets_dir = os.path.join(client_directory, 'unverified_targets')
+  if not os.path.exists(unverified_targets_dir):
+    os.mkdir(unverified_targets_dir)
+  with open(os.path.join(unverified_targets_dir, image_fname), 'wb') as fobj:
+    fobj.write(image.data)
 
 
+  # Validate the image against the metadata.
+  secondary_ecu.validate_image(image_fname)
+
+
+  # Simulate installation. (If the demo eventually uses pictures to move into
+  # place or something, here is where to do it.)
+  # 1. Move the downloaded image from the unverified targets subdirectory to
+  #    the root of the client directory.
+  if os.path.exists(os.path.join(client_directory, image_fname)):
+    os.remove(os.path.join(client_directory, image_fname))
+  os.rename(
+      os.path.join(client_directory, 'unverified_targets', image_fname),
+      os.path.join(client_directory, image_fname))
+
+  # 2. Set the fileinfo in the secondary_ecu object to the target info for the
+  #    new firmware.
+  secondary_ecu.firmware_fileinfo = expected_target_info
+
+
+  print(GREEN + 'Installed firmware received from Primary that was fully '
+      'validated by the Director and OEM Repo.' + ENDCOLORS)
+
+  if expected_target_info['filepath'].endswith('.txt'):
+    print('The contents of the newly-installed firmware with filename ' +
+        repr(expected_target_info['filepath']) + ' are:')
+    print('---------------------------------------------------------')
+    print(open(os.path.join(client_directory, image_fname)).read())
+    print('---------------------------------------------------------')
+
+
+  # Submit info on what is currently installed back to the Primary.
+  generate_signed_ecu_manifest()
+  submit_ecu_manifest_to_primary()
+
+
+
+# No longer doing this:
+# def write_multirepo_tuf_metadata_to_files(metadata, metadata_directory):
+#   """
+#   Writes TUF metadata from several repositories into a directory to serve as
+#   a set of local repositories for metadata.
+
+#   Since the repository name provided may not be trustworthy from the Primary, we make sure it doesn't
+#   contain slashes, say, and try to get us to create files somewhere bizarre.
+
+
+#   <Arguments>
+
+#     metadata
+#       Metadata from any number of repsitories, in a dictionary indexed by
+#       repository name, with each value being a dict of metadata of the form that
+#       is returned by tuf.updater.Updater.get_metadata.
+#       Example:
+#         {
+#           'repo1':
+#             'root': {'_type': 'Root',
+#               'compression_algorithms': ['gz'],
+#               'consistent_snapshot': False,
+#               ...
+#             'targets': {'_type': 'Targets',
+#               'delegations': {'keys': {}, 'roles': []},
+#               'expires': '2017-02-15T02:55:05Z',
+#               ...
+#             ...
+#           'repo2':
+#             'root': {...},
+#             ...
+#         }
+
+#     metadata_directory
+#       The directory into which we will put the metadata, with subdirectories
+#       for each repository:
+#         <metadata_directory>/<repo_name>/metadata
+
+#   """
+#   for repo_name in metadata:
+
+#     safer_repo_metadata_directory = enforce_jail(
+#         os.path.join(metadata_directory, repo_name, 'metadata'),
+#         client_directory)
+
+#     os.makedirs(safer_repo_metadata_directory)
+
+#     # TODO: Mind this. This will have to change if the structure of TUF
+#     # repositories changes (as it probably has in a branch we have to merge
+#     # shortly for TAP 5 that might put delegated roles in a different
+#     # directory).
+#     for role_name in metadata[repo_name]:
+
+#       safer_role_fname = enforce_jail(
+#           os.path.join(safer_repo_metadata_directory, role_name + '.json'),
+#           safer_repo_metadata_directory)
+
+#       json.dump(metadata[repo_name][role_name], open(safer_role_fname, 'w'))
 
 
 

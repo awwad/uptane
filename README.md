@@ -1,5 +1,5 @@
-# uptanedemo
-The Reference Implementation and Demonstration code for [UPTANE](https://uptane.umtri.umich.edu/).
+# Uptane
+Early demonstration code for UPTANE. Python 3 is preferred during development.
 
 Please note that extensive documentation on design can be found in the following documents:
 - [Uptane Design Overview](https://docs.google.com/document/d/13XXQZ6KXCK_MiZj_Q84PQyMDmBiHnhEfgJgj8drKWRI/edit#heading=h.8swqb4rerhs3)
@@ -10,15 +10,21 @@ Python 3 is preferred during development.
 
 # Instructions on use of the Uptane demonstration code
 ## Installation
-(As usual, virtual environments are recommended for development and testing, but not necessary.)
+(As usual, virtual environments are recommended for development and testing, but not necessary. If you use a virtual environment, use python3: virtualenv -p python3 <name>)
+
+Some development libraries are necessary to install some of Uptane's dependencies. If your system uses apt, the command to install them will be:
+```shell
+sudo apt-get install build-essential libssl-dev libffi-dev python-dev python3-dev
+```
+
 
 To download and install the Uptane code and its dependencies, run the following:
 ```shell
 git clone https://github.com/uptane/uptane
 cd uptane
-pip install cffi==1.7.0 pycrypto==2.6.1 pynacl==1.0.1 cryptography
-pip install git+git://github.com/awwad/tuf.git@pinning
-pip install -e .
+pip3 install cffi==1.7.0 pycrypto==2.6.1 pynacl==1.0.1 cryptography
+pip3 install git+git://github.com/awwad/tuf.git@pinning
+pip3 install -e .
 ```
 
 If you're going to be running the ASN.1 encoding scripts once they are ready, you'll also need to `pip install pyasn1`
@@ -26,11 +32,11 @@ If you're going to be running the ASN.1 encoding scripts once they are ready, yo
 
 ## Running
 The code below is intended to be run IN FIVE PANES:
-- WINDOW 1: Python shell for the OEM. This serves HTTP (repository files).
-- WINDOW 2: Python shell for the Director (Repository and Service). This serves metadata and image files via HTTP receives manifests from the Primary via XMLRPC (manifests).
+- WINDOW 1: Python3 shell for the OEM. This serves HTTP (repository files).
+- WINDOW 2: Python3 shell for the Director (Repository and Service). This serves metadata and image files via HTTP receives manifests from the Primary via XMLRPC (manifests).
 - WINDOW 3: Bash shell for the Timeserver. This serves signed times in response to requests from the Primary via XMLRPC.
-- WINDOW 4: Python shell for a Primary client in the vehicle. This fetches images and metadata from the repositories via HTTP, and communicates with the Director service, Timeserver, and any Secondaries via XMLRPC.
-- WINDOW 5: (At least one) Python shell for a Secondary in the vehicle. This communicates directly only with the Primary via XMLRPC, and will perform full metadata verification.
+- WINDOW 4: Python3 shell for a Primary client in the vehicle. This fetches images and metadata from the repositories via HTTP, and communicates with the Director service, Timeserver, and any Secondaries via XMLRPC.
+- WINDOW 5: (At least one) Python3 shell for a Secondary in the vehicle. This communicates directly only with the Primary via XMLRPC, and will perform full metadata verification.
 
 
 ###*WINDOW 1: the OEM Repository*
@@ -88,7 +94,7 @@ time request, so that each ECU can better establish that it is not being tricked
 into accepting a false time.
 ```shell
 #!/bin/bash
-python demo/demo_timeserver.py
+python3 demo/demo_timeserver.py
 ```
 
 ###*WINDOW 4: the Primary client:*

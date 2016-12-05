@@ -520,7 +520,7 @@ def get_image_for_ecu(ecu_serial):
   """
 
   # Ensure serial is correct format & registered
-  primary_ecu.check_ecu_serial(ecu_serial)
+  primary_ecu._check_ecu_serial(ecu_serial)
 
   image_fname = primary_ecu.get_image_fname_for_ecu(ecu_serial)
 
@@ -604,7 +604,7 @@ def get_metadata_for_ecu(ecu_serial, force_partial_verification=False):
     ... fill in more
   """
   # Ensure serial is correct format & registered
-  primary_ecu.check_ecu_serial(ecu_serial)
+  primary_ecu._check_ecu_serial(ecu_serial)
 
   # The filename of the file to return.
   fname = None
@@ -699,7 +699,7 @@ def get_time_attestation_for_ecu(ecu_serial):
   """
   """
   # Ensure serial is correct format & registered
-  primary_ecu.check_ecu_serial(ecu_serial)
+  primary_ecu._check_ecu_serial(ecu_serial)
 
   attestation = primary_ecu.get_last_timeserver_attestation()
 

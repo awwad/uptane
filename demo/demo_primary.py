@@ -776,6 +776,9 @@ def listen():
 
   server.register_function(get_metadata_for_ecu, 'get_metadata')
 
+  server.register_function(
+      primary_ecu.update_exists_for_ecu, 'update_exists_for_ecu')
+
 
   print('Primary will now listen on port ' + str(demo.PRIMARY_SERVER_PORT))
   server.serve_forever()

@@ -423,8 +423,17 @@ def update_cycle():
     expected_image_fname = expected_image_fname[1:]
 
 
-  # Since metadata validation worked out, download the image for this ECU from
-  # the Primary.
+  # Since metadata validation worked out, check if the Primary says we have an
+  # image to download and then download it.
+  # TODO: <~> Cross-check this: we have the metadata now, so we and the Primary
+  # should agree on whether or not there is an image to download.
+  if not pserver.update_exists_for_ecu(secondary_ecu.ecu_serial):
+    print(YELLOW + 'Primary reports that there is no update for this ECU.')
+    (image_fname, image) = pserver.get_image(secondary_ecu.ecu_serial)
+    generate_signed_ecu_manifest()
+    submit_ecu_manifest_to_primary()
+
+  # Download the image for this ECU from the Primary.
   (image_fname, image) = pserver.get_image(secondary_ecu.ecu_serial)
 
   if image is None:

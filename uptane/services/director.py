@@ -31,7 +31,7 @@
 
 import uptane
 import uptane.formats
-import uptane.services.inventorydb as inventorydb scrub_filename
+import uptane.services.inventorydb as inventorydb
 import tuf
 import tuf.formats
 import tuf.repository_tool as rt

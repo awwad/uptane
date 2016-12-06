@@ -41,7 +41,6 @@ INVENTORY_DB_DIR = os.path.join(uptane.WORKING_DIR, 'inventorydb')
 if not os.path.exists(INVENTORY_DB_DIR):
   os.mkdir(INVENTORY_DB_DIR)
 
-
 def get_ecu_public_key(ecu_serial):
 
   # Hardcoded single example for now:
@@ -54,90 +53,6 @@ def get_ecu_public_key(ecu_serial):
     raise NotImplementedError('Ask for key ecu1234.')
 
   return pubkey
-
-
-
-def get_vehicle_manifest(vin):
-
-  uptane.formats.VIN_SCHEMA.check_match(vin) # Check arg format
-  # This is obviously EXTREMELY insecure and the 'vin' passed in should be
-  # scrubbed.
-  # Perform trivial validation. NOT TO BE TRUSTED.
-  scrubbed_vin = scrub_filename(vin, INVENTORY_DB_DIR)
-
-  fname = os.path.join(scrubbed_vin, 'vehicle')
-
-  return json.load(open(fname, 'r'))
-
-
-
-
-
-def save_vehicle_manifest(vin, signed_vehicle_manifest):
-  """
-  Given a manifest of form
-  uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA, save it in an index
-  by vin, and save the individual ecu attestations in an index by ecu serial.
-  """
-  uptane.formats.VIN_SCHEMA.check_match(vin)
-  uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
-      signed_vehicle_manifest)
-
-  print('Saving Vehicle Manifest...')
-
-  scrubbed_vin = scrub_filename(vin, INVENTORY_DB_DIR)
-
-  if not os.path.exists(scrubbed_vin):
-    os.mkdir(scrubbed_vin)
-
-  fname = os.path.join(scrubbed_vin, 'vehicle')
-
-  json.dump(signed_vehicle_manifest, open(fname, 'w'))
-
-  print('Saved Vehicle Manifest.')
-
-
-
-
-
-def get_ecu_manifest(vin, ecu_serial):
-  uptane.formats.VIN_SCHEMA.check_match(vin)
-  uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial) # Check arg format
-  # This is obviously EXTREMELY insecure and the 'vin' passed in should be
-  # scrubbed.
-  # Perform trivial validation. NOT TO BE TRUSTED.
-  scrubbed_vin = scrub_filename(vin, INVENTORY_DB_DIR)
-  scrubbed_ecu_serial = scrub_filename(ecu_serial, INVENTORY_DB_DIR)
-
-  fname = os.path.join(scrubbed_vin, ecu_serial) # Note non-scrubbed.
-
-  return json.load(open(fname, 'r'))
-
-
-
-
-
-def save_ecu_manifest(vin, ecu_serial, signed_ecu_manifest):
-  uptane.formats.VIN_SCHEMA.check_match(vin)
-  uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial)
-  uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
-      signed_ecu_manifest)
-
-  print('Saving ECU Manifest...')
-
-  scrubbed_vin = scrub_filename(vin, INVENTORY_DB_DIR)
-  if not os.path.exists(scrubbed_vin):
-    os.mkdir(scrubbed_vin)
-
-  scrubbed_ecu_serial = scrub_filename(ecu_serial, INVENTORY_DB_DIR)
-
-  fname = os.path.join(scrubbed_vin, ecu_serial) # Note non-scrubbed.
-
-  json.dump(signed_ecu_manifest, open(fname, 'w'))
-
-  print('Saved ECU Manifest for ECU ' + str(ecu_serial) + ' at ' + fname)
-
-
 
 
 def scrub_filename(fname, expected_containing_dir):
@@ -168,5 +83,123 @@ def scrub_filename(fname, expected_containing_dir):
 
   return abs_fname
 
+
+class InventoryDataBase():
+  """
+  Dictionary design:
+
+  {
+    'vehicle manifests':
+             {
+               'vehicle_id_1': [ <full vehicle manifests, in order of receipt> ],
+               ...
+             },
+    'ecu_manifests':
+             {
+               'ecu_serial': [ <full ECU manifests, in order of receipt>],
+               ...
+             }
+    'public_keys':
+             {
+               'vehicle_primaries':
+               {
+                 'vehicle_id_1': { ecu_id: 'primary_ecu_id',
+                                   public_key: <publickey for primary ecu>
+                                 },
+                 ...
+               },
+               'all_ecus':
+               {
+                 'ecu_serial_2': <publickey>,
+                 ...
+               }
+             }
+  }
+  """
+  # Inventory database dictionary
+  inventory_db = {'vehicle_manifests': {},
+                  'ecu_manifests': {},
+                  'public_keys': {
+                                  'vehicle_primaries': {},
+                                  'all_ecus': {}
+                                 }
+                 }
+
+  # Register ECU
+  def register_ecu(self, isPrimary, vin, ecu_serial, public_key):
+    if isPrimary:
+      vehicle_primary_ids = self.inventory_db['public_keys']['vehicle_primaries']
+      if (vehicle_primary_ids and (vin in vehicle_primary_ids)):
+        # rewrite value
+        (self.inventory_db['public_keys']['vehicle_primaries'])[vin] = \
+           {'ecu_id': ecu_serial, 'public_key': public_key}
+      else:
+        temp_dic = {'ecu_id': ecu_serial, 'public_key': public_key}
+        (self.inventory_db['public_keys']['vehicle_primaries'])[vin] = temp_dic
+    else:
+      ecu_serial_ids = self.inventory_db['public_keys']['all_ecus']
+      if (ecu_serial_ids and (ecu_serial in ecu_serial_ids)):
+        (self.inventory_db['public_keys']['all_ecus'])[ecu_serial] = public_key
+      else:
+        (self.inventory_db['public_keys']['all_ecus'])[ecu_serial] = public_key
+
+    is_registered = 1
+
+
+  # Save vehicle manifest
+  def save_vehicle_manifest(self, vin, signed_vehicle_manifest):
+    """
+    Given a manifest of form
+    uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA, save it in an index
+    by vin, and save the individual ecu attestations in an index by ecu serial.
+    """
+    vehicle_primary_ids = self.inventory_db['public_keys']['vehicle_primaries']
+    ecu_serial_ids = self.inventory_db['public_keys']['all_ecus']
+    if len(vehicle_primary_ids) == 0 or len(ecu_serial_ids) == 0:
+      raise uptane.UnknownECU("InventoryDataBase has not registered yet!")
+
+    vehicle_ids = self.inventory_db['vehicle_manifests']
+    if (vehicle_ids and (vin in vehicle_ids)):
+      (self.inventory_db['vehicle_manifests'][vin]).append(signed_vehicle_manifest)
+    else:
+      vm_list = []
+      vm_list.append(signed_vehicle_manifest)
+      vehicle_ids[vin] = vm_list
+      self.inventory_db['vehicle_manifests'] = vehicle_ids
+
+
+  # Get vehicle manifest
+  def get_vehicle_manifest(self, vin):
+    # Check arg format
+    vehicle_ids = self.inventory_db['vehicle_manifests']
+    if (vehicle_ids and (vin in vehicle_ids)):
+      return self.inventory_db['vehicle_manifests'][vin]
+    return False
+
+
+  # Save ECU manifest
+  def save_ecu_manifest(self, ecu_serial, signed_ecu_manifest):
+    uptane.formats.VIN_SCHEMA.check_match(vin)
+    uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial)
+    uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
+        signed_ecu_manifest)
+
+    ecu_serial_ids = self.inventory_db['ecu_manifests']
+    if (ecu_serials_ids and (ecu_serial in ecu_serials_ids)):
+      (self.inventory_db['ecu_manifests'][ecu_serial]).append(signed_vehicle_manifest)
+    else:
+      ecu_list = []
+      ecu_list.append(signed_vehicle_manifest)
+      ecu_serial_ids[ecu_serial] = ecu_list
+      self.inventory_db['ecu_manifests'] = ecu_serial_ids
+
+
+  # Get ECU manifest
+  def get_ecu_manifest(self, ecu_serial):
+    # Check arg format
+    ecu_serial_ids = self.inventory_db['ecu_manifests']
+    if (ecu_serial_ids and (ecu_serial in ecu_serial__ids)):
+      return self.inventory_db['ecu_manifests'][ecu_serial]
+    return False
 
 

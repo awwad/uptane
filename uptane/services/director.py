@@ -31,7 +31,7 @@
 
 import uptane
 import uptane.formats
-from uptane.services.inventorydb import InventoryDataBase, scrub_filename
+import uptane.services.inventorydb as inventorydb scrub_filename
 import tuf
 import tuf.formats
 import tuf.repository_tool as rt
@@ -86,7 +86,6 @@ class Director:
     self.key_dirtarg_pri = key_targets
 
     self.ecu_public_keys = ecu_public_keys
-    self.inventorydb = InventoryDataBase()
 
 
   def register_ecu_serial(self, ecu_serial, ecu_key):
@@ -202,7 +201,7 @@ class Director:
 
     # If the Primary's signature is valid, save the whole vehicle manifest to
     # the inventorydb.
-    self.inventorydb.save_vehicle_manifest(vin, signed_vehicle_manifest)
+    inventorydb.save_vehicle_manifest(vin, signed_vehicle_manifest)
 
     log.info(GREEN + ' Received a Vehicle Manifest from Primary ECU ' +
         repr(primary_ecu_serial) + ', with a valid signature from that ECU.' +
@@ -311,7 +310,7 @@ class Director:
     self.validate_ecu_manifest(ecu_serial, signed_ecu_manifest)
 
     # Otherwise, we save it:
-    self.inventorydb.save_ecu_manifest(ecu_serial, signed_ecu_manifest)
+    inventorydb.save_ecu_manifest(ecu_serial, signed_ecu_manifest)
 
     log.debug('Stored a valid ECU manifest from ECU ' + repr(ecu_serial))
 
@@ -391,7 +390,7 @@ class Director:
     # DIRECTOR_REPO_HOST = 'http://localhost'
     # DIRECTOR_REPO_PORT = 30301
 
-    vin = scrub_filename(vin, WORKING_DIR)
+    vin = inventorydb.scrub_filename(vin, WORKING_DIR)
 
     self.repositories[vin] = rt.create_new_repository('repodirector_' + 'vin')
 

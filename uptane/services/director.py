@@ -38,6 +38,8 @@ import tuf.repository_tool as rt
 #import asn1_conversion as asn1
 from uptane import GREEN, RED, YELLOW, ENDCOLORS
 
+import os
+
 log = uptane.logging.getLogger('director')
 log.addHandler(uptane.file_handler)
 log.addHandler(uptane.console_handler)
@@ -56,6 +58,12 @@ class Director:
       the Director knows about
 
     ecus_by_vin
+      A dictionary mapping VIN - the identifier for a known vehicle for
+      which this is responsible - to a list of ECU Serials associated with that
+      vehicle.
+      This is used to both identify known VINs and associate ECUs with VINs.
+      Identifying known ECUs is generally done instead by checking the
+      ecu_public_keys field, since that is flat.
       A dictionary of lists of ECU Serials, indexed by VIN.
       e.g.:
           {'vin111': ['ecuserial12345', 'ecuserial6789'],
@@ -72,14 +80,6 @@ class Director:
 
     key_dirtarg_pri
       Private signing key for the targets role in the Director's repositories
-
-    ecus_by_vin
-      This is a dictionary mapping VIN - the identifier for a known vehicle for
-      which this is responsible - to a list of ECU Serials associated with that
-      vehicle.
-      This is used to both identify known VINs and associate ECUs with VINs.
-      Identifying known ECUs is generally done instead by checking the
-      ecu_public_keys field, since that is flat.
 
     vehicle_repositories
       A dictionary of tuf.repository_tool.Repository objects, indexed by VIN.
@@ -116,6 +116,7 @@ class Director:
     for key in ecu_public_keys:
       tuf.formats.ANYKEY_SCHEMA.check_match(key)
 
+    self.director_repos_dir = director_repos_dir
 
     self.key_dirroot_pri = key_root
     self.key_dirtime_pri = key_timestamp
@@ -124,14 +125,11 @@ class Director:
 
     self.ecu_public_keys = ecu_public_keys
 
+    self.vehicle_repositories = dict()
     self.ecus_by_vin = dict() # This will be populated with ecus_by_vin shortly.
     for vin in ecus_by_vin:
-      self.add_new_vehicle(vin, ecus_by_vin[vin])
-
-    self.vehicle_repositories = dict()
-    for vin in self.ecus_by_vin:
       uptane.formats.VIN_SCHEMA.check_match(vin)
-      self.vehicle_repositories[vin] = create_director_repo_for_vehicle(vin)
+      self.add_new_vehicle(vin, ecus_by_vin[vin])
 
 
 
@@ -514,7 +512,7 @@ class Director:
 
     # Repository Tool expects to use the current directory.
     # Figure out if this is impactful and needs to be changed.
-    os.chdir(self.director_repos_dir)
+    os.chdir(self.director_repos_dir) # <~> Check to see if this edit was finished.
 
     # Generates absolute path for a subdirectory with name equal to vin,
     # in the current directory, making (relatively) sure that there isn't
@@ -524,10 +522,10 @@ class Director:
     self.vehicle_repositories[vin] = this_repo = rt.create_new_repository(vin)
 
 
-    this_repo.root.add_verification_key(self.key_dirroot_pub)
-    this_repo.timestamp.add_verification_key(self.key_dirtime_pub)
-    this_repo.snapshot.add_verification_key(self.key_dirsnap_pub)
-    this_repo.targets.add_verification_key(self.key_dirtarg_pub)
+    #this_repo.root.add_verification_key(self.key_dirroot_pub)
+    #this_repo.timestamp.add_verification_key(self.key_dirtime_pub)
+    #this_repo.snapshot.add_verification_key(self.key_dirsnap_pub)
+    #this_repo.targets.add_verification_key(self.key_dirtarg_pub)
     this_repo.root.load_signing_key(self.key_dirroot_pri)
     this_repo.timestamp.load_signing_key(self.key_dirtime_pri)
     this_repo.snapshot.load_signing_key(self.key_dirsnap_pri)

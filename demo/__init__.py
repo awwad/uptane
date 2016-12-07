@@ -25,7 +25,7 @@ DIRECTOR_REPO_HOST = 'localhost' #'http://192.168.1.124'
 DIRECTOR_REPO_PORT = 30401
 DIRECTOR_REPO_NAME = 'director'
 DIRECTOR_REPO_DIR = os.path.join(uptane.WORKING_DIR, DIRECTOR_REPO_NAME)
-DIRECTOR_REPO_TARGETS_DIR = os.path.join(DIRECTOR_REPO_DIR, 'targets')
+# DIRECTOR_REPO_TARGETS_DIR = os.path.join(DIRECTOR_REPO_DIR, 'targets')
 DIRECTOR_REPO_ROOT_FNAME = os.path.join(DIRECTOR_REPO_DIR, 'metadata', 'root.json')
 
 DIRECTOR_SERVER_HOST = '0.0.0.0' #'localhost'

@@ -53,6 +53,14 @@ def clean_slate(
   global director_service_instance
 
 
+  director_dir = os.path.join(uptane.WORKING_DIR, 'director')
+
+  # Create a directory for the Director's files.
+  if os.path.exists(director_dir):
+    shutil.rmtree(director_dir)
+  os.makedirs(director_dir)
+
+
   # Create keys and/or load keys into memory.
 
   if use_new_keys:
@@ -73,31 +81,13 @@ def clean_slate(
 
   # Create the demo Director instance.
   director_service_instance = director.Director(
-      director_repos_dir=os.path.join(uptane.WORKING_DIR, 'director'),
+      director_repos_dir=director_dir,
       key_root=key_dirroot_pri,
       key_timestamp=key_dirtime_pri,
       key_snapshot=key_dirsnap_pri,
       key_targets=key_dirtarg_pri,
       ecu_public_keys=dict(),
-      known_vins=KNOWN_VINS)
-
-
-  # Add target to director.
-  # FOR NOW, we symlink the targets files on the director.
-  # In the future, we probably have to have the repository tools add a function
-  # like targets.add_target_from_metadata that doesn't require an actual target
-  # file to exist, but instead provides metadata on some hypothetical file that
-  # the director may not physically hold.
-  if os.path.exists(os.path.join(demo.DIRECTOR_REPO_TARGETS_DIR, 'infotainment_firmware.txt')):
-    os.remove(os.path.join(demo.DIRECTOR_REPO_TARGETS_DIR, 'infotainment_firmware.txt'))
-
-  os.symlink(os.path.join(demo.MAIN_REPO_TARGETS_DIR, 'infotainment_firmware.txt'),
-      os.path.join(demo.DIRECTOR_REPO_TARGETS_DIR, 'infotainment_firmware.txt'))
-
-  fobj = open(os.path.join(demo.DIRECTOR_REPO_TARGETS_DIR, 'additional_file.txt'), 'w')
-  fobj.write('Contents of additional_file.txt')
-  fobj.close()
-
+      ecus_by_vin={vin: [] for vin in KNOWN_VINS}) # dict mapping vin to [] for each vin in KNOWN_VINS
 
 
 
@@ -105,16 +95,18 @@ def clean_slate(
   test_ecu_public_key = demo.import_public_key('secondary')
   test_ecu_serial = 'ecu11111'
   director_service_instance.register_ecu_serial(
-      test_ecu_serial, test_ecu_public_key)
+      test_ecu_serial, test_ecu_public_key, vin='111')
 
 
 
   # Add a first target file, for use by every ECU in every vehicle in that the
-  # Director starts off with. (Currently just one or two)
+  # Director starts off with. (Currently 3)
+  # This copies the file to each repository's targets directory from the
+  # main repository.
   for vin in director_service_instance.ecus_by_vin:
     for ecu in director_service_instance.ecus_by_vin[vin]:
       add_target_to_director(
-          os.path.join(demo.DIRECTOR_REPO_TARGETS_DIR, 'infotainment_firmware.txt'),
+          os.path.join(demo.MAIN_REPO_TARGETS_DIR, 'infotainment_firmware.txt'),
           'infotainment_firmware.txt',
           vin,
           ecu)

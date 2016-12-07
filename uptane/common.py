@@ -4,6 +4,9 @@ the future.
 """
 import tuf
 import tuf.formats
+import json
+import os
+import shutil
 
 SUPPORTED_KEY_TYPES = ['ed25519', 'rsa']
 
@@ -93,3 +96,65 @@ def canonical_key_from_pub_and_pri(key_pub, key_pri):
 
   return key
 
+
+
+
+# Not sure where to put this yet.
+def create_directory_structure_for_client(
+    client_dir,
+    pinning_fname,
+    root_fnames_by_repository):
+  """
+
+  Creates a directory structure for a client, including current and previous
+  metadata directories.
+
+  Arguments:
+    client_dir
+      the client directory, into which metadata and targets will be downloaded
+      from repositories
+
+    pinning_fname
+      the filename of a pinned.json file to copy and use to map targets to
+      repositories
+
+    root_fnames_by_repository
+      a dictionary mapping repository name to the filename of the root.json
+      file for that repository to start with as the root of trust for that
+      repository.
+      e.g.
+        {'supplier': 'distributed_roots/mainrepo_root.json',
+         'director': 'distributed_roots/director_root.json'}
+      Each repository listed in the pinning.json file should have a
+      corresponding entry in this dict.
+
+  """
+
+  # Read the pinning file here and create a list of repositories and
+  # directories.
+
+  # Set up the TUF client directories for each repository.
+  if os.path.exists(client_dir):
+    shutil.rmtree(client_dir)
+  os.makedirs(os.path.join(client_dir, 'metadata'))
+
+  # Add a pinned.json to this client (softlink it from the indicated copy).
+  os.symlink(
+      pinning_fname, #os.path.join(WORKING_DIR, 'pinned.json'),
+      os.path.join(client_dir, 'metadata', 'pinned.json'))
+
+  pinnings = json.load(open(pinning_fname, 'r'))
+
+  for repo_name in pinnings['repositories']:
+    os.makedirs(os.path.join(client_dir, 'metadata', repo_name, 'current'))
+    os.makedirs(os.path.join(client_dir, 'metadata', repo_name, 'previous'))
+
+    # Set the root of trust we have for that repository.
+    shutil.copyfile(
+      root_fnames_by_repository[repo_name],
+      os.path.join(client_dir, 'metadata', repo_name, 'current', 'root.json'))
+
+
+  # Configure tuf with the client's metadata directories (where it stores the
+  # metadata it has collected from each repository, in subdirectories).
+  tuf.conf.repository_directory = client_dir # TODO for TUF: This setting should probably be called client_directory instead, post-TAP4.

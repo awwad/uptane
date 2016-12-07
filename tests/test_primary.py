@@ -13,6 +13,7 @@
 import uptane
 import uptane.formats
 import uptane.clients.primary as primary
+import uptane.common
 import tuf
 import tuf.formats
 import tuf.client.updater # to test one of the fields in the Primary object
@@ -134,106 +135,115 @@ class TestPrimary(unittest.TestCase):
 
     global primary_instance
 
+
+    client_directory_name = 'test_primary_client'
+
+
+    # Set up a client directory first.
+    uptane.common.create_directory_structure_for_client(
+        client_directory_name,
+        TEST_PINNING_FNAME,
+        {'mainrepo': TEST_OEM_ROOT_FNAME,
+        'director': TEST_DIRECTOR_ROOT_FNAME})
+
+
     # Now try creating a Primary with a series of bad arguments, expecting
     # errors.
 
     # Invalid Pinning File
-    with self.assertRaises(tuf.FormatError):
-      p = primary.Primary(
-          full_client_dir=os.path.join(TEST_DATA_DIR, client_directory_name),
-          pinning_filename=TEST_OEM_ROOT_FNAME, # INVALID: WRONG TYPE OF FILE
-          director_repo_name=demo.DIRECTOR_REPO_NAME,
-          vin=vin,
-          ecu_serial=primary_ecu_serial,
-          fname_root_from_mainrepo=TEST_OEM_ROOT_FNAME,
-          fname_root_from_directorrepo=TEST_DIRECTOR_ROOT_FNAME,
-          primary_key=primary_ecu_key,
-          time=clock,
-          timeserver_public_key=key_timeserver_pub)
+    # TODO: Can't test this this way anymore. The pinning file is assumed to
+    # already exist in the appropriate directory now, where the updater object
+    # initialization will find it. This test now needs to edit or replace the
+    # pinning file in its expected location.
+    # with self.assertRaises(tuf.FormatError):
+    #   p = primary.Primary(
+    #       full_client_dir=os.path.join(TEST_DATA_DIR, client_directory_name),
+    #       pinning_filename=TEST_OEM_ROOT_FNAME, # INVALID: WRONG TYPE OF FILE
+    #       director_repo_name=demo.DIRECTOR_REPO_NAME,
+    #       vin=vin,
+    #       ecu_serial=primary_ecu_serial,
+    #       fname_root_from_mainrepo=TEST_OEM_ROOT_FNAME,
+    #       fname_root_from_directorrepo=TEST_DIRECTOR_ROOT_FNAME,
+    #       primary_key=primary_ecu_key,
+    #       time=clock,
+    #       timeserver_public_key=key_timeserver_pub)
 
     # Director repo not specified in pinning file
-    with self.assertRaises(uptane.Error):
-      p = primary.Primary(
-          full_client_dir=os.path.join(TEST_DATA_DIR, client_directory_name),
-          pinning_filename=TEST_PINNING_FNAME,
-          director_repo_name='this_is_not_the_name_of_any_repository', # TODO: Should probably be a new exception class, uptane.UnknownRepository or something
-          vin=vin,
-          ecu_serial=primary_ecu_serial,
-          fname_root_from_mainrepo=TEST_OEM_ROOT_FNAME,
-          fname_root_from_directorrepo=TEST_DIRECTOR_ROOT_FNAME,
-          primary_key=primary_ecu_key,
-          time=clock,
-          timeserver_public_key=key_timeserver_pub)
+    # TODO: Same comment as above: need to edit the pinning file on disk for
+    # this test to work.
+    # with self.assertRaises(uptane.Error):
+    #   p = primary.Primary(
+    #       full_client_dir=os.path.join(TEST_DATA_DIR, client_directory_name),
+    #       pinning_filename=TEST_PINNING_FNAME,
+    #       director_repo_name='this_is_not_the_name_of_any_repository', # TODO: Should probably be a new exception class, uptane.UnknownRepository or something
+    #       vin=vin,
+    #       ecu_serial=primary_ecu_serial,
+    #       fname_root_from_mainrepo=TEST_OEM_ROOT_FNAME,
+    #       fname_root_from_directorrepo=TEST_DIRECTOR_ROOT_FNAME,
+    #       primary_key=primary_ecu_key,
+    #       time=clock,
+    #       timeserver_public_key=key_timeserver_pub)
 
+    # TODO: Add test for my_secondaries argument.
 
     # Invalid VIN:
     with self.assertRaises(tuf.FormatError):
       p = primary.Primary(
           full_client_dir=os.path.join(TEST_DATA_DIR, client_directory_name),
-          pinning_filename=TEST_PINNING_FNAME,
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=5,  # INVALID
           ecu_serial=primary_ecu_serial,
-          fname_root_from_mainrepo=TEST_OEM_ROOT_FNAME,
-          fname_root_from_directorrepo=TEST_DIRECTOR_ROOT_FNAME,
           primary_key=primary_ecu_key,
           time=clock,
-          timeserver_public_key=key_timeserver_pub)
+          timeserver_public_key=key_timeserver_pub,
+          my_secondaries=[])
 
     # Invalid ECU Serial
     with self.assertRaises(tuf.FormatError):
       p = primary.Primary(
           full_client_dir=os.path.join(TEST_DATA_DIR, client_directory_name),
-          pinning_filename=TEST_PINNING_FNAME,
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vin,
           ecu_serial=500, # INVALID
-          fname_root_from_mainrepo=TEST_OEM_ROOT_FNAME,
-          fname_root_from_directorrepo=TEST_DIRECTOR_ROOT_FNAME,
           primary_key=primary_ecu_key,
           time=clock,
-          timeserver_public_key=key_timeserver_pub)
+          timeserver_public_key=key_timeserver_pub,
+          my_secondaries=[])
 
     # Invalid ECU Key
     with self.assertRaises(tuf.FormatError):
       p = primary.Primary(
           full_client_dir=os.path.join(TEST_DATA_DIR, client_directory_name),
-          pinning_filename=TEST_PINNING_FNAME,
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vin,
           ecu_serial=primary_ecu_serial,
-          fname_root_from_mainrepo=TEST_OEM_ROOT_FNAME,
-          fname_root_from_directorrepo=TEST_DIRECTOR_ROOT_FNAME,
           primary_key={''}, # INVALID
           time=clock,
-          timeserver_public_key=key_timeserver_pub)
+          timeserver_public_key=key_timeserver_pub,
+          my_secondaries=[])
 
     # Invalid time:
     with self.assertRaises(tuf.FormatError):
       p = primary.Primary(
           full_client_dir=os.path.join(TEST_DATA_DIR, client_directory_name),
-          pinning_filename=TEST_PINNING_FNAME,
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vin,
           ecu_serial=primary_ecu_serial,
-          fname_root_from_mainrepo=TEST_OEM_ROOT_FNAME,
-          fname_root_from_directorrepo=TEST_DIRECTOR_ROOT_FNAME,
           primary_key=primary_ecu_key,
           time='potato', # INVALID
-          timeserver_public_key=key_timeserver_pub)
+          timeserver_public_key=key_timeserver_pub,
+          my_secondaries=[])
 
     # Invalid timeserver key
     with self.assertRaises(tuf.FormatError):
       p = primary.Primary(
           full_client_dir=os.path.join(TEST_DATA_DIR, client_directory_name),
-          pinning_filename=TEST_PINNING_FNAME,
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vin,
           ecu_serial=primary_ecu_serial,
-          fname_root_from_mainrepo=TEST_OEM_ROOT_FNAME,
-          fname_root_from_directorrepo=TEST_DIRECTOR_ROOT_FNAME,
           primary_key=primary_ecu_key, time=clock,
-          timeserver_public_key=clock) # INVALID
+          timeserver_public_key=clock, # INVALID
+          my_secondaries=[])
 
 
 
@@ -241,14 +251,13 @@ class TestPrimary(unittest.TestCase):
     # Initializes a Primary ECU, making a client directory and copying the root
     # file from the repositories.
     # Save the result for future tests, to save time and code.
+    # TODO: Stick TEST_PINNING_FNAME in the right place.
+    # Stick TEST_OEM_ROOT_FNAME and TEST_DIRECTOR_ROOT_FNAME in the right place.
     primary_instance = primary.Primary(
         full_client_dir=os.path.join(TEST_DATA_DIR, client_directory_name),
-        pinning_filename=TEST_PINNING_FNAME,
         director_repo_name=demo.DIRECTOR_REPO_NAME,
         vin=vin,
         ecu_serial=primary_ecu_serial,
-        fname_root_from_mainrepo=TEST_OEM_ROOT_FNAME,
-        fname_root_from_directorrepo=TEST_DIRECTOR_ROOT_FNAME,
         primary_key=primary_ecu_key,
         time=clock,
         timeserver_public_key=key_timeserver_pub)

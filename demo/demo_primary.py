@@ -527,7 +527,7 @@ def get_image_for_ecu(ecu_serial):
   if image_fname is None:
     print('ECU Serial ' + repr(ecu_serial) + ' requested an image, but this '
         'Primary has no update for that ECU.')
-    return None
+    return None, None
 
   # If the given ECU is a Partial Verification Secondary operating across a
   # CAN bus, we send the image via an external C CAN library, libuptane.

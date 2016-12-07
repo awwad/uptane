@@ -86,10 +86,10 @@ def scrub_filename(fname, expected_containing_dir):
 
 
 # Global dictionaries
-vehicle_manifests = {'vehicle_manifests': {}}
-ecu_manifests = {'ecu_manifests': {}}
-primary_public_keys = {'vehicle_primaries': {}}
-public_keys = {'all_ecus': {}}
+vehicle_manifests = {}
+ecu_manifests = {}
+primary_public_keys = {}
+public_keys = {}
 
 
 
@@ -100,13 +100,13 @@ def save_ecu_manifest(ecu_serial, signed_ecu_manifest):
   uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
        signed_ecu_manifest)
 
-  if ecu_serial not in public_keys['all_ecus']:
+  if ecu_serial not in public_keys:
     raise uptane.UnknownECU("ECU serial has not been registered yet!")
 
-  if ecu_serial not in ecu_manifests['vehicle_manifests']:
-    ecu_manifests['ecu_manifests'][ecu_serial] = [signed_ecu_manifest]
+  if ecu_serial not in ecu_manifests:
+    ecu_manifests[ecu_serial] = [signed_ecu_manifest]
   else:
-    ecu_manifests['ecu_manifests'][ecu_serial].append(signed_ecu_manifest)
+    ecu_manifests[ecu_serial].append(signed_ecu_manifest)
 
 
 
@@ -115,31 +115,33 @@ def get_all_ecu_manifests_from_vehicle(vin):
 
   uptane.formats.VIN_SCHEMA.check_match(vin)
 
-  if vin not in ecu_manifests['ecu_manifests']:
+  if vin not in ecu_manifests:
     raise uptane.Error('The given VIN, ' + repr(vin) + ', is not known.')
   else:
-    return ecu_manifests['ecu_manifests'][vin]
+    return ecu_manifests[vin]
+
 
 
 # Save vehicle manifest
 def save_vehicle_manifest(vin, signed_vehicle_manifest):
 
   uptane.formats.VIN_SCHEMA.check_match(vin)
-  uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
-       signed_ecu_manifest)
+  uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
+       signed_vehicle_manifest)
 
-  if vin not in vehicle_manifests['vehicle_manifests']:
+  if vin not in vehicle_manifests:
     vm_list = []
     vm_list.append(signed_vehicle_manifest)
-    vehicle_manifests['vehicle_manifests'][vin] = vm_list
+    vehicle_manifests[vin] = vm_list
   else:
-    vehicle_manifests['vehicle_manifests'][vin].append(signed_vehicle_manifest)
+    vehicle_manifests[vin].append(signed_vehicle_manifest)
 
   # Save all the contained ECU manifests.
-  # NOTE: not tested
-  all_contained_ecu_manifests = signed_vehicle_manifest['signed']['ecu_manifests']
+  all_contained_ecu_manifests = signed_vehicle_manifest['signed']['ecu_version_manifests']
   for ecu_serial in all_contained_ecu_manifests:
-    save_ecu_manifest(ecu_serial, all_contained_ecu_manifests[ecu_serial])
+    for signed_ecu_manifest in all_contained_ecu_manifests[ecu_serial]:
+      save_ecu_manifest(ecu_serial, signed_ecu_manifest)
+
 
 
 # Get vehicle manifest
@@ -147,10 +149,11 @@ def get_all_vehicle_manifests(vin):
 
   uptane.formats.VIN_SCHEMA.check_match(vin)
 
-  if vin not in vehicle_manifests['vehicle_manifests']:
+  if vin not in vehicle_manifests:
     raise uptane.Error('The given VIN, ' + repr(vin) + ', is not known.')
   else:
-    return vehicle_manifests['vehicle_manifests'][vin]
+    return vehicle_manifests[vin]
+
 
 
 
@@ -160,15 +163,16 @@ def register_ecu(is_primary, vin, ecu_serial, public_key):
   uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial)
 
   if is_primary:
-    if vin in primary_public_keys['vehicle_primaries']:
+    if vin in primary_public_keys:
       # rewrite value
       # TODO later it should return exeption or warning
-      primary_public_keys['vehicle_primaries'][vin] = \
-        {'ecu_id': ecu_serial, 'public_key': public_key}
+      primary_public_keys[vin] = {
+          'ecu_id': ecu_serial,
+          'public_key': public_key}
     else:
       temp_dic = {'ecu_id': ecu_serial, 'public_key': public_key}
-      primary_public_keys['vehicle_primaries'][vin] = temp_dic
+      primary_public_keys[vin] = temp_dic
 
   # public keys
-  public_keys['all_ecus'][ecu_serial] = public_key
+  public_keys[ecu_serial] = public_key
 

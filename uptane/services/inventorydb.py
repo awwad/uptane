@@ -170,3 +170,13 @@ def scrub_filename(fname, expected_containing_dir):
 
 
 
+
+
+def get_random_string(length):
+  """
+  Returns a random alphanumeric string of length length. Not
+  cryptographically reliable.
+  """
+  return ''.join(
+      random.choice(string.ascii_uppercase + string.ascii_lowercase +
+      string.digits) for i in range(length))

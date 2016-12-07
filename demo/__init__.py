@@ -12,6 +12,7 @@ DEMO_DIR = os.path.join(uptane.WORKING_DIR, 'demo')
 DEMO_KEYS_DIR = os.path.join(DEMO_DIR, 'keys')
 DEMO_PINNING_FNAME = os.path.join(DEMO_DIR, 'pinned.json')
 DEMO_SECONDARY_PINNING_FNAME = os.path.join(DEMO_DIR, 'pinned_secondary_template.json')
+DEMO_PRIMARY_PINNING_FNAME = os.path.join(DEMO_DIR, 'pinned_primary_template.json')
 
 MAIN_REPO_HOST = 'localhost' #'http://192.168.1.124'
 MAIN_REPO_PORT = 30301

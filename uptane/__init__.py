@@ -18,6 +18,10 @@ class Error(Exception):
   """
   pass
 
+class UnknownVehicle(Error):
+  """Received a message from an Vehicle with an unrecognized VIN."""
+  pass
+
 class UnknownECU(Error):
   """Received a message from an ECU with an unrecognized ECU Serial."""
   pass

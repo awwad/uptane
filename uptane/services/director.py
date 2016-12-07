@@ -55,6 +55,12 @@ class Director:
       the public key for that ECU (tuf.formats.ANYKEY_SCHEMA) for each ECU that
       the Director knows about
 
+    ecus_by_vin
+      A dictionary of lists of ECU Serials, indexed by VIN.
+      e.g.:
+          {'vin111': ['ecuserial12345', 'ecuserial6789'],
+           'vin112': ['serialabc', 'serialdef']}
+
     key_dirroot_pri
       Private signing key for the root role in the Director's repositories
 
@@ -67,19 +73,49 @@ class Director:
     key_dirtarg_pri
       Private signing key for the targets role in the Director's repositories
 
+    ecus_by_vin
+      This is a dictionary mapping VIN - the identifier for a known vehicle for
+      which this is responsible - to a list of ECU Serials associated with that
+      vehicle.
+      This is used to both identify known VINs and associate ECUs with VINs.
+      Identifying known ECUs is generally done instead by checking the
+      ecu_public_keys field, since that is flat.
+
+    vehicle_repositories
+      A dictionary of tuf.repository_tool.Repository objects, indexed by VIN.
+      Each holds the Director metadata geared toward that particular vehicle.
+
+    director_repos_dir
+      The root directory in which the repositories for each vehicle reside.
+
   """
 
 
   def __init__(self,
+    director_repos_dir,
     #inventorydb = None,
     key_root,
     key_timestamp,
     key_snapshot,
     key_targets,
-    ecu_public_keys=dict()):
+    ecu_public_keys=dict(),
+    ecus_by_vin=dict()):
+
+    # TODO: Consider allowing multiple keys per role for the Director.
+    # github.com/awwad/uptane/issues/20
+
     # if inventorydb is None:
     #   inventorydb = json.load()
     # self.inventorydb = {}
+
+    tuf.formats.RELPATH_SCHEMA.check_match(director_repos_dir)
+
+    for key in [key_root, key_timestamp, key_snapshot, key_targets]:
+      tuf.formats.ANYKEY_SCHEMA.check_match(key)
+
+    for key in ecu_public_keys:
+      tuf.formats.ANYKEY_SCHEMA.check_match(key)
+
 
     self.key_dirroot_pri = key_root
     self.key_dirtime_pri = key_timestamp
@@ -88,11 +124,21 @@ class Director:
 
     self.ecu_public_keys = ecu_public_keys
 
+    self.ecus_by_vin = dict() # This will be populated with ecus_by_vin shortly.
+    for vin in ecus_by_vin:
+      self.add_new_vehicle(vin, ecus_by_vin[vin])
+
+    self.vehicle_repositories = dict()
+    for vin in self.ecus_by_vin:
+      uptane.formats.VIN_SCHEMA.check_match(vin)
+      self.vehicle_repositories[vin] = create_director_repo_for_vehicle(vin)
 
 
 
 
-  def register_ecu_serial(self, ecu_serial, ecu_key):
+
+
+  def register_ecu_serial(self, ecu_serial, ecu_key, vin):
     uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial)
     tuf.formats.ANYKEY_SCHEMA.check_match(ecu_key)
 
@@ -188,15 +234,37 @@ class Director:
                 uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA
 
     Exceptions:
-      If the Primary's signature on the vehicle manifest is invalid or the
-      listed Primary ECU's serial is not recognized, raises one of the following
-      as appropriate:
+
         tuf.BadSignatureError
+          if the Primary's signature on the vehicle manifest is invalid
+          (An individual Secondary's signature on an ECU Version Manifests
+          being invalid does not raise an exception, but instead results in
+          a warning and that ECU Version Manifest alone being discarded.)
+
         uptane.Spoofing
+          if the primary_ecu_serial argument does not match the ECU Serial
+          for the Primary in the signed Vehicle Version Manifest.
+          (As above, an ECU Version Manifest that is wrong in this respect is
+          individually discarded with only a warning.)
+
         uptane.UnknownECU
+          if the ECU Serial provided for the Primary is not known to this
+          Director.
+          (As above, an unknown Secondary ECU in an ECU Version Manifest is
+          individually discarded with only a warning.)
+
+        uptane.UnknownVehicle
+          if the VIN provided is not known to this Director
+
     """
+    uptane.formats.VIN_SCHEMA.check_match(vin)
+    uptane.formats.ECU_SERIAL_SCHEMA.check_match(primary_ecu_serial)
     uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
         signed_vehicle_manifest)
+
+    if vin not in self.ecus_by_vin:
+      raise uptane.UnknownVehicle('Recieved a vehicle manifest purportedly '
+          'from a vehicle with a VIN that is not known to this Director.')
 
     # Process Primary's signature on full manifest here.
     # If it doesn't match expectations, error out here.
@@ -384,31 +452,115 @@ class Director:
 
 
 
+
+
+  def add_new_vehicle(self, vin, ecu_serials=[]):
+    """
+    For adding vehicles whose VINs were not provided when this object was
+    initialized.
+
+    Note that individual ECUs should also be registered, providing their
+    public keys.
+
+    """
+    # TODO: The VIN string is manipulated for create_director_repo_for_vehicle,
+    # but the string is not manipulated for this addition to ecus_by_vin.
+    # Treatment has to be made consistent. (In particular, things like slashes
+    # are pruned - or an error is raised when they are detected.)
+    uptane.formats.VIN_SCHEMA.check_match(vin)
+
+    for serial in ecu_serials:
+      uptane.formats.ECU_SERIAL_SCHEMA.check_match(serial)
+
+    self.ecus_by_vin[vin] = ecu_serials
+
+    self.create_director_repo_for_vehicle(vin)
+
+
+
+
+
   def create_director_repo_for_vehicle(self, vin):
     """
+    Creates a separate repository object for a given vehicle identifier.
+    Each uses the same keys.
+    Ideally, each would use the same root.json file, but that will have to
+    wait until TUF Augmentation Proposal 5 (when the hash of root.json ceases
+    to be included in snapshot.json).
+
+    The name of each repository is the VIN string.
+
+    If the repository already exists, it is overwritten.
+
+    Usage:
+
+      d = uptane.services.director.Director(...)
+      d.create_director_repo_for_vehicle(vin)
+      d.add_target_for_ecu(vin, ecu, target_filepath)
+
+    These repository objects can be manipulated as described in TUF
+    documentation; for example, to produce metadata files afterwards for that
+    vehicle:
+      d.vehicle_repositories[vin].write()
+
+
+    # TODO: This may be outside of the scope of the reference implementation,
+    # and best to put in the demo code. It's not clear what should live in the
+    # reference implementation itself for this....
+
     """
-    WORKING_DIR = os.getcwd()
-    MAIN_REPO_DIR = os.path.join(WORKING_DIR, 'repomain')
-    DIRECTOR_REPO_DIR = os.path.join(WORKING_DIR, 'repodirector')
-    TARGETS_DIR = os.path.join(MAIN_REPO_DIR, 'targets')
-    # DIRECTOR_REPO_HOST = 'http://localhost'
-    # DIRECTOR_REPO_PORT = 30301
 
-    vin = inventorydb.scrub_filename(vin, WORKING_DIR)
+    uptane.formats.VIN_SCHEMA.check_match(vin)
 
-    self.repositories[vin] = rt.create_new_repository('repodirector_' + 'vin')
+    # Repository Tool expects to use the current directory.
+    # Figure out if this is impactful and needs to be changed.
+    os.chdir(self.director_repos_dir)
 
-    repodirector.root.add_verification_key(self.key_dirroot_pub)
-    repodirector.timestamp.add_verification_key(self.key_dirtime_pub)
-    repodirector.snapshot.add_verification_key(self.key_dirsnap_pub)
-    repodirector.targets.add_verification_key(self.key_dirtarg_pub)
-    repodirector.root.load_signing_key(self.key_dirroot_pri)
-    repodirector.timestamp.load_signing_key(self.key_dirtime_pri)
-    repodirector.snapshot.load_signing_key(self.key_dirsnap_pri)
-    repodirector.targets.load_signing_key(self.key_dirtarg_pri)
+    # Generates absolute path for a subdirectory with name equal to vin,
+    # in the current directory, making (relatively) sure that there isn't
+    # anything suspect like "../" in the VIN.
+    vin = inventorydb.scrub_filename(vin, self.director_repos_dir)
 
-    # TODO: <~> Continue when course is decided. This may be outside of the
-    # scope of the reference implementation, and best to put in the demo code.
+    self.vehicle_repositories[vin] = this_repo = rt.create_new_repository(vin)
+
+
+    this_repo.root.add_verification_key(self.key_dirroot_pub)
+    this_repo.timestamp.add_verification_key(self.key_dirtime_pub)
+    this_repo.snapshot.add_verification_key(self.key_dirsnap_pub)
+    this_repo.targets.add_verification_key(self.key_dirtarg_pub)
+    this_repo.root.load_signing_key(self.key_dirroot_pri)
+    this_repo.timestamp.load_signing_key(self.key_dirtime_pri)
+    this_repo.snapshot.load_signing_key(self.key_dirsnap_pri)
+    this_repo.targets.load_signing_key(self.key_dirtarg_pri)
+
+
+
+
+
+  def add_target_for_ecu(self, vin, ecu_serial, target_filepath):
+    """
+    Add a target to the repository for a vehicle, marked as being for a
+    specific ECU.
+
+    The target file at the provided path will be analyzed, and its hashes
+    and file length will be saved in target metadata in memory, which will then
+    be signed with the appropriate Director keys and written to disk when the
+    "write" method is called on the vehicle repository.
+    """
+    uptane.formats.VIN_SCHEMA.check_match(vin)
+    uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial)
+    tuf.formats.RELPATH_SCHEMA.check_match(target_filepath)
+
+    if vin not in self.vehicle_repositories:
+      raise uptane.UnknownVehicle('The VIN provided, ' + repr(vin) + ' is not '
+          'that of a vehicle known to this Director.')
+
+    elif ecu_serial not in self.ecu_public_keys:
+      raise uptane.UnknownECU('The ECU Serial provided, ' + repr(ecu_serial) +
+          ' is not that of an ECU known to this Director.')
+
+    self.vehicle_repositories[vin].targets.add_target(
+        target_filepath, custom={'ecu_serial': ecu_serial})
 
 
 
@@ -424,19 +576,3 @@ class Director:
 
 
 
-
-  def write_metadata(self):
-    raise NotImplementedError('Not yet written.')
-    # Perform repo.write() on repo for the vehicle.
-
-    #   def write_director_metadata(self, vehicle_software_assignments):
-
-    #     uptane.formats.VEHICLE_SOFTWARE_ASSIGNMENTS_SCHEMA.check_match(
-    #         vehicle_software_assignments) # Check argument.
-
-    #     #repo = tuf.repository_tool.load_repo(   )
-
-    #     # load director keys only (grab code from uptane_tuf_server.py)
-    #     # Call repository_tool internal functions to produce metadata
-    #     # file.  /:  Ugly.
-    #     #

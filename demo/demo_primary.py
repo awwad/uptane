@@ -110,11 +110,8 @@ def clean_slate(
   load_or_generate_key(use_new_keys)
 
 
-
-
-
-  # TODO: <~> Remove old hack assumption about number and name of
-  # repositories. Use pinned.json, if anything even still has to be done here.
+  # TODO: Remove old hack assumption about number and name of
+  # repositories. Use pinned.json.
   CLIENT_DIR = _client_directory_name
   CLIENT_METADATA_DIR_MAINREPO_CURRENT = os.path.join(CLIENT_DIR, 'metadata', 'mainrepo', 'current')
   CLIENT_METADATA_DIR_MAINREPO_PREVIOUS = os.path.join(CLIENT_DIR, 'metadata', 'mainrepo', 'previous')
@@ -153,7 +150,7 @@ def clean_slate(
 
   # Add a pinned.json to this client (softlink it from the indicated copy).
   os.symlink(
-      demo.DEMO_PINNING_FNAME, #os.path.join(WORKING_DIR, 'pinned.json'),
+      create_primary_pinning_file(), #os.path.join(WORKING_DIR, 'pinned.json'),
       os.path.join(CLIENT_DIR, 'metadata', 'pinned.json'))
 
   # Configure tuf with the client's metadata directories (where it stores the
@@ -162,22 +159,13 @@ def clean_slate(
 
 
 
-
-
-
-
-
-
   # Initialize a Primary ECU, making a client directory and copying the root
   # file from the repositories.
   primary_ecu = primary.Primary(
       full_client_dir=os.path.join(uptane.WORKING_DIR, _client_directory_name),
-      # pinning_filename=demo.DEMO_PINNING_FNAME,
       director_repo_name=demo.DIRECTOR_REPO_NAME,
       vin=_vin,
       ecu_serial=_ecu_serial,
-      # fname_root_from_mainrepo=demo.MAIN_REPO_ROOT_FNAME,
-      # fname_root_from_directorrepo=demo.DIRECTOR_REPO_ROOT_FNAME,
       primary_key=ecu_key,
       time=clock,
       timeserver_public_key=key_timeserver_pub)
@@ -223,6 +211,37 @@ def clean_slate(
 
   generate_signed_vehicle_manifest()
   submit_vehicle_manifest_to_director()
+
+
+
+
+
+def create_primary_pinning_file():
+  """
+  Load the template pinned.json file and save a filled in version that, for the
+  Director repository, points to a subdirectory intended for this specific
+  vehicle.
+
+  Returns the filename of the created file.
+  """
+
+  pinnings = json.load(open(demo.DEMO_PRIMARY_PINNING_FNAME, 'r'))
+
+  fname_to_create = os.path.join(
+      demo.DEMO_DIR, 'pinned.json_primary_' + demo.get_random_string(5))
+
+  assert 1 == len(pinnings['repositories'][demo.DIRECTOR_REPO_NAME]['mirrors']), 'Config error.'
+
+  mirror = pinnings['repositories'][demo.DIRECTOR_REPO_NAME]['mirrors'][0]
+  mirror = mirror.replace('<VIN>', _vin)
+
+  pinnings['repositories'][demo.DIRECTOR_REPO_NAME]['mirrors'][0] = mirror
+
+
+  with open(fname_to_create, 'w') as fobj:
+    json.dump(pinnings, fobj)
+
+  return fname_to_create
 
 
 

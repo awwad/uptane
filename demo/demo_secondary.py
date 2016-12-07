@@ -104,7 +104,6 @@ def clean_slate(
 
   # Create directory structure for the client and copy the root files from the
   # repositories.
-
   CLIENT_METADATA_DIR_MAINREPO_CURRENT = os.path.join(client_directory, 'metadata', 'mainrepo', 'current')
   CLIENT_METADATA_DIR_MAINREPO_PREVIOUS = os.path.join(client_directory, 'metadata', 'mainrepo', 'previous')
   CLIENT_METADATA_DIR_DIRECTOR_CURRENT = os.path.join(client_directory, 'metadata', 'director', 'current')
@@ -117,7 +116,6 @@ def clean_slate(
   # e.g. timeserver.TIMESERVER_PORT and director.DIRECTOR_SERVER_PORT).
   # Note that despite the vague name, the latter is not the director
   # repository, but a service that receives manifests.
-
 
   # Set up the TUF client directories for the two repositories.
   if os.path.exists(client_directory):
@@ -148,10 +146,6 @@ def clean_slate(
   # Configure tuf with the client's metadata directories (where it stores the
   # metadata it has collected from each repository, in subdirectories).
   tuf.conf.repository_directory = client_directory # This setting should probably be called client_directory instead, post-TAP4.
-
-
-
-
 
 
 
@@ -208,7 +202,7 @@ def create_secondary_pinning_file():
   pinnings = json.load(open(demo.DEMO_SECONDARY_PINNING_FNAME, 'r'))
 
   fname_to_create = os.path.join(
-      demo.DEMO_DIR, 'pinned.json_' + demo.get_random_string(5))
+      demo.DEMO_DIR, 'pinned.json_secondary_' + demo.get_random_string(5))
 
   for repo_name in pinnings['repositories']:
 

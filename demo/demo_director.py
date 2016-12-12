@@ -24,6 +24,7 @@ dd.listen()
   Some of these are discussed in uptane_test_instructions.py.
 
 """
+from __future__ import print_function
 
 import demo
 import uptane

@@ -2,6 +2,7 @@
 Some common utilities for Uptane, to be assigned to more sensible locations in
 the future.
 """
+from __future__ import print_function
 import tuf
 import tuf.formats
 

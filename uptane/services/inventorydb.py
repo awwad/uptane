@@ -28,6 +28,7 @@
   For now, only the most recent validated manifest from the vehicle is stored.
   Once a manifest is validated, it replaces the previously held manifest.
 """
+from __future__ import print_function
 
 import os.path
 #join = os.path.join

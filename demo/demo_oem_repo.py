@@ -14,6 +14,7 @@ do.host()
 do.kill_server()
 
 """
+from __future__ import print_function
 
 import demo
 import uptane

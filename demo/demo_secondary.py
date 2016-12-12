@@ -23,6 +23,7 @@ ds.submit_ecu_manifest_to_primary() # optionally takes different signed manifest
 
 
 """
+from __future__ import print_function
 
 import demo
 import uptane

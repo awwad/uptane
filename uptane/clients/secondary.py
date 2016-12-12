@@ -8,6 +8,7 @@
   Also includes some partial verification functionality.
 
 """
+from __future__ import print_function
 import uptane
 import uptane.formats
 import uptane.ber_encoder as ber_encoder

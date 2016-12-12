@@ -1,3 +1,4 @@
+from __future__ import print_function
 
 def ber_encode_signable_object(signable):
   """

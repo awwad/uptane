@@ -17,6 +17,7 @@
     ./run_timeserver.sh
 
 """
+from __future__ import print_function
 
 import demo
 import uptane

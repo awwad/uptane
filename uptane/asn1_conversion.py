@@ -1,5 +1,6 @@
 """
 """
+from __future__ import print_function
 
 
 def json_to_asn1(json_input):

@@ -24,6 +24,7 @@ ds.submit_ecu_manifest_to_primary() # optionally takes different signed manifest
 
 """
 from __future__ import print_function
+from __future__ import unicode_literals
 
 import demo
 import uptane

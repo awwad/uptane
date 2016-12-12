@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import unicode_literals
+
 from pyasn1.type import univ, char, namedtype, namedval, tag, constraint, useful
 
 from metadataverificationmodule import *

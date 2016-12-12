@@ -48,6 +48,7 @@
   then be required to update his $PATH variable:
   $ export PATH=$PATH:~/.local/bin
 """
+from __future__ import unicode_literals
 
 from setuptools import setup
 from setuptools import find_packages

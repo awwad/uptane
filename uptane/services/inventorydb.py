@@ -29,6 +29,7 @@
   Once a manifest is validated, it replaces the previously held manifest.
 """
 from __future__ import print_function
+from __future__ import unicode_literals
 
 import os.path
 #join = os.path.join

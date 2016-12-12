@@ -28,6 +28,7 @@
       extract target info), including BER encoding
 
 """
+from __future__ import unicode_literals
 
 import uptane
 import uptane.formats

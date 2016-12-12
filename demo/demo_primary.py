@@ -18,6 +18,7 @@ dp.submit_vehicle_manifest_to_director()
 
 """
 from __future__ import print_function
+from __future__ import unicode_literals
 
 import demo
 import uptane

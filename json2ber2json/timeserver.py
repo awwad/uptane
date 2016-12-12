@@ -5,6 +5,7 @@
 # indepedently of each other.
 
 from __future__ import print_function
+from __future__ import unicode_literals
 
 from pyasn1.type import univ, char, namedtype, namedval, tag, constraint, useful
 

@@ -1,7 +1,7 @@
 """
 """
 from __future__ import print_function
-
+from __future__ import unicode_literals
 
 def json_to_asn1(json_input):
   print("Pretending to convert.")

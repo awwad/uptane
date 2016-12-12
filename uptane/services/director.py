@@ -38,6 +38,8 @@ import tuf.repository_tool as rt
 #import asn1_conversion as asn1
 from uptane import GREEN, RED, YELLOW, ENDCOLORS
 
+from six.moves import getcwd
+
 log = uptane.logging.getLogger('director')
 log.addHandler(uptane.file_handler)
 log.addHandler(uptane.console_handler)
@@ -387,7 +389,7 @@ class Director:
   def create_director_repo_for_vehicle(self, vin):
     """
     """
-    WORKING_DIR = os.getcwd()
+    WORKING_DIR = getcwd()
     MAIN_REPO_DIR = os.path.join(WORKING_DIR, 'repomain')
     DIRECTOR_REPO_DIR = os.path.join(WORKING_DIR, 'repodirector')
     TARGETS_DIR = os.path.join(MAIN_REPO_DIR, 'targets')

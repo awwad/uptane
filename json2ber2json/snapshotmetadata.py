@@ -6,6 +6,7 @@ from metadataverificationmodule import *
 
 import metadata
 
+from six.moves import range
 
 def get_asn_signed(json_signed):
   snapshotMetadataFiles = SnapshotMetadataFiles()\

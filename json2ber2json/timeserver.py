@@ -17,6 +17,7 @@ import calendar
 import hashlib
 import json
 
+from six.moves import range
 
 def ber_to_json_metadata(get_json_signed, ber_metadata):
   asn_metadata = decoder.decode(ber_metadata, asn1Spec=CurrentTime())[0]

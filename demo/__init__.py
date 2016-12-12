@@ -8,6 +8,8 @@ import tuf.formats
 import tuf.repository_tool as rt
 import random, string # To generate random strings for Secondary directory names
 
+from six.moves import range
+
 DEMO_DIR = os.path.join(uptane.WORKING_DIR, 'demo')
 DEMO_KEYS_DIR = os.path.join(DEMO_DIR, 'keys')
 DEMO_PINNING_FNAME = os.path.join(DEMO_DIR, 'pinned.json')

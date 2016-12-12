@@ -84,7 +84,7 @@ setup(
     'Topic :: Security',
     'Topic :: Software Development'
   ],
-  install_requires = ['iso8601', 'tuf'],
+  install_requires = ['iso8601', 'tuf', 'six'],
   packages = find_packages(exclude=['tests']),
   scripts = []
 )

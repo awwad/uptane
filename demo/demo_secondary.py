@@ -37,10 +37,11 @@ import os # For paths and makedirs
 import shutil # For copyfile
 import threading # for the demo listener
 import time
-import xmlrpc.client
-import xmlrpc.server
 import copy # for copying manifests before corrupting them during attacks
 import json # for customizing the Secondary's pinnings file.
+
+from six.moves import xmlrpc_client
+from six.moves import xmlrpc_server
 
 # Globals
 CLIENT_DIRECTORY_PREFIX = 'temp_secondary' # name for this secondary's directory
@@ -172,13 +173,13 @@ def clean_slate(
 
   try:
     register_self_with_director()
-  except xmlrpc.client.Fault:
+  except xmlrpc_client.Fault:
     print('Registration with Director failed. Now assuming this Secondary is '
         'already registered.')
 
   try:
     register_self_with_primary()
-  except xmlrpc.client.Fault:
+  except xmlrpc_client.Fault:
     print('Registration with Primary failed. Now assuming this Secondary is '
         'already registered.')
 
@@ -233,7 +234,7 @@ def create_secondary_pinning_file():
 
 # Restrict director requests to a particular path.
 # Must specify RPC2 here for the XML-RPC interface to work.
-class RequestHandler(xmlrpc.server.SimpleXMLRPCRequestHandler):
+class RequestHandler(xmlrpc_server.SimpleXMLRPCRequestHandler):
   rpc_paths = ('/RPC2',)
 
 
@@ -250,7 +251,7 @@ def listen():
   global listener_thread
 
   # Create server
-  server = xmlrpc.server.SimpleXMLRPCServer(
+  server = xmlrpc_server.SimpleXMLRPCServer(
       (demo.SECONDARY_SERVER_HOST, demo.SECONDARY_SERVER_PORT),
       requestHandler=RequestHandler, allow_none=True)
   #server.register_introspection_functions()
@@ -289,7 +290,7 @@ def submit_ecu_manifest_to_primary(signed_ecu_manifest=None):
   # version of the ecu_manifest after encoders have been implemented.
 
 
-  server = xmlrpc.client.ServerProxy(
+  server = xmlrpc_client.ServerProxy(
       'http://' + str(demo.PRIMARY_SERVER_HOST) + ':' +
       str(demo.PRIMARY_SERVER_PORT))
   #if not server.system.listMethods():
@@ -337,7 +338,7 @@ def update_cycle():
   global current_firmware_fileinfo
 
   # Connect to the Primary
-  pserver = xmlrpc.client.ServerProxy(
+  pserver = xmlrpc_client.ServerProxy(
     'http://' + str(demo.PRIMARY_SERVER_HOST) + ':' +
     str(demo.PRIMARY_SERVER_PORT))
 
@@ -595,11 +596,9 @@ def ATTACK_send_corrupt_manifest_to_primary():
   print('   The attacks_detected field now reads "' + RED +
       repr(corrupt_signed_manifest['signed']['attacks_detected']) + ENDCOLORS)
 
-  import xmlrpc.client # for xmlrpc.client.Fault
-
   try:
     submit_ecu_manifest_to_primary(corrupt_signed_manifest)
-  except xmlrpc.client.Fault:
+  except xmlrpc_client.Fault:
     print(GREEN + 'Primary REJECTED the fraudulent ECU manifest.' + ENDCOLORS)
   else:
     print(RED + 'Primary ACCEPTED the fraudulent ECU manifest!' + ENDCOLORS)
@@ -639,11 +638,9 @@ def ATTACK_send_manifest_with_wrong_sig_to_primary():
   uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
       signed_corrupt_manifest)
 
-  #import xmlrpc.client # for xmlrpc.client.Fault
-
   try:
     submit_ecu_manifest_to_primary(signed_corrupt_manifest)
-  except xmlrpc.client.Fault as e:
+  except xmlrpc_client.Fault as e:
     print('Primary REJECTED the fraudulent ECU manifest.')
   else:
     print('Primary ACCEPTED the fraudulent ECU manifest!')
@@ -664,7 +661,7 @@ def register_self_with_director():
   themselves.
   """
   # Connect to the Director
-  server = xmlrpc.client.ServerProxy(
+  server = xmlrpc_client.ServerProxy(
     'http://' + str(demo.DIRECTOR_SERVER_HOST) + ':' +
     str(demo.DIRECTOR_SERVER_PORT))
 
@@ -683,7 +680,7 @@ def register_self_with_primary():
   into the vehicle during assembly, not by the Secondary itself.
   """
   # Connect to the Primary
-  server = xmlrpc.client.ServerProxy(
+  server = xmlrpc_client.ServerProxy(
     'http://' + str(demo.PRIMARY_SERVER_HOST) + ':' +
     str(demo.PRIMARY_SERVER_PORT))
 

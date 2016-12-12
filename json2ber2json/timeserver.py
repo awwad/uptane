@@ -6,6 +6,7 @@
 
 from __future__ import print_function
 from __future__ import unicode_literals
+from io import open
 
 from pyasn1.type import univ, char, namedtype, namedval, tag, constraint, useful
 

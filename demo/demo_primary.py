@@ -19,6 +19,7 @@ dp.submit_vehicle_manifest_to_director()
 """
 from __future__ import print_function
 from __future__ import unicode_literals
+from io import open
 
 import demo
 import uptane

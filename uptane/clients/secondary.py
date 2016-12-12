@@ -10,6 +10,7 @@
 """
 from __future__ import print_function
 from __future__ import unicode_literals
+from io import open
 
 import uptane
 import uptane.formats
@@ -26,6 +27,7 @@ import shutil # For copyfile
 import random # for nonces
 import zipfile # to expand the metadata archive retrieved from the Primary
 from uptane import GREEN, RED, YELLOW, ENDCOLORS
+
 
 log = uptane.logging.getLogger('secondary')
 log.addHandler(uptane.file_handler)

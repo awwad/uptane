@@ -49,6 +49,7 @@
   $ export PATH=$PATH:~/.local/bin
 """
 from __future__ import unicode_literals
+from io import open
 
 from setuptools import setup
 from setuptools import find_packages

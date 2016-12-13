@@ -42,6 +42,7 @@ import threading # for the demo listener
 import time
 import copy # for copying manifests before corrupting them during attacks
 import json # for customizing the Secondary's pinnings file.
+import canonicaljson
 
 from six.moves import xmlrpc_client
 from six.moves import xmlrpc_server
@@ -209,7 +210,8 @@ def create_secondary_pinning_file():
   Returns the filename of the created file.
   """
 
-  pinnings = json.load(open(demo.DEMO_SECONDARY_PINNING_FNAME, 'r'))
+  pinnings = json.load(
+    open(demo.DEMO_SECONDARY_PINNING_FNAME, encoding="utf-8"))
 
   fname_to_create = os.path.join(
       demo.DEMO_DIR, 'pinned.json_' + demo.get_random_string(5))
@@ -224,9 +226,8 @@ def create_secondary_pinning_file():
 
     pinnings['repositories'][repo_name]['mirrors'][0] = mirror
 
-
-  with open(fname_to_create, 'w') as fobj:
-    json.dump(pinnings, fobj)
+  with open(fname_to_create, 'wb') as fobj:
+    fobj.write(canonicaljson.encode_canonical_json(pinnings))
 
   return fname_to_create
 

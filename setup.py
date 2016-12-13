@@ -86,7 +86,7 @@ setup(
     'Topic :: Security',
     'Topic :: Software Development'
   ],
-  install_requires = ['iso8601', 'tuf', 'six'],
+  install_requires = ['iso8601', 'tuf', 'six', 'canonicaljson'],
   packages = find_packages(exclude=['tests']),
   scripts = []
 )

@@ -119,7 +119,7 @@ def pretty_print(json_metadata):
 def test(json_filename, ber_filename, get_asn_signed, get_json_signed,
          update_json_signature):
   # 1. Read from JSON.
-  with open(json_filename, 'rb') as jsonFile:
+  with open(json_filename, 'r', encoding="utf-8") as jsonFile:
     before_json = json.load(jsonFile)
   json_signed = before_json['signed']
   json_signatures = before_json['signatures']

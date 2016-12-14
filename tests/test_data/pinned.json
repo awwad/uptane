@@ -4,7 +4,7 @@
       "mirrors": ["http://localhost:30301"]
     },
     "director": {
-      "mirrors": ["http://localhost:30401"]
+      "mirrors": ["http://localhost:30401/111"]
     }
   },
   "delegations": [

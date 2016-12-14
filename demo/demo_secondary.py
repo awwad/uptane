@@ -104,44 +104,11 @@ def clean_slate(
 
   # Create directory structure for the client and copy the root files from the
   # repositories.
-  CLIENT_METADATA_DIR_MAINREPO_CURRENT = os.path.join(client_directory, 'metadata', 'mainrepo', 'current')
-  CLIENT_METADATA_DIR_MAINREPO_PREVIOUS = os.path.join(client_directory, 'metadata', 'mainrepo', 'previous')
-  CLIENT_METADATA_DIR_DIRECTOR_CURRENT = os.path.join(client_directory, 'metadata', 'director', 'current')
-  CLIENT_METADATA_DIR_DIRECTOR_PREVIOUS = os.path.join(client_directory, 'metadata', 'director', 'previous')
-
-  # Note that the hosts and ports for the repositories are drawn from
-  # pinned.json now. The services (timeserver and the director's
-  # submit-manifest service) are still addressed here, though, currently
-  # by pulling the constants from their modules directly
-  # e.g. timeserver.TIMESERVER_PORT and director.DIRECTOR_SERVER_PORT).
-  # Note that despite the vague name, the latter is not the director
-  # repository, but a service that receives manifests.
-
-  # Set up the TUF client directories for the two repositories.
-  if os.path.exists(client_directory):
-    shutil.rmtree(client_directory)
-
-  for d in [
-      CLIENT_METADATA_DIR_MAINREPO_CURRENT,
-      CLIENT_METADATA_DIR_MAINREPO_PREVIOUS,
-      CLIENT_METADATA_DIR_DIRECTOR_CURRENT,
-      CLIENT_METADATA_DIR_DIRECTOR_PREVIOUS]:
-    os.makedirs(d)
-
-  # Get the root.json file from the mainrepo (would come with this client).
-  shutil.copyfile(
-      demo.MAIN_REPO_ROOT_FNAME,
-      os.path.join(CLIENT_METADATA_DIR_MAINREPO_CURRENT, 'root.json'))
-
-  # Get the root.json file from the director repo (would come with this client).
-  shutil.copyfile(
-      demo.DIRECTOR_REPO_ROOT_FNAME,
-      os.path.join(CLIENT_METADATA_DIR_DIRECTOR_CURRENT, 'root.json'))
-
-  # Add a pinned.json to this client (softlink it from a saved copy).
-  os.symlink(
-      create_secondary_pinning_file(),
-      os.path.join(client_directory, 'metadata', 'pinned.json'))
+  uptane.common.create_directory_structure_for_client(
+      client_directory, create_secondary_pinning_file(),
+      {demo.MAIN_REPO_NAME: demo.MAIN_REPO_ROOT_FNAME,
+      demo.DIRECTOR_REPO_NAME: os.path.join(demo.DIRECTOR_REPO_DIR, vin,
+      'metadata', 'root.json')})
 
   # Configure tuf with the client's metadata directories (where it stores the
   # metadata it has collected from each repository, in subdirectories).

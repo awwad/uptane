@@ -79,19 +79,17 @@ def sign_signable(signable, keys_to_sign_with):
 
 def canonical_key_from_pub_and_pri(key_pub, key_pri):
   """
-  Turn this into a canonical key matching tuf.formats.ANYKEY_SCHEMA
-  Note: it looks like the resulting object is the same as the private key
-  anyway, at least with ed25519. Is it always?
-
-  TODO: <~> Find out if this is necessary. If not, instead, replace calls to
-  this with use of private key, but don't forget to STILL call check_match.
+  Turn this into a canonical key matching tuf.formats.ANYKEY_SCHEMA, with
+  the optional element keyid_hash_algorithms, which can be found in the
+  public key, and containing both public and private key values.
   """
   key = {
       'keytype': key_pub['keytype'],
       'keyid': key_pub['keyid'],
       'keyval': {
         'public': key_pub['keyval']['public'],
-        'private': key_pri['keyval']['private']}}
+        'private': key_pri['keyval']['private']},
+      'keyid_hash_algorithms': key_pub['keyid_hash_algorithms']}
   tuf.formats.ANYKEY_SCHEMA.check_match(key)
 
   return key

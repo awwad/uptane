@@ -93,11 +93,14 @@ class Director:
 
   def __init__(self,
     director_repos_dir,
-    #inventorydb = None,
-    key_root,
-    key_timestamp,
-    key_snapshot,
-    key_targets,
+    key_root_pri,
+    key_root_pub,
+    key_timestamp_pri,
+    key_timestamp_pub,
+    key_snapshot_pri,
+    key_snapshot_pub,
+    key_targets_pri,
+    key_targets_pub,
     ecu_public_keys=dict(),
     ecus_by_vin=dict()):
 
@@ -110,7 +113,9 @@ class Director:
 
     tuf.formats.RELPATH_SCHEMA.check_match(director_repos_dir)
 
-    for key in [key_root, key_timestamp, key_snapshot, key_targets]:
+    for key in [
+        key_root_pri, key_root_pub, key_timestamp_pri, key_timestamp_pub,
+        key_snapshot_pri, key_snapshot_pub, key_targets_pri, key_targets_pub]:
       tuf.formats.ANYKEY_SCHEMA.check_match(key)
 
     for key in ecu_public_keys:
@@ -118,10 +123,14 @@ class Director:
 
     self.director_repos_dir = director_repos_dir
 
-    self.key_dirroot_pri = key_root
-    self.key_dirtime_pri = key_timestamp
-    self.key_dirsnap_pri = key_snapshot
-    self.key_dirtarg_pri = key_targets
+    self.key_dirroot_pri = key_root_pri
+    self.key_dirroot_pub = key_root_pub
+    self.key_dirtime_pri = key_timestamp_pri
+    self.key_dirtime_pub = key_timestamp_pub
+    self.key_dirsnap_pri = key_snapshot_pri
+    self.key_dirsnap_pub = key_snapshot_pub
+    self.key_dirtarg_pri = key_targets_pri
+    self.key_dirtarg_pub = key_targets_pub
 
     self.ecu_public_keys = ecu_public_keys
 
@@ -137,10 +146,37 @@ class Director:
 
 
   def register_ecu_serial(self, ecu_serial, ecu_key, vin):
+    """
+    Set the expected public key for signed messages from the ECU with the given
+    ECU Serial. If signed messages purportedly coming from the ECU with that
+    ECU Serial are not signed by the given key, they will not be trusted.
+
+    This also associates the ECU Serial with the given VIN, so that the
+    Director will treat this ECU as part of that vehicle.
+
+    Exceptions
+      uptane.UnknownVehicle
+        if the VIN is not known.
+
+      uptane.Spoofing
+        if the given ECU Serial already has a registered public key.
+        (That is, this public method is not how you should replace the public
+        key a given ECU uses.)
+
+      uptane.FormatError or tuf.FormatError
+        if the arguments do not fit the correct format.
+    """
+    uptane.formats.VIN_SCHEMA.check_match(vin)
     uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial)
     tuf.formats.ANYKEY_SCHEMA.check_match(ecu_key)
 
-    if ecu_serial in self.ecu_public_keys:
+    if vin not in self.ecus_by_vin:
+      # TODO: Should we also log here? Review logging before exceptions
+      # throughout the reference implementation.
+      raise uptane.UnknownVehicle('The given VIN does not correspond to a '
+          'vehicle known to this Director.')
+
+    elif ecu_serial in self.ecu_public_keys:
       log.error(RED + 'Rejecting an attempt to register a public key to an ECU '
           'Serial when that ECU Serial already has a public key registered to '
           'it.' + ENDCOLORS)
@@ -148,10 +184,19 @@ class Director:
           'Rejecting registration request.')
 
     else:
+      assert ecu_serial not in self.ecus_by_vin[vin], 'Programming error: ' + \
+          'The given ECU Serial was not in ecu_public_keys but WAS in ' + \
+          'ecus_by_vin. That should not be possible.'
+
+      # Register the public key.
       self.ecu_public_keys[ecu_serial] = ecu_key
+
+      # Associate this ECU with the given VIN's vehicle.
+      self.ecus_by_vin[vin].append(ecu_serial)
+
       log.info(
-          GREEN + ' Registered a new ECU:\n    ECU Serial: ' +
-          repr(ecu_serial) + '\n    ECU Key: ' + repr(ecu_key) + '\n' +
+          GREEN + 'Registered a new ECU, ' + repr(ecu_serial) + ' in '
+          'vehicle ' + repr(vin) + ' with ECU public key: ' + repr(ecu_key) +
           ENDCOLORS)
 
 
@@ -517,15 +562,20 @@ class Director:
     # Generates absolute path for a subdirectory with name equal to vin,
     # in the current directory, making (relatively) sure that there isn't
     # anything suspect like "../" in the VIN.
+    # Then I strip the common prefix back off the absolute path to get a
+    # relative path and keep the guarantees.
+    # TODO: Clumsy and hacky; fix.
     vin = inventorydb.scrub_filename(vin, self.director_repos_dir)
+    vin = os.path.relpath(vin, self.director_repos_dir)
 
-    self.vehicle_repositories[vin] = this_repo = rt.create_new_repository(vin)
+    self.vehicle_repositories[vin] = this_repo = rt.create_new_repository(
+        vin, repository_name=vin)
 
 
-    #this_repo.root.add_verification_key(self.key_dirroot_pub)
-    #this_repo.timestamp.add_verification_key(self.key_dirtime_pub)
-    #this_repo.snapshot.add_verification_key(self.key_dirsnap_pub)
-    #this_repo.targets.add_verification_key(self.key_dirtarg_pub)
+    this_repo.root.add_verification_key(self.key_dirroot_pub)
+    this_repo.timestamp.add_verification_key(self.key_dirtime_pub)
+    this_repo.snapshot.add_verification_key(self.key_dirsnap_pub)
+    this_repo.targets.add_verification_key(self.key_dirtarg_pub)
     this_repo.root.load_signing_key(self.key_dirroot_pri)
     this_repo.timestamp.load_signing_key(self.key_dirtime_pri)
     this_repo.snapshot.load_signing_key(self.key_dirsnap_pri)

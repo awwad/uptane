@@ -68,34 +68,39 @@ def clean_slate(
     demo.generate_key('directortimestamp')
     demo.generate_key('directorsnapshot')
     demo.generate_key('director') # targets
-    if additional_root_key:
-      demo.generate_key('directorroot2')
-    if additional_targets_key:
-      demo.generate_key('director2')
 
+
+  key_dirroot_pub = demo.import_public_key('directorroot')
   key_dirroot_pri = demo.import_private_key('directorroot')
+  key_dirtime_pub = demo.import_public_key('directortimestamp')
   key_dirtime_pri = demo.import_private_key('directortimestamp')
+  key_dirsnap_pub = demo.import_public_key('directorsnapshot')
   key_dirsnap_pri = demo.import_private_key('directorsnapshot')
+  key_dirtarg_pub = demo.import_public_key('director')
   key_dirtarg_pri = demo.import_private_key('director')
 
 
   # Create the demo Director instance.
   director_service_instance = director.Director(
       director_repos_dir=director_dir,
-      key_root=key_dirroot_pri,
-      key_timestamp=key_dirtime_pri,
-      key_snapshot=key_dirsnap_pri,
-      key_targets=key_dirtarg_pri,
+      key_root_pri=key_dirroot_pri,
+      key_root_pub=key_dirroot_pub,
+      key_timestamp_pri=key_dirtime_pri,
+      key_timestamp_pub=key_dirtime_pub,
+      key_snapshot_pri=key_dirsnap_pri,
+      key_snapshot_pub=key_dirsnap_pub,
+      key_targets_pri=key_dirtarg_pri,
+      key_targets_pub=key_dirtarg_pub,
       ecu_public_keys=dict(),
       ecus_by_vin={vin: [] for vin in KNOWN_VINS}) # dict mapping vin to [] for each vin in KNOWN_VINS
 
 
 
-  # Start with a hard-coded key for a single ECU for now.
-  test_ecu_public_key = demo.import_public_key('secondary')
-  test_ecu_serial = 'ecu11111'
-  director_service_instance.register_ecu_serial(
-      test_ecu_serial, test_ecu_public_key, vin='111')
+  # You can tell the Director about ECUs this way:
+  # test_ecu_public_key = demo.import_public_key('secondary')
+  # test_ecu_serial = 'ecu11111'
+  # director_service_instance.register_ecu_serial(
+  #     test_ecu_serial, test_ecu_public_key, vin='111')
 
 
 
@@ -205,17 +210,19 @@ def add_target_to_director(target_fname, filepath_in_repo, vin, ecu_serial):
   repo_dir = repo._repository_directory
 
   print('Copying target file into place.')
+  destination_filepath = os.path.join(repo_dir, 'targets', filepath_in_repo)
+
   # TODO: This should probably place the file into a common targets directory
   # that is then softlinked to all repositories.
-  os.copy(
+  shutil.copy(
       target_fname,
-      os.path.join(repo_dir, filepath_in_repo))
+      destination_filepath)
 
   print('Adding target ' + repr(target_fname) + ' for ECU ' + repr(ecu_serial))
 
   # This calls the appropriate vehicle repository.
   director_service_instance.add_target_for_ecu(
-      vin, ecu_serial, filepath_in_repo)
+      vin, ecu_serial, destination_filepath)
 
 
 

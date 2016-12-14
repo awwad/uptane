@@ -26,6 +26,7 @@ from uptane import GREEN, RED, YELLOW, ENDCOLORS
 import tuf.keys
 import tuf.repository_tool as rt
 import tuf.client.updater
+import json
 
 import os # For paths and makedirs
 import shutil # For copyfile
@@ -114,9 +115,10 @@ def clean_slate(
   # creation of repository metadata directories, current and previous, putting
   # the pinning.json file in place, etc.
   uptane.common.create_directory_structure_for_client(
-      _client_directory_name, demo.DEMO_PINNING_FNAME,
+      _client_directory_name, create_primary_pinning_file(), #demo.DEMO_PINNING_FNAME,
       {demo.MAIN_REPO_NAME: demo.MAIN_REPO_ROOT_FNAME,
-      demo.DIRECTOR_REPO_NAME: demo.DIRECTOR_REPO_ROOT_FNAME})
+      demo.DIRECTOR_REPO_NAME: os.path.join(demo.DIRECTOR_REPO_DIR, vin,
+      'metadata', 'root.json')})
 
   # Configure tuf with the client's metadata directories (where it stores the
   # metadata it has collected from each repository, in subdirectories).
@@ -381,7 +383,8 @@ def register_self_with_director():
     str(demo.DIRECTOR_SERVER_PORT))
 
   print('Registering Primary ECU Serial and Key with Director.')
-  server.register_ecu_serial(primary_ecu.ecu_serial, primary_ecu.primary_key)
+  server.register_ecu_serial(
+      primary_ecu.ecu_serial, primary_ecu.primary_key, _vin)
   print(GREEN + 'Primary has been registered with the Director.' + ENDCOLORS)
 
 

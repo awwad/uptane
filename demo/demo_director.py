@@ -21,6 +21,9 @@ demo_director.kill_server()
   Some of these are discussed in uptane_test_instructions.py.
 
 """
+from __future__ import print_function
+from __future__ import unicode_literals
+from io import open
 
 import demo
 import uptane
@@ -28,13 +31,15 @@ import uptane.services.director as director
 import tuf.formats
 
 import threading # for the director services interface
-import xmlrpc.server # for the director services interface
 import os # For paths and symlink
 import shutil # For copying directory trees
 import sys, subprocess, time # For hosting
 import tuf.repository_tool as rt
 import demo.demo_oem_repo as demo_oem_repo # for the main repo directory /:
 from uptane import GREEN, RED, YELLOW, ENDCOLORS
+
+from six.moves import xmlrpc_server # for the director services interface
+
 
 KNOWN_VINS = ['111', '112', '113']
 
@@ -283,7 +288,7 @@ def host():
 
 # Restrict director requests to a particular path.
 # Must specify RPC2 here for the XML-RPC interface to work.
-class RequestHandler(xmlrpc.server.SimpleXMLRPCRequestHandler):
+class RequestHandler(xmlrpc_server.SimpleXMLRPCRequestHandler):
   rpc_paths = ('/RPC2',)
 
 
@@ -305,7 +310,7 @@ def listen():
     return
 
   # Create server
-  server = xmlrpc.server.SimpleXMLRPCServer(
+  server = xmlrpc_server.SimpleXMLRPCServer(
       (demo.DIRECTOR_SERVER_HOST, demo.DIRECTOR_SERVER_PORT),
       requestHandler=RequestHandler, allow_none=True)
   #server.register_introspection_functions()

@@ -17,6 +17,9 @@ dp.submit_vehicle_manifest_to_director()
 
 
 """
+from __future__ import print_function
+from __future__ import unicode_literals
+from io import open
 
 import demo
 import uptane
@@ -27,14 +30,17 @@ import tuf.keys
 import tuf.repository_tool as rt
 import tuf.client.updater
 import json
+import canonicaljson
 
 import os # For paths and makedirs
 import shutil # For copyfile
 import threading # for the demo listener
 import time
-import xmlrpc.client
-import xmlrpc.server
-import six
+
+from six.moves import xmlrpc_client
+from six.moves import xmlrpc_server
+from six.moves import range
+import socket # for socket.error, to catch listening failures from six's xmlrpc server
 
 # Import a CAN communications module for partial-verification Secondaries
 import ctypes
@@ -154,7 +160,7 @@ def clean_slate(
 
   try:
     register_self_with_director()
-  except xmlrpc.client.Fault:
+  except xmlrpc_client.Fault:
     print('Registration with Director failed. Now assuming this Primary is '
         'already registered.')
 
@@ -198,7 +204,8 @@ def create_primary_pinning_file():
   Returns the filename of the created file.
   """
 
-  pinnings = json.load(open(demo.DEMO_PRIMARY_PINNING_FNAME, 'r'))
+  pinnings = json.load(
+      open(demo.DEMO_PRIMARY_PINNING_FNAME, 'r', encoding='utf-8'))
 
   fname_to_create = os.path.join(
       demo.DEMO_DIR, 'pinned.json_primary_' + demo.get_random_string(5))
@@ -211,8 +218,8 @@ def create_primary_pinning_file():
   pinnings['repositories'][demo.DIRECTOR_REPO_NAME]['mirrors'][0] = mirror
 
 
-  with open(fname_to_create, 'w') as fobj:
-    json.dump(pinnings, fobj)
+  with open(fname_to_create, 'wb') as fobj:
+    fobj.write(canonicaljson.encode_canonical_json(pinnings))
 
   return fname_to_create
 
@@ -269,7 +276,7 @@ def update_cycle():
   # nonces as "sent" and empties the Primary's list of nonces to send.)
   nonces_to_send = primary_ecu.get_nonces_to_send_and_rotate()
 
-  tserver = xmlrpc.client.ServerProxy(
+  tserver = xmlrpc_client.ServerProxy(
       'http://' + str(demo.TIMESERVER_HOST) + ':' + str(demo.TIMESERVER_PORT))
   #if not server.system.listMethods():
   #  raise Exception('Unable to connect to server.')
@@ -359,7 +366,7 @@ def submit_vehicle_manifest_to_director(signed_vehicle_manifest=None):
   # version of the ecu_manifest after encoders have been implemented.
 
 
-  server = xmlrpc.client.ServerProxy(
+  server = xmlrpc_client.ServerProxy(
       'http://' + str(demo.DIRECTOR_SERVER_HOST) + ':' +
       str(demo.DIRECTOR_SERVER_PORT))
   #if not server.system.listMethods():
@@ -384,7 +391,7 @@ def register_self_with_director():
   Send the Director a message to register our ECU serial number and Public Key.
   """
   # Connect to the Director
-  server = xmlrpc.client.ServerProxy(
+  server = xmlrpc_client.ServerProxy(
     'http://' + str(demo.DIRECTOR_SERVER_HOST) + ':' +
     str(demo.DIRECTOR_SERVER_PORT))
 
@@ -421,11 +428,11 @@ def register_self_with_director():
 #   print('   Modified the signed manifest as a MITM, simply changing a value:')
 #   print('   The attacks_detected field now reads ' + RED + '"Everything is great, I PROMISE!' + ENDCOLORS)
 
-#   #import xmlrpc.client # for xmlrpc.client.Fault
+#   #import xmlrpc_client # for xmlrpc_client.Fault
 
 #   try:
 #     primary_ecu.submit_ecu_manifest_to_director(corrupt_signed_manifest)
-#   except xmlrpc.client.Fault:
+#   except xmlrpc_client.Fault:
 #     print(GREEN + 'Director service REJECTED the fraudulent ECU manifest.' + ENDCOLORS)
 #   else:
 #     print(RED + 'Director service ACCEPTED the fraudulent ECU manifest!' + ENDCOLORS)
@@ -463,11 +470,11 @@ def register_self_with_director():
 #   uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
 #       signed_corrupt_manifest)
 
-#   #import xmlrpc.client # for xmlrpc.client.Fault
+#   #import xmlrpc_client # for xmlrpc_client.Fault
 
 #   try:
 #     primary_ecu.submit_ecu_manifest_to_director(signed_corrupt_manifest)
-#   except xmlrpc.client.Fault as e:
+#   except xmlrpc_client.Fault as e:
 #     print('Director service REJECTED the fraudulent ECU manifest.')
 #   else:
 #     print('Director service ACCEPTED the fraudulent ECU manifest!')
@@ -563,7 +570,7 @@ def get_image_for_ecu(ecu_serial):
 
     assert os.path.exists(image_fname), 'File ' + repr(image_fname) + \
         ' does not exist....'
-    binary_data = xmlrpc.client.Binary(open(image_fname, 'rb').read())
+    binary_data = xmlrpc_client.Binary(open(image_fname, 'rb').read())
 
     print('Distributing image to ECU ' + repr(ecu_serial))
 
@@ -637,7 +644,7 @@ def get_metadata_for_ecu(ecu_serial, force_partial_verification=False):
 
     print('Distributing metadata to ECU ' + repr(ecu_serial))
 
-    binary_data = xmlrpc.client.Binary(open(fname, 'rb').read())
+    binary_data = xmlrpc_client.Binary(open(fname, 'rb').read())
 
     print('Distributing image to ECU ' + repr(ecu_serial))
     return binary_data
@@ -734,7 +741,7 @@ def get_time_attestation_for_ecu(ecu_serial):
 
 # Restrict Primary requests to a particular path.
 # Must specify RPC2 here for the XML-RPC interface to work.
-class RequestHandler(xmlrpc.server.SimpleXMLRPCRequestHandler):
+class RequestHandler(xmlrpc_server.SimpleXMLRPCRequestHandler):
   rpc_paths = ('/RPC2',)
 
 
@@ -753,10 +760,10 @@ def listen():
   last_error = None
   for port in demo.PRIMARY_SERVER_AVAILABLE_PORTS:
     try:
-      server = xmlrpc.server.SimpleXMLRPCServer(
+      server = xmlrpc_server.SimpleXMLRPCServer(
           (demo.PRIMARY_SERVER_HOST, port),
           requestHandler=RequestHandler, allow_none=True)
-    except OSError as e:
+    except socket.error as e:
       print('Failed to bind Primary XMLRPC Listener to port ' + repr(port) +
           '. Trying next port.')
       last_error = e

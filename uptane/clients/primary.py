@@ -7,6 +7,9 @@
   to Secondaries, collect ECU manifests, generate timeserver requests, etc.
 
 """
+from __future__ import print_function
+from __future__ import unicode_literals
+
 import uptane.formats
 import tuf.formats
 import uptane.ber_encoder as ber_encoder

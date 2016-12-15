@@ -17,19 +17,21 @@
     ./run_timeserver.sh
 
 """
+from __future__ import print_function
+from __future__ import unicode_literals
 
 import demo
 import uptane
 import uptane.common
 import tuf.formats
 
-import xmlrpc.server
+from six.moves import xmlrpc_server
 import uptane.services.timeserver as timeserver
 
 
 # Restrict director requests to a particular path.
 # Must specify RPC2 here for the XML-RPC interface to work.
-class RequestHandler(xmlrpc.server.SimpleXMLRPCRequestHandler):
+class RequestHandler(xmlrpc_server.SimpleXMLRPCRequestHandler):
   rpc_paths = ('/RPC2',)
 
 
@@ -60,7 +62,7 @@ def listen(use_new_keys=False):
   print('Timeserver signing key loaded.')
 
   # Create server
-  server = xmlrpc.server.SimpleXMLRPCServer(
+  server = xmlrpc_server.SimpleXMLRPCServer(
       (demo.TIMESERVER_HOST, demo.TIMESERVER_PORT),
       requestHandler=RequestHandler)#, allow_none=True)
   #server.register_introspection_functions()

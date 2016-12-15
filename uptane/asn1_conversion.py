@@ -1,5 +1,8 @@
 """
 """
+from __future__ import print_function
+from __future__ import unicode_literals
+from io import open
 
 
 def json_to_asn1(json_input):

@@ -1,11 +1,14 @@
 #!/usr/bin/env python
 
+from __future__ import unicode_literals
+
 from pyasn1.type import univ, char, namedtype, namedval, tag, constraint, useful
 
 from timeservermodule import *
 
 import timeserver as timeserver
 
+from six.moves import range
 
 def get_asn_signed(json_signed):
   signed = NoncesAndTimestamp()\

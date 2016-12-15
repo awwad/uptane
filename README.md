@@ -1,5 +1,5 @@
 # Uptane
-Early demonstration code for UPTANE. Python 3 is preferred during development.
+Reference Implementation and demonstration code for UPTANE.
 
 Please note that extensive documentation on design can be found in the following documents:
 - [Uptane Design Overview](https://docs.google.com/document/d/13XXQZ6KXCK_MiZj_Q84PQyMDmBiHnhEfgJgj8drKWRI/edit#heading=h.8swqb4rerhs3)
@@ -22,9 +22,9 @@ To download and install the Uptane code and its dependencies, run the following:
 ```shell
 git clone https://github.com/uptane/uptane
 cd uptane
-pip3 install cffi==1.7.0 pycrypto==2.6.1 pynacl==1.0.1 cryptography
-pip3 install git+git://github.com/awwad/tuf.git@pinning
-pip3 install -e .
+pip install cffi==1.7.0 pycrypto==2.6.1 pynacl==1.0.1 cryptography canonicaljson
+pip install git+git://github.com/awwad/tuf.git@pinning
+pip install -e .
 ```
 
 If you're going to be running the ASN.1 encoding scripts once they are ready, you'll also need to `pip install pyasn1`
@@ -32,15 +32,15 @@ If you're going to be running the ASN.1 encoding scripts once they are ready, yo
 
 ## Running
 The code below is intended to be run IN FIVE PANES:
-- WINDOW 1: Python3 shell for the OEM. This serves HTTP (repository files).
-- WINDOW 2: Python3 shell for the Director (Repository and Service). This serves metadata and image files via HTTP receives manifests from the Primary via XMLRPC (manifests).
+- WINDOW 1: Python shell for the OEM. This serves HTTP (repository files).
+- WINDOW 2: Python shell for the Director (Repository and Service). This serves metadata and image files via HTTP receives manifests from the Primary via XMLRPC (manifests).
 - WINDOW 3: Bash shell for the Timeserver. This serves signed times in response to requests from the Primary via XMLRPC.
-- WINDOW 4: Python3 shell for a Primary client in the vehicle. This fetches images and metadata from the repositories via HTTP, and communicates with the Director service, Timeserver, and any Secondaries via XMLRPC. (More of these can be run, simulating more vehicles with one Primary each.)
-- WINDOW 5: Python3 shell for a Secondary in the vehicle. This communicates directly only with the Primary via XMLRPC, and will perform full metadata verification. (More of these can be run, simulating more ECUs in one or more vehicles.)
+- WINDOW 4: Python shell for a Primary client in the vehicle. This fetches images and metadata from the repositories via HTTP, and communicates with the Director service, Timeserver, and any Secondaries via XMLRPC. (More of these can be run, simulating more vehicles with one Primary each.)
+- WINDOW 5: Python shell for a Secondary in the vehicle. This communicates directly only with the Primary via XMLRPC, and will perform full metadata verification. (More of these can be run, simulating more ECUs in one or more vehicles.)
 
 
 ###*WINDOW 1: the Supplier/OEM Repository*
-These instructions start a demonstration version of an OEM or Supplier's main repository
+These instructions start a demonstration version of an OEM's or Supplier's main repository
 for software, hosting images and the metadata Uptane requires.
 
 ```python
@@ -94,13 +94,13 @@ time request, so that each ECU can better establish that it is not being tricked
 into accepting a false time.
 ```shell
 #!/bin/bash
-python3 demo/demo_timeserver.py
+python demo/demo_timeserver.py
 ```
 
 ###*WINDOW 4(+): the Primary client(s):*
 (ONLY AFTER SUPPLIER, DIRECTOR, AND TIMESERVER HAVE FINISHED STARTING UP AND ARE HOSTING)
 The Primary client started below is likely to run on a more capable and
-connected ECU in a vehicle - potentially the head unit / infotainment. It will
+connected ECU in the vehicle - potentially the head unit / infotainment. It will
 obtain metadata and images from the OEM Repository as instructed by the Director
 and distribute them appropriately to other, Secondary ECUs in the vehicle,
 and it will receive ECU Manifests indicating the software on each Secondary ECU,

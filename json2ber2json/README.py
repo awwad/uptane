@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+from __future__ import unicode_literals
+from io import open
+
 import hashlib
 import json
 
@@ -31,7 +35,7 @@ def seamless_transport_of_json_over_ber(json_in_filename, ber_filename,
   converted.'''
 
   # 1. Read from JSON.
-  with open(json_in_filename, 'rb') as json_in_file:
+  with open(json_in_filename, 'r', encoding="utf-8") as json_in_file:
     before_json = json.load(json_in_file)
   print('Read {}'.format(json_in_filename))
   json_signed = before_json['signed']
@@ -52,6 +56,7 @@ def seamless_transport_of_json_over_ber(json_in_filename, ber_filename,
   print('Read {}'.format(ber_filename))
 
   after_json = metadata.ber_to_json_metadata(get_json_signed, ber_metadata)
+  #FIXME Consider using canonicaljson
   with open(json_out_filename, 'wb') as json_out_file:
     json.dump(after_json, json_out_file, sort_keys=True, indent=1,
               separators=(',', ': '))
@@ -75,7 +80,7 @@ def sign_the_ber_not_the_json(json_in_filename, ber_filename, json_out_filename,
   converted.'''
 
   # Setup keys.
-  with open(json_in_filename) as json_in_file:
+  with open(json_in_filename, encoding="utf-8") as json_in_file:
     json_signatures = json.load(json_in_file)['signatures']
   for json_signature in json_signatures:
     tuf.repository_tool\
@@ -100,7 +105,7 @@ def sign_the_ber_not_the_json(json_in_filename, ber_filename, json_out_filename,
     assert tuf.keys.verify_signature(public_key, json_signature, hash)
 
   # 1. Read from JSON.
-  with open(json_in_filename, 'rb') as json_in_file:
+  with open(json_in_filename, 'r', encoding="utf-8") as json_in_file:
     before_json = json.load(json_in_file)
   print('Read {}'.format(json_in_filename))
   json_signed = before_json['signed']
@@ -134,6 +139,7 @@ def sign_the_ber_not_the_json(json_in_filename, ber_filename, json_out_filename,
   for json_signature in after_json['signatures']:
     check_json_signature(json_signature)
 
+  #FIXME Consider using canonicaljson
   with open(json_out_filename, 'wb') as json_out_file:
     json.dump(after_json, json_out_file, sort_keys=True, indent=1,
               separators=(',', ': '))

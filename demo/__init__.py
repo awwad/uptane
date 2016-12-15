@@ -1,12 +1,15 @@
 """
 __init__.py for the Uptane demo package
 """
+from __future__ import unicode_literals
 
 import uptane
 import os
 import tuf.formats
 import tuf.repository_tool as rt
 import random, string # To generate random strings for Secondary directory names
+
+from six.moves import range
 
 DEMO_DIR = os.path.join(uptane.WORKING_DIR, 'demo')
 DEMO_KEYS_DIR = os.path.join(DEMO_DIR, 'keys')

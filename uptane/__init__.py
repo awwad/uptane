@@ -5,11 +5,16 @@
 <Purpose>
   Defines Uptane common constants, exceptions, etc.
 """
+from __future__ import unicode_literals
 
 import logging, time # both for logging
+
+# FIXME: I actually think other modules rely on the `os` imported here and
+# not just for getcwd
 import os # for getcwd only
 
-WORKING_DIR = os.getcwd()
+from six.moves import getcwd
+WORKING_DIR = getcwd()
 
 ### Exceptions
 class Error(Exception):

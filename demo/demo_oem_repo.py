@@ -14,6 +14,9 @@ do.host()
 do.kill_server()
 
 """
+from __future__ import print_function
+from __future__ import unicode_literals
+from io import open
 
 import demo
 import uptane

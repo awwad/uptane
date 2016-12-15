@@ -8,7 +8,7 @@
   return a signed time attestation that includes those nonces.
 
 """
-
+from __future__ import unicode_literals
 
 import uptane
 import uptane.formats

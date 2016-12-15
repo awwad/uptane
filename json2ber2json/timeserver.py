@@ -5,6 +5,8 @@
 # indepedently of each other.
 
 from __future__ import print_function
+from __future__ import unicode_literals
+from io import open
 
 from pyasn1.type import univ, char, namedtype, namedval, tag, constraint, useful
 
@@ -17,6 +19,7 @@ import calendar
 import hashlib
 import json
 
+from six.moves import range
 
 def ber_to_json_metadata(get_json_signed, ber_metadata):
   asn_metadata = decoder.decode(ber_metadata, asn1Spec=CurrentTime())[0]
@@ -120,7 +123,7 @@ def pretty_print(json_metadata):
 def test(json_filename, ber_filename, get_asn_signed, get_json_signed,
          update_json_signature):
   # 1. Read from JSON.
-  with open(json_filename, 'rb') as jsonFile:
+  with open(json_filename, 'r', encoding="utf-8") as jsonFile:
     before_json = json.load(jsonFile)
   json_signed = before_json['signed']
   json_signatures = before_json['signatures']

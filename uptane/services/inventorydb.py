@@ -28,6 +28,10 @@
   For now, only the most recent validated manifest from the vehicle is stored.
   Once a manifest is validated, it replaces the previously held manifest.
 """
+from __future__ import print_function
+from __future__ import unicode_literals
+from io import open
+
 
 import os.path
 #join = os.path.join
@@ -35,6 +39,7 @@ import uptane
 import uptane.formats
 import tuf
 import json
+import canonicaljson
 
 # TODO: Move this out of import territory and to somewhere sensible.
 INVENTORY_DB_DIR = os.path.join(uptane.WORKING_DIR, 'inventorydb')
@@ -67,7 +72,7 @@ def get_vehicle_manifest(vin):
 
   fname = os.path.join(scrubbed_vin, 'vehicle')
 
-  return json.load(open(fname, 'r'))
+  return json.load(open(fname, 'r', encoding="utf-8"))
 
 
 
@@ -92,7 +97,8 @@ def save_vehicle_manifest(vin, signed_vehicle_manifest):
 
   fname = os.path.join(scrubbed_vin, 'vehicle')
 
-  json.dump(signed_vehicle_manifest, open(fname, 'w'))
+  with open(fname, 'wb') as fobj:
+    fobj.write(canonicaljson.encode_canonical_json(signed_vehicle_manifest))
 
   print('Saved Vehicle Manifest.')
 
@@ -111,7 +117,7 @@ def get_ecu_manifest(vin, ecu_serial):
 
   fname = os.path.join(scrubbed_vin, ecu_serial) # Note non-scrubbed.
 
-  return json.load(open(fname, 'r'))
+  return json.load(open(fname, 'r', encoding="utf-8"))
 
 
 
@@ -133,7 +139,8 @@ def save_ecu_manifest(vin, ecu_serial, signed_ecu_manifest):
 
   fname = os.path.join(scrubbed_vin, ecu_serial) # Note non-scrubbed.
 
-  json.dump(signed_ecu_manifest, open(fname, 'w'))
+  with open(fname, 'wb') as fobj:
+    fobj.write(canonicaljson.encode_canonical_json(signed_ecu_manifest))
 
   print('Saved ECU Manifest for ECU ' + str(ecu_serial) + ' at ' + fname)
 

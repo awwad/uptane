@@ -48,6 +48,8 @@
   then be required to update his $PATH variable:
   $ export PATH=$PATH:~/.local/bin
 """
+from __future__ import unicode_literals
+from io import open
 
 from setuptools import setup
 from setuptools import find_packages
@@ -76,6 +78,7 @@ setup(
     'Operating System :: MacOS :: MacOS X',
     'Operating System :: Microsoft :: Windows',
     'Programming Language :: Python',
+    'Programming Language :: Python :: 2.7',
     'Programming Language :: Python :: 3',
     'Programming Language :: Python :: 3.3',
     'Programming Language :: Python :: 3.4',
@@ -84,7 +87,7 @@ setup(
     'Topic :: Security',
     'Topic :: Software Development'
   ],
-  install_requires = ['iso8601', 'tuf'],
+  install_requires = ['iso8601', 'tuf', 'six', 'canonicaljson'],
   packages = find_packages(exclude=['tests']),
   scripts = []
 )

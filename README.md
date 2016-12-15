@@ -35,12 +35,12 @@ The code below is intended to be run IN FIVE PANES:
 - WINDOW 1: Python3 shell for the OEM. This serves HTTP (repository files).
 - WINDOW 2: Python3 shell for the Director (Repository and Service). This serves metadata and image files via HTTP receives manifests from the Primary via XMLRPC (manifests).
 - WINDOW 3: Bash shell for the Timeserver. This serves signed times in response to requests from the Primary via XMLRPC.
-- WINDOW 4: Python3 shell for a Primary client in the vehicle. This fetches images and metadata from the repositories via HTTP, and communicates with the Director service, Timeserver, and any Secondaries via XMLRPC.
-- WINDOW 5: (At least one) Python3 shell for a Secondary in the vehicle. This communicates directly only with the Primary via XMLRPC, and will perform full metadata verification.
+- WINDOW 4: Python3 shell for a Primary client in the vehicle. This fetches images and metadata from the repositories via HTTP, and communicates with the Director service, Timeserver, and any Secondaries via XMLRPC. (More of these can be run, simulating more vehicles with one Primary each.)
+- WINDOW 5: Python3 shell for a Secondary in the vehicle. This communicates directly only with the Primary via XMLRPC, and will perform full metadata verification. (More of these can be run, simulating more ECUs in one or more vehicles.)
 
 
-###*WINDOW 1: the OEM Repository*
-These instructions start a demonstration version of an OEM's main repository
+###*WINDOW 1: the Supplier/OEM Repository*
+These instructions start a demonstration version of an OEM or Supplier's main repository
 for software, hosting images and the metadata Uptane requires.
 
 ```python
@@ -97,10 +97,10 @@ into accepting a false time.
 python3 demo/demo_timeserver.py
 ```
 
-###*WINDOW 4: the Primary client:*
-(ONLY AFTER THE OTHERS HAVE FINISHED STARTING UP AND ARE HOSTING)
+###*WINDOW 4(+): the Primary client(s):*
+(ONLY AFTER SUPPLIER, DIRECTOR, AND TIMESERVER HAVE FINISHED STARTING UP AND ARE HOSTING)
 The Primary client started below is likely to run on a more capable and
-connected ECU in the vehicle - potentially the head unit / infotainment. It will
+connected ECU in a vehicle - potentially the head unit / infotainment. It will
 obtain metadata and images from the OEM Repository as instructed by the Director
 and distribute them appropriately to other, Secondary ECUs in the vehicle,
 and it will receive ECU Manifests indicating the software on each Secondary ECU,
@@ -118,10 +118,19 @@ The Primary's update_cycle() call:
 - generates a Vehicle Version Manifest with some vehicle metadata and all ECU Version Manifests received from Secondaries, describing currently installed images, most recent times available to each ECU, and reports of any attacks observed by Secondaries (can also be called directly: `dp.generate_signed_vehicle_manifest()`)
 - sends that Vehicle Version Manifest to the Director (can also be called directly: `dp.submit_vehicle_manifest_to_director()`)
 
+If you wish to run the demo with multiple vehicles (one Primary each), you can open a new
+window for each vehicle's Primary and provide a unique VIN and ECU for each of them. Find the port that is chosen in the Primary's initialization and make note of it so that it can be provided to any Secondaries you set up in a moment (e.g. "Primary will now listen on port 30702")
+For example:
+```python
+import demo.demo_primary as dp
+dp.clean_slate(vin='112', ecu_serial='PRIMARY_ECU_2')
+dp.update_cycle()
+```
 
 
-###*WINDOW 5+: the Secondary client(s):*
-(ONLY AFTER THE OTHERS HAVE FINISHED STARTING UP AND ARE HOSTING)
+
+###*WINDOW 5(+): the Secondary client(s):*
+(ONLY AFTER SUPPLIER, DIRECTOR, TIMESERVER, AND PRIMARY HAVE FINISHED STARTING UP AND ARE HOSTING)
 Here, we start a single Secondary ECU and generate a signed ECU Manifest
 with information about the "firmware" that it is running, which we send to the
 Primary.
@@ -131,7 +140,10 @@ ds.clean_slate()
 ds.update_cycle()
 ```
 
-Note that multiple windows with different Secondary clients can be run simultaneously. In each additional window, run the same calls as above, but with the clean_slate() call modified to include a distinct ECU Serial. e.g. `ds.clean_slate(ecu_serial='33333')`
+Optionally, multiple windows with different Secondary clients can be run simultaneously. In each additional window, you can run the same calls as above to set up a new ECU in the same, default vehicle by modifying the clean_slate() call to include a distinct ECU Serial. e.g. `ds.clean_slate(ecu_serial='33333')`
+
+If the Secondary is in a different vehicle from the default vehicle, this call should look like:
+`ds.clean_slate(vin='112', ecu_serial='33333', primary_port='30702')`, providing a VIN for the new vehicle, a unique ECU Serial, and indicating the port listed by this Secondary's Primary when that Primary initialized (e.g. "Primary will now listen on port 30702").
 
 The Secondary's update_cycle() call:
 - fetches and validates the signed metadata for the vehicle from the Primary

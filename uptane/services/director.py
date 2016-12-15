@@ -177,9 +177,9 @@ class Director:
           'vehicle known to this Director.')
 
     elif ecu_serial in self.ecu_public_keys:
-      log.error(RED + 'Rejecting an attempt to register a public key to an ECU '
-          'Serial when that ECU Serial already has a public key registered to '
-          'it.' + ENDCOLORS)
+      log.error(YELLOW + 'Rejecting an attempt to register a public key to an '
+          'ECU Serial when that ECU Serial already has a public key registered '
+          'to it.' + ENDCOLORS)
       raise uptane.Spoofing('This ecu_serial has already been registered. '
           'Rejecting registration request.')
 

@@ -316,11 +316,11 @@ def listen():
       director_service_instance.register_vehicle_manifest,
       'submit_vehicle_manifest')
 
-  # In the longer term, this won't be exposed: it will only be reached via
-  # register_vehicle_manifest. For now, during development, however, this is
-  # exposed.
-  server.register_function(
-      director_service_instance.register_ecu_manifest, 'submit_ecu_manifest')
+  # # In the longer term, this won't be exposed: it will only be reached via
+  # # register_vehicle_manifest. For now, during development, however, this is
+  # # exposed.
+  # server.register_function(
+  #     director_service_instance.register_ecu_manifest, 'submit_ecu_manifest')
 
   server.register_function(
       director_service_instance.register_ecu_serial, 'register_ecu_serial')

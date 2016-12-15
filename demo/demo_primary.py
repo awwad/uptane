@@ -46,7 +46,9 @@ LIBUPTANE_LIBRARY_FNAME = os.path.join(
 
 
 # Globals
-_client_directory_name = 'temp_primary' # name for this Primary's directory
+CLIENT_DIRECTORY_PREFIX = 'temp_primary'
+client_directory = None
+#_client_directory_name = 'temp_primary' # name for this Primary's directory
 _vin = '111'
 _ecu_serial = '11111'
 # firmware_filename = 'infotainment_firmware.txt'
@@ -79,7 +81,7 @@ most_recent_signed_vehicle_manifest = None
 
 def clean_slate(
     use_new_keys=False,
-    client_directory_name=_client_directory_name,
+    # client_directory_name=None,
     vin=_vin,
     ecu_serial=_ecu_serial,
     c_interface=False):
@@ -87,17 +89,21 @@ def clean_slate(
   """
 
   global primary_ecu
-  global _client_directory_name
+  global client_directory
   global _vin
   global _ecu_serial
   global listener_thread
   global use_can_interface
 
-  _client_directory_name = client_directory_name
   _vin = vin
   _ecu_serial = ecu_serial
   use_can_interface = c_interface
 
+  # if client_directory_name is not None:
+  #   client_directory = client_directory_name
+  # else:
+  client_directory = os.path.join(
+      uptane.WORKING_DIR, CLIENT_DIRECTORY_PREFIX + demo.get_random_string(5))
 
   # Load the public timeserver key.
   key_timeserver_pub = demo.import_public_key('timeserver')
@@ -115,21 +121,21 @@ def clean_slate(
   # creation of repository metadata directories, current and previous, putting
   # the pinning.json file in place, etc.
   uptane.common.create_directory_structure_for_client(
-      _client_directory_name, create_primary_pinning_file(), #demo.DEMO_PINNING_FNAME,
+      client_directory, create_primary_pinning_file(),
       {demo.MAIN_REPO_NAME: demo.MAIN_REPO_ROOT_FNAME,
       demo.DIRECTOR_REPO_NAME: os.path.join(demo.DIRECTOR_REPO_DIR, vin,
       'metadata', 'root.json')})
 
   # Configure tuf with the client's metadata directories (where it stores the
   # metadata it has collected from each repository, in subdirectories).
-  tuf.conf.repository_directory = _client_directory_name
+  tuf.conf.repository_directory = client_directory
 
 
 
   # Initialize a Primary ECU, making a client directory and copying the root
   # file from the repositories.
   primary_ecu = primary.Primary(
-      full_client_dir=os.path.join(uptane.WORKING_DIR, _client_directory_name),
+      full_client_dir=os.path.join(uptane.WORKING_DIR, client_directory),
       director_repo_name=demo.DIRECTOR_REPO_NAME,
       vin=_vin,
       ecu_serial=_ecu_serial,
@@ -737,13 +743,32 @@ class RequestHandler(xmlrpc.server.SimpleXMLRPCRequestHandler):
 
 def listen():
   """
-  Listens on PRIMARY_SERVER_PORT for xml-rpc calls to functions
+  Listens on an available port from list PRIMARY_SERVER_AVAILABLE_PORTS, for
+  XML-RPC calls from demo Secondaries for Primary interface calls.
   """
 
   # Create server
-  server = xmlrpc.server.SimpleXMLRPCServer(
-      (demo.PRIMARY_SERVER_HOST, demo.PRIMARY_SERVER_PORT),
-      requestHandler=RequestHandler, allow_none=True)
+  server = None
+  successful_port = None
+  last_error = None
+  for port in demo.PRIMARY_SERVER_AVAILABLE_PORTS:
+    try:
+      server = xmlrpc.server.SimpleXMLRPCServer(
+          (demo.PRIMARY_SERVER_HOST, port),
+          requestHandler=RequestHandler, allow_none=True)
+    except OSError as e:
+      print('Failed to bind Primary XMLRPC Listener to port ' + repr(port) +
+          '. Trying next port.')
+      last_error = e
+
+    else:
+      successful_port = port
+      break
+
+  if server is None: # All ports failed.
+    assert last_error is not None, 'Programming error'
+    raise last_error
+
   #server.register_introspection_functions()
 
   # Register functions that can be called via XML-RPC, allowing Secondaries to
@@ -767,6 +792,6 @@ def listen():
       primary_ecu.update_exists_for_ecu, 'update_exists_for_ecu')
 
 
-  print('Primary will now listen on port ' + str(demo.PRIMARY_SERVER_PORT))
+  print('Primary will now listen on port ' + str(successful_port))
   server.serve_forever()
 

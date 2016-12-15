@@ -136,9 +136,6 @@ class TestPrimary(unittest.TestCase):
     global primary_instance
 
 
-    client_directory_name = 'test_primary_client'
-
-
     # Set up a client directory first.
     uptane.common.create_directory_structure_for_client(
         client_directory_name,

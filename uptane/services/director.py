@@ -394,7 +394,7 @@ class Director:
     # DIRECTOR_REPO_HOST = 'http://localhost'
     # DIRECTOR_REPO_PORT = 30301
 
-    vin = inventorydb.scrub_filename(vin, WORKING_DIR)
+    vin = uptane.common.scrub_filename(vin, WORKING_DIR)
 
     self.repositories[vin] = rt.create_new_repository('repodirector_' + 'vin')
 

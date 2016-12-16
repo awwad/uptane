@@ -69,6 +69,7 @@ class Director:
 
   """
 
+
   def __init__(self,
     #inventorydb = None,
     key_root,
@@ -86,6 +87,9 @@ class Director:
     self.key_dirtarg_pri = key_targets
 
     self.ecu_public_keys = ecu_public_keys
+
+
+
 
 
   def register_ecu_serial(self, ecu_serial, ecu_key):
@@ -310,7 +314,7 @@ class Director:
     self.validate_ecu_manifest(ecu_serial, signed_ecu_manifest)
 
     # Otherwise, we save it:
-    inventorydb.save_ecu_manifest(ecu_serial, signed_ecu_manifest)
+    inventorydb.save_ecu_manifest(vin, ecu_serial, signed_ecu_manifest)
 
     log.debug('Stored a valid ECU manifest from ECU ' + repr(ecu_serial))
 

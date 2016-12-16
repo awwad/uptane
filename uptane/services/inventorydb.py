@@ -41,6 +41,7 @@ INVENTORY_DB_DIR = os.path.join(uptane.WORKING_DIR, 'inventorydb')
 if not os.path.exists(INVENTORY_DB_DIR):
   os.mkdir(INVENTORY_DB_DIR)
 
+
 def get_ecu_public_key(ecu_serial):
 
   # Hardcoded single example for now:
@@ -53,6 +54,49 @@ def get_ecu_public_key(ecu_serial):
     raise NotImplementedError('Ask for key ecu1234.')
 
   return pubkey
+
+
+
+
+
+def get_all_vehicle_manifests(vin):
+
+  uptane.formats.VIN_SCHEMA.check_match(vin)
+
+  if vin not in vehicle_manifests:
+    raise uptane.Error('The given VIN, ' + repr(vin) + ', is not known.')
+  else:
+    return vehicle_manifests[vin]
+
+
+
+
+
+def save_vehicle_manifest(vin, signed_vehicle_manifest):
+  """
+  Given a manifest of form
+  uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA, save it in an index
+  by vin, and save the individual ecu attestations in an index by ecu serial.
+  """
+  uptane.formats.VIN_SCHEMA.check_match(vin)
+  uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
+       signed_vehicle_manifest)
+
+  if vin not in vehicle_manifests:
+    vehicle_manifests[vin] = []
+
+  vehicle_manifests[vin].append(signed_vehicle_manifest)
+
+  # Save all the contained ECU manifests.
+  all_contained_ecu_manifests = signed_vehicle_manifest['signed'][
+      'ecu_version_manifests']
+
+  for ecu_serial in all_contained_ecu_manifests:
+    for signed_ecu_manifest in all_contained_ecu_manifests[ecu_serial]:
+      save_ecu_manifest(ecu_serial, signed_ecu_manifest)
+
+
+
 
 
 def scrub_filename(fname, expected_containing_dir):
@@ -122,37 +166,9 @@ def get_all_ecu_manifests_from_vehicle(vin):
 
 
 
-# Save vehicle manifest
-def save_vehicle_manifest(vin, signed_vehicle_manifest):
-
-  uptane.formats.VIN_SCHEMA.check_match(vin)
-  uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
-       signed_vehicle_manifest)
-
-  if vin not in vehicle_manifests:
-    vm_list = []
-    vm_list.append(signed_vehicle_manifest)
-    vehicle_manifests[vin] = vm_list
-  else:
-    vehicle_manifests[vin].append(signed_vehicle_manifest)
-
-  # Save all the contained ECU manifests.
-  all_contained_ecu_manifests = signed_vehicle_manifest['signed']['ecu_version_manifests']
-  for ecu_serial in all_contained_ecu_manifests:
-    for signed_ecu_manifest in all_contained_ecu_manifests[ecu_serial]:
-      save_ecu_manifest(ecu_serial, signed_ecu_manifest)
 
 
 
-# Get vehicle manifest
-def get_all_vehicle_manifests(vin):
-
-  uptane.formats.VIN_SCHEMA.check_match(vin)
-
-  if vin not in vehicle_manifests:
-    raise uptane.Error('The given VIN, ' + repr(vin) + ', is not known.')
-  else:
-    return vehicle_manifests[vin]
 
 
 

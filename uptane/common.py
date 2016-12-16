@@ -186,3 +186,34 @@ def create_directory_structure_for_client(
   # Configure tuf with the client's metadata directories (where it stores the
   # metadata it has collected from each repository, in subdirectories).
   tuf.conf.repository_directory = client_dir # TODO for TUF: This setting should probably be called client_directory instead, post-TAP4.
+
+
+
+
+def scrub_filename(fname, expected_containing_dir):
+  """
+  DO NOT ASSUME THAT THIS TEMPORARY FUNCTION IS SECURE.
+
+  Performs basic scrubbing to try to ensure that the filename provided is
+  actually just a plain filename (no pathing), so that it cannot specify a file
+  that is not in the provided directory.
+
+  May break (exception trigger-happy) if there's a softlink somewhere in the
+  working directory path.
+
+  Returns an absolute path that was confirmed to be inside
+  expected_containing_dir.
+  """
+  # Assert no tricksy characters. (Improvised, not to be trusted)
+  assert '..' not in fname and '/' not in fname and '$' not in fname and \
+      '~' not in fname and b'\\' not in fname.encode('unicode-escape'), \
+      'Unacceptable string: ' + fname
+
+  # Make sure it's in the expected directory.
+  abs_fname = os.path.abspath(os.path.join(expected_containing_dir, fname))
+  if not abs_fname.startswith(os.path.abspath(expected_containing_dir)):
+    raise ValueError('Expected a plain filename. Was given one that had '
+        'pathing specified that put it in a different, unexpected directory. '
+        'Filename was: ' + fname)
+
+  return abs_fname

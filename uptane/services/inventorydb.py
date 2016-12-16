@@ -97,16 +97,9 @@
 
 """
 
-import os.path
 import uptane
 import uptane.formats
 import tuf
-import json
-
-# TODO: Move this out of import territory and to somewhere sensible.
-INVENTORY_DB_DIR = os.path.join(uptane.WORKING_DIR, 'inventorydb')
-if not os.path.exists(INVENTORY_DB_DIR):
-  os.mkdir(INVENTORY_DB_DIR)
 
 # Global dictionaries
 vehicle_manifests = {}

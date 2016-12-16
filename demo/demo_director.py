@@ -28,6 +28,7 @@ from io import open
 import demo
 import uptane
 import uptane.services.director as director
+import uptane.services.inventorydb as inventory
 import tuf.formats
 
 import threading # for the director services interface
@@ -50,10 +51,7 @@ director_service_instance = None
 director_service_thread = None
 
 
-def clean_slate(
-  use_new_keys=False,
-  additional_root_key=False,
-  additional_targets_key=False):
+def clean_slate(use_new_keys=False):
 
   global director_service_instance
 
@@ -95,11 +93,10 @@ def clean_slate(
       key_snapshot_pri=key_dirsnap_pri,
       key_snapshot_pub=key_dirsnap_pub,
       key_targets_pri=key_dirtarg_pri,
-      key_targets_pub=key_dirtarg_pub,
-      ecu_public_keys=dict(),
-      ecus_by_vin={vin: [] for vin in KNOWN_VINS}) # dict mapping vin to [] for each vin in KNOWN_VINS
+      key_targets_pub=key_dirtarg_pub)
 
-
+  for vin in KNOWN_VINS:
+    director_service_instance.add_new_vehicle(vin)
 
   # You can tell the Director about ECUs this way:
   # test_ecu_public_key = demo.import_public_key('secondary')
@@ -113,8 +110,8 @@ def clean_slate(
   # Director starts off with. (Currently 3)
   # This copies the file to each repository's targets directory from the
   # main repository.
-  for vin in director_service_instance.ecus_by_vin:
-    for ecu in director_service_instance.ecus_by_vin[vin]:
+  for vin in inventory.ecus_by_vin:
+    for ecu in inventory.ecus_by_vin[vin]:
       add_target_to_director(
           os.path.join(demo.MAIN_REPO_TARGETS_DIR, 'infotainment_firmware.txt'),
           'infotainment_firmware.txt',

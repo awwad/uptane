@@ -276,7 +276,7 @@ def register_ecu(is_primary, vin, ecu_serial, public_key, overwrite=True):
   uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial)
   tuf.formats.ANYKEY_SCHEMA.check_match(public_key)
 
-  assert ecu_serial in ecu_public_keys == ecu_serial in ecu_manifests, \
+  assert (ecu_serial in ecu_public_keys) == (ecu_serial in ecu_manifests), \
       'Programming error: ECU registration is not consistent.'
 
   if not overwrite:
@@ -362,10 +362,15 @@ def _check_registration_is_sane(vin):
 
   uptane.formats.VIN_SCHEMA.check_match(vin)
 
-  # A VIN may be in either none or all three of these dictionaries, and nowhere
-  # in between, or there is a bug.
-  assert vin in vehicle_manifests == vin in ecus_by_vin == \
-      vin in primary_ecus_by_vin, 'Programming error.'
+  # # A VIN may be in either none or all three of these dictionaries, and nowhere
+  # # in between, or there is a bug.
+  # if vin in vehicle_manifests != vin in ecus_by_vin or vin in ecus_by_vin != \
+  #     vin in primary_ecus_by_vin:
+  #   import pdb
+  #   pdb.set_trace()
+
+  assert (vin in vehicle_manifests) == (vin in ecus_by_vin) == (
+      vin in primary_ecus_by_vin), 'Programming error.'
 
 
 

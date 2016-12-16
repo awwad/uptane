@@ -32,6 +32,7 @@ from __future__ import unicode_literals
 
 import uptane
 import uptane.formats
+import uptane.common
 import uptane.services.inventorydb as inventory
 import tuf
 import tuf.formats
@@ -114,9 +115,6 @@ class Director:
     for key in [
         key_root_pri, key_root_pub, key_timestamp_pri, key_timestamp_pub,
         key_snapshot_pri, key_snapshot_pub, key_targets_pri, key_targets_pub]:
-      tuf.formats.ANYKEY_SCHEMA.check_match(key)
-
-    for key in ecu_public_keys:
       tuf.formats.ANYKEY_SCHEMA.check_match(key)
 
     self.director_repos_dir = director_repos_dir

@@ -58,12 +58,18 @@
       list of the ECU Serials (uptane.formats.ECU_SERIAL_SCHEMA) of all ECUs
       associated with that vehicle.
 
-      All known vehicles should be in this dictionary.
+      All known vehicles should have their VIN in this dictionary.
 
       e.g. {'vin1': ['ecuserial1', 'ecuserial9', ...], 'vin2': ['ecuserial2']}
 
 
     public_keys
+
+      A dictionary mapping ECU Serial (uptane.formats.ECU_SERIAL_SCHEMA) of an
+      ECU to the public key (conforming to uptane.formats.ANYKEY_SCHEMA) that
+      corresponds to the signing key we expect that ECU to use.
+
+      All known ECUs should have their ECU Serial in this dictionary.
 
       e.g. {'ecuserial1': <key>, 'ecuserial2': <key>, ...}
 

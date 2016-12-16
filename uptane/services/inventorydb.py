@@ -7,6 +7,15 @@
   by the Director.
 
 
+  # TODO: <~> This is not properly thread-safe: there may be race conditions if
+  Primaries are being switched frequently. The windows are extremely small, but
+  assertions related to VIN registration in _check_registration_is_sane() are
+  likely to fail if such a race   condition is encountered. Similar race
+  conditions may exist. Cautious use of mutexes or a queue is probably
+  necessary.
+
+
+
 <Globals>
   The following five global dictionaries store information about ECUs and
   vehicles, including their serials, keys, and manifests submitted from
@@ -63,7 +72,7 @@
       e.g. {'vin1': ['ecuserial1', 'ecuserial9', ...], 'vin2': ['ecuserial2']}
 
 
-    public_keys
+    ecu_public_keys
 
       A dictionary mapping ECU Serial (uptane.formats.ECU_SERIAL_SCHEMA) of an
       ECU to the public key (conforming to uptane.formats.ANYKEY_SCHEMA) that
@@ -74,7 +83,7 @@
       e.g. {'ecuserial1': <key>, 'ecuserial2': <key>, ...}
 
 
-<Functions>
+<Public Functions>
 
   Registration:
     register_ecu(is_primary, vin, ecu_serial, public_key, overwrite=True)
@@ -109,7 +118,7 @@ vehicle_manifests = {}
 ecu_manifests = {}
 primary_ecus_by_vin = {}
 ecus_by_vin = {}
-public_keys = {}
+ecu_public_keys = {}
 
 
 def get_ecu_public_key(ecu_serial):
@@ -127,11 +136,11 @@ def get_ecu_public_key(ecu_serial):
 
   uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial)
 
-  if ecu_serial not in public_keys:
+  if ecu_serial not in ecu_public_keys:
     raise uptane.UnknownECU('The given ECU Serial, ' + repr(ecu_serial) +
         ' is not known. It must be registered.')
 
-  return public_keys[ecu_serial]
+  return ecu_public_keys[ecu_serial]
 
 
 
@@ -181,13 +190,18 @@ def save_vehicle_manifest(vin, signed_vehicle_manifest):
 
   vehicle_manifests[vin].append(signed_vehicle_manifest)
 
-  # Save all the contained ECU manifests.
-  all_contained_ecu_manifests = signed_vehicle_manifest['signed'][
-      'ecu_version_manifests']
 
-  for ecu_serial in all_contained_ecu_manifests:
-    for signed_ecu_manifest in all_contained_ecu_manifests[ecu_serial]:
-      save_ecu_manifest(ecu_serial, signed_ecu_manifest)
+  # Not doing it this way because the Director is going to pass through a
+  # correctly-signed vehicle manifest even if some of the ECU Manifests within
+  # it are *not* correctly signed. The Director will instead issue a
+  # save_ecu_manifest call for each validly-signed ECU Manifest.
+  # # Save all the contained ECU manifests.
+  # all_contained_ecu_manifests = signed_vehicle_manifest['signed'][
+  #     'ecu_version_manifests']
+
+  # for ecu_serial in all_contained_ecu_manifests:
+  #   for signed_ecu_manifest in all_contained_ecu_manifests[ecu_serial]:
+  #     save_ecu_manifest(ecu_serial, signed_ecu_manifest)
 
 
 
@@ -262,16 +276,20 @@ def register_ecu(is_primary, vin, ecu_serial, public_key, overwrite=True):
   uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial)
   tuf.formats.ANYKEY_SCHEMA.check_match(public_key)
 
+  assert ecu_serial in ecu_public_keys == ecu_serial in ecu_manifests, \
+      'Programming error: ECU registration is not consistent.'
+
   if not overwrite:
 
     # If we aren't supposed to be overwriting public keys or Primary
     # associations, make sure we don't.
 
-    if is_primary and vin in primary_ecus_by_vin:
+    if is_primary and vin in primary_ecus_by_vin and \
+        primary_ecus_by_vin[vin] is not None:
       raise uptane.Spoofing('The given VIN, ' + repr(vin) + ', is already '
           'associated with a Primary ECU.')
 
-    if ecu_serial in public_keys:
+    if ecu_serial in ecu_public_keys:
       raise uptane.Spoofing('The given ECU Serial, ' + repr(ecu_serial) +
           ', is already associated with a public key.')
 
@@ -280,24 +298,42 @@ def register_ecu(is_primary, vin, ecu_serial, public_key, overwrite=True):
   # No VIN should ever be in only one or the other of ecus_by_vin or
   # vehicle_manifests, or there is a bug.
   if vin not in ecus_by_vin:
-    assert vin not in vehicle_manifests, 'Programming error.'
-    ecus_by_vin[vin] = []
-    vehicle_manifests[vin] = []
+    register_vehicle(vin, overwrite=overwrite)
 
-  else:
-    assert vin in vehicle_manifests, 'Programming error.'
 
+  # Associate the ECU with the vehicle.
+  if ecu_serial not in ecus_by_vin[vin]:
+    ecus_by_vin[vin].append(ecu_serial)
 
   if is_primary:
     # Set the ECU as the vehicle's Primary ECU.
     primary_ecus_by_vin[vin] = ecu_serial
 
 
-  if ecu_serial not in ecus_by_vin[vin]:
-    ecus_by_vin[vin].append(ecu_serial)
+  # Save the ECU's public key.
+  ecu_public_keys[ecu_serial] = public_key
 
-  public_keys[ecu_serial] = public_key
+
+  # Create an entry in the ecu_manifests dictionary for future manifests from
+  # the ECU.
   ecu_manifests[ecu_serial] = []
+
+
+
+
+
+def register_vehicle(vin, primary_ecu_serial=None, overwrite=True):
+
+  _check_registration_is_sane(vin)
+
+  if not overwrite and vin in ecus_by_vin:
+    raise uptane.Spoofing('The given VIN, ' + repr(vin) + ', is already '
+        'registered.')
+
+  ecus_by_vin[vin] = []
+  vehicle_manifests[vin] = []
+  primary_ecus_by_vin[vin] = primary_ecu_serial
+
 
 
 
@@ -305,17 +341,31 @@ def register_ecu(is_primary, vin, ecu_serial, public_key, overwrite=True):
 
 def check_vin_registered(vin):
 
-  uptane.formats.VIN_SCHEMA.check_match(vin)
-
-  # No VIN should ever be in only one or the other of ecus_by_vin or
-  # vehicle_manifests, or there is a bug.
+  _check_registration_is_sane(vin)
 
   if vin not in vehicle_manifests:
-    assert vin not in ecus_by_vin, 'Programming error.'
-    raise uptane.Error('The given VIN, ' + repr(vin) + ', is not known.')
+    # TODO: Should we also log here? Review logging before exceptions
+    # throughout the reference implementation.
+    raise uptane.UnknownVehicle('The given VIN, ' + repr(vin) + ', is not '
+        'known.')
 
-  else:
-    assert vin in ecus_by_vin, 'Programming error.'
+
+
+
+
+def _check_registration_is_sane(vin):
+  """
+  Asserts that a data structure invariant remains correct. A vehicle must be
+  in all three of the relevant global dictionaries if it is registered, and in
+  none of them if it is not.
+  """
+
+  uptane.formats.VIN_SCHEMA.check_match(vin)
+
+  # A VIN may be in either none or all three of these dictionaries, and nowhere
+  # in between, or there is a bug.
+  assert vin in vehicle_manifests == vin in ecus_by_vin == \
+      vin in primary_ecus_by_vin, 'Programming error.'
 
 
 
@@ -325,6 +375,6 @@ def check_ecu_registered(ecu_serial):
 
   uptane.formats.VIN_SCHEMA.check_match(vin)
 
-  if ecu_serial not in public_keys:
+  if ecu_serial not in ecu_public_keys:
     raise uptane.UnknownECU('The given ECU serial, ' + repr(ecu_serial) +
         ', is not known.')

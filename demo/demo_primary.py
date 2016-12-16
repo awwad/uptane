@@ -397,7 +397,7 @@ def register_self_with_director():
 
   print('Registering Primary ECU Serial and Key with Director.')
   server.register_ecu_serial(
-      primary_ecu.ecu_serial, primary_ecu.primary_key, _vin)
+      primary_ecu.ecu_serial, primary_ecu.primary_key, _vin, is_primary=True)
   print(GREEN + 'Primary has been registered with the Director.' + ENDCOLORS)
 
 

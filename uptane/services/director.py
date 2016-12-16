@@ -32,7 +32,7 @@ from __future__ import unicode_literals
 
 import uptane
 import uptane.formats
-import uptane.services.inventorydb as inventorydb
+import uptane.services.inventorydb as inventory
 import tuf
 import tuf.formats
 import tuf.repository_tool as rt
@@ -53,22 +53,25 @@ class Director:
   See file's docstring.
 
   Fields:
-    ecu_public_keys
-      A dictionary mapping ECU_SERIAL (uptane.formats.ECU_SERIAL_SCHEMA) to
-      the public key for that ECU (tuf.formats.ANYKEY_SCHEMA) for each ECU that
-      the Director knows about
 
-    ecus_by_vin
-      A dictionary mapping VIN - the identifier for a known vehicle for
-      which this is responsible - to a list of ECU Serials associated with that
-      vehicle.
-      This is used to both identify known VINs and associate ECUs with VINs.
-      Identifying known ECUs is generally done instead by checking the
-      ecu_public_keys field, since that is flat.
-      A dictionary of lists of ECU Serials, indexed by VIN.
-      e.g.:
-          {'vin111': ['ecuserial12345', 'ecuserial6789'],
-           'vin112': ['serialabc', 'serialdef']}
+    Now uses inventory module for this instead:
+    # ecu_public_keys
+    #   A dictionary mapping ECU_SERIAL (uptane.formats.ECU_SERIAL_SCHEMA) to
+    #   the public key for that ECU (tuf.formats.ANYKEY_SCHEMA) for each ECU that
+    #   the Director knows about
+
+    Now uses inventory module for this instead:
+    # ecus_by_vin
+    #   A dictionary mapping VIN - the identifier for a known vehicle for
+    #   which this is responsible - to a list of ECU Serials associated with that
+    #   vehicle.
+    #   This is used to both identify known VINs and associate ECUs with VINs.
+    #   Identifying known ECUs is generally done instead by checking the
+    #   ecu_public_keys field, since that is flat.
+    #   A dictionary of lists of ECU Serials, indexed by VIN.
+    #   e.g.:
+    #       {'vin111': ['ecuserial12345', 'ecuserial6789'],
+    #        'vin112': ['serialabc', 'serialdef']}
 
     key_dirroot_pri
       Private signing key for the root role in the Director's repositories
@@ -101,16 +104,10 @@ class Director:
     key_snapshot_pri,
     key_snapshot_pub,
     key_targets_pri,
-    key_targets_pub,
-    ecu_public_keys=dict(),
-    ecus_by_vin=dict()):
+    key_targets_pub):
 
     # TODO: Consider allowing multiple keys per role for the Director.
     # github.com/awwad/uptane/issues/20
-
-    # if inventorydb is None:
-    #   inventorydb = json.load()
-    # self.inventorydb = {}
 
     tuf.formats.RELPATH_SCHEMA.check_match(director_repos_dir)
 
@@ -133,20 +130,13 @@ class Director:
     self.key_dirtarg_pri = key_targets_pri
     self.key_dirtarg_pub = key_targets_pub
 
-    self.ecu_public_keys = ecu_public_keys
-
     self.vehicle_repositories = dict()
-    self.ecus_by_vin = dict() # This will be populated with ecus_by_vin shortly.
-    for vin in ecus_by_vin:
-      uptane.formats.VIN_SCHEMA.check_match(vin)
-      self.add_new_vehicle(vin, ecus_by_vin[vin])
 
 
 
 
 
-
-  def register_ecu_serial(self, ecu_serial, ecu_key, vin):
+  def register_ecu_serial(self, ecu_serial, ecu_key, vin, is_primary=False):
     """
     Set the expected public key for signed messages from the ECU with the given
     ECU Serial. If signed messages purportedly coming from the ECU with that
@@ -171,34 +161,16 @@ class Director:
     uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial)
     tuf.formats.ANYKEY_SCHEMA.check_match(ecu_key)
 
-    if vin not in self.ecus_by_vin:
-      # TODO: Should we also log here? Review logging before exceptions
-      # throughout the reference implementation.
-      raise uptane.UnknownVehicle('The given VIN does not correspond to a '
-          'vehicle known to this Director.')
+    inventory.check_vin_registered(vin)
 
-    elif ecu_serial in self.ecu_public_keys:
-      log.error(YELLOW + 'Rejecting an attempt to register a public key to an '
-          'ECU Serial when that ECU Serial already has a public key registered '
-          'to it.' + ENDCOLORS)
-      raise uptane.Spoofing('This ecu_serial has already been registered. '
-          'Rejecting registration request.')
+    # Register the public key and associate the ECU with the given VIN.
+    inventory.register_ecu(
+        is_primary, vin, ecu_serial, ecu_key, overwrite=False)
 
-    else:
-      assert ecu_serial not in self.ecus_by_vin[vin], 'Programming error: ' + \
-          'The given ECU Serial was not in ecu_public_keys but WAS in ' + \
-          'ecus_by_vin. That should not be possible.'
-
-      # Register the public key.
-      self.ecu_public_keys[ecu_serial] = ecu_key
-
-      # Associate this ECU with the given VIN's vehicle.
-      self.ecus_by_vin[vin].append(ecu_serial)
-
-      log.info(
-          GREEN + 'Registered a new ECU, ' + repr(ecu_serial) + ' in '
-          'vehicle ' + repr(vin) + ' with ECU public key: ' + repr(ecu_key) +
-          ENDCOLORS)
+    log.info(
+        GREEN + 'Registered a new ECU, ' + repr(ecu_serial) + ' in '
+        'vehicle ' + repr(vin) + ' with ECU public key: ' + repr(ecu_key) +
+        ENDCOLORS)
 
 
 
@@ -223,7 +195,7 @@ class Director:
 
     # TODO: Consider mechanism for fetching keys from inventorydb itself,
     # rather than always registering them after Director svc starts up.
-    if ecu_serial not in self.ecu_public_keys:
+    if ecu_serial not in inventory.ecu_public_keys:
       log.info(
           'Validation failed on an ECU Manifest: ECU ' + repr(ecu_serial) +
           ' is not registered.')
@@ -233,7 +205,7 @@ class Director:
           'new, Register the new ECU with its key in order to be able to '
           'submit its manifests.')
 
-    ecu_public_key = self.ecu_public_keys[ecu_serial]
+    ecu_public_key = inventory.ecu_public_keys[ecu_serial]
 
     valid = tuf.keys.verify_signature(
         ecu_public_key,
@@ -306,7 +278,7 @@ class Director:
     uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
         signed_vehicle_manifest)
 
-    if vin not in self.ecus_by_vin:
+    if vin not in inventory.ecus_by_vin:
       raise uptane.UnknownVehicle('Recieved a vehicle manifest purportedly '
           'from a vehicle with a VIN that is not known to this Director.')
 
@@ -317,7 +289,7 @@ class Director:
 
     # If the Primary's signature is valid, save the whole vehicle manifest to
     # the inventorydb.
-    inventorydb.save_vehicle_manifest(vin, signed_vehicle_manifest)
+    inventory.save_vehicle_manifest(vin, signed_vehicle_manifest)
 
     log.info(GREEN + ' Received a Vehicle Manifest from Primary ECU ' +
         repr(primary_ecu_serial) + ', with a valid signature from that ECU.' +
@@ -383,7 +355,7 @@ class Director:
 
     # TODO: Consider mechanism for fetching keys from inventorydb itself,
     # rather than always registering them after Director svc starts up.
-    if primary_ecu_serial not in self.ecu_public_keys:
+    if primary_ecu_serial not in inventory.ecu_public_keys:
       log.debug(
           'Rejecting a vehicle manifest from a Primary ECU whose '
           'key is not registered.')
@@ -393,7 +365,7 @@ class Director:
           'the ECU is new, Register the new ECU with its key in order to be '
           'able to submit its manifests.')
 
-    ecu_public_key = self.ecu_public_keys[primary_ecu_serial]
+    ecu_public_key = inventory.ecu_public_keys[primary_ecu_serial]
 
     valid = tuf.keys.verify_signature(
         ecu_public_key,
@@ -426,7 +398,7 @@ class Director:
     self.validate_ecu_manifest(ecu_serial, signed_ecu_manifest)
 
     # Otherwise, we save it:
-    inventorydb.save_ecu_manifest(vin, ecu_serial, signed_ecu_manifest)
+    inventory.save_ecu_manifest(vin, ecu_serial, signed_ecu_manifest)
 
     log.debug('Stored a valid ECU manifest from ECU ' + repr(ecu_serial))
 
@@ -436,25 +408,6 @@ class Director:
           YELLOW + 'Attacks have been reported by the Secondary ECU ' +
           repr(ecu_serial) + ':\n' +
           signed_ecu_manifest['signed']['attacks_detected'] + ENDCOLORS)
-
-
-
-  # Replacing this: don't need separate validate and register calls for
-  # vehicle manifests: it's too redundant and not useful enough.
-  # # This is called by the primary through an XMLRPC interface, currently.
-  # def register_vehicle_manifest(self,
-  #     vin, primary_ecu_serial, signed_vehicle_manifest):
-
-  #   # Check argument format.
-  #   uptane.formats.VIN_SCHEMA.check_match(vin)
-  #   uptane.formats.ECU_SERIAL_SCHEMA.check_match(primary_ecu_serial)
-
-  #   # Error out if the signature isn't valid and from the expected party.
-  #   # This call also checks argument format.
-  #   self.validate_vehicle_manifest(
-  #       vin, primary_ecu_serial, signed_vehicle_manifest)
-
-  #   inventorydb.save_vehicle_manifest(vin, signed_vehicle_manifest)
 
 
 
@@ -498,7 +451,7 @@ class Director:
 
 
 
-  def add_new_vehicle(self, vin, ecu_serials=[]):
+  def add_new_vehicle(self, vin, primary_ecu_serial=None):
     """
     For adding vehicles whose VINs were not provided when this object was
     initialized.
@@ -511,12 +464,7 @@ class Director:
     # but the string is not manipulated for this addition to ecus_by_vin.
     # Treatment has to be made consistent. (In particular, things like slashes
     # are pruned - or an error is raised when they are detected.)
-    uptane.formats.VIN_SCHEMA.check_match(vin)
-
-    for serial in ecu_serials:
-      uptane.formats.ECU_SERIAL_SCHEMA.check_match(serial)
-
-    self.ecus_by_vin[vin] = ecu_serials
+    inventory.register_vehicle(vin, primary_ecu_serial=primary_ecu_serial)
 
     self.create_director_repo_for_vehicle(vin)
 
@@ -566,7 +514,7 @@ class Director:
     # Then I strip the common prefix back off the absolute path to get a
     # relative path and keep the guarantees.
     # TODO: Clumsy and hacky; fix.
-    vin = inventorydb.scrub_filename(vin, self.director_repos_dir)
+    vin = uptane.common.scrub_filename(vin, self.director_repos_dir)
     vin = os.path.relpath(vin, self.director_repos_dir)
 
     self.vehicle_repositories[vin] = this_repo = rt.create_new_repository(
@@ -604,7 +552,7 @@ class Director:
       raise uptane.UnknownVehicle('The VIN provided, ' + repr(vin) + ' is not '
           'that of a vehicle known to this Director.')
 
-    elif ecu_serial not in self.ecu_public_keys:
+    elif ecu_serial not in inventory.ecu_public_keys:
       raise uptane.UnknownECU('The ECU Serial provided, ' + repr(ecu_serial) +
           ' is not that of an ECU known to this Director.')
 

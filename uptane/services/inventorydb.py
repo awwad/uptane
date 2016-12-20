@@ -378,8 +378,6 @@ def _check_registration_is_sane(vin):
 
 def check_ecu_registered(ecu_serial):
 
-  uptane.formats.VIN_SCHEMA.check_match(vin)
-
   if ecu_serial not in ecu_public_keys:
     raise uptane.UnknownECU('The given ECU serial, ' + repr(ecu_serial) +
         ', is not known.')

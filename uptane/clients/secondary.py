@@ -61,10 +61,6 @@ class Secondary(object):
       expect the Director to use here. Full verification clients should have
       None in this field.
 
-    self.attacks_detected
-      A string representing whatever attacks the secondary wishes to alert the
-      Director about. Empty string indicates no alerts.
-
     self.ecu_key:
       The signing key this ECU will use to sign manifests.
 
@@ -141,7 +137,6 @@ class Secondary(object):
     self.timeserver_public_key = timeserver_public_key
     self.director_public_key = director_public_key
     self.partial_verifying = partial_verifying
-    self.attacks_detected = ''
     self.firmware_fileinfo = firmware_fileinfo
 
     if not self.partial_verifying and self.director_public_key is not None:
@@ -197,11 +192,17 @@ class Secondary(object):
 
 
 
-  def generate_signed_ecu_manifest(self):
+  def generate_signed_ecu_manifest(self, description_of_attacks_observed=''):
     """
     Returns a signed ECU manifest indicating self.firmware_fileinfo,
     encoded in BER (requires code added to two ber_* functions below).
+
+    If the optional description_of_attacks_observed argument is provided,
+    the ECU Manifest will include that in the ECU Manifest (attacks_detected).
     """
+
+    uptane.formats.DESCRIPTION_OF_ATTACKS_SCHEMA.check_match(
+        description_of_attacks_observed)
 
     # We'll construct a signed signable_ecu_manifest_SCHEMA from the
     # targetinfo.
@@ -211,7 +212,7 @@ class Secondary(object):
         'installed_image': self.firmware_fileinfo,
         'timeserver_time': self.all_valid_timeserver_times[-1],
         'previous_timeserver_time': self.all_valid_timeserver_times[-2],
-        'attacks_detected': self.attacks_detected
+        'attacks_detected': description_of_attacks_observed
     }
     uptane.formats.ECU_VERSION_MANIFEST_SCHEMA.check_match(ecu_manifest)
 
@@ -296,9 +297,6 @@ class Secondary(object):
           'Primary is compromised or that there is a Man in the Middle attack '
           'underway between the vehicle and the servers, or within the '
           'vehicle.')
-      # TODO: Determine whether or not to add something to self.attacks_detected
-      # to indicate this problem. It's probably not certain enough? But perhaps
-      # we should err on the side of reporting.
 
     # Extract actual time from the timeserver's signed attestation.
     new_timeserver_time = timeserver_attestation['signed']['time']

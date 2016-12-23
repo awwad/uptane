@@ -38,8 +38,6 @@ ECU_SERIAL_SCHEMA = SCHEMA.AnyString() # Instead, for now, we'll go with an ecu 
 # Implementation Specification, but the signed contents of that object.
 ECU_VERSION_MANIFEST_SCHEMA = SCHEMA.Object(
     ecu_serial = ECU_SERIAL_SCHEMA,
-    #current_bootloader_images = SCHEMA.ListOf(TARGETFILE_SCHEMA), # multiple targets per ECU possible
-    #current_application_images = SCHEMA.ListOf(TARGETFILE_SCHEMA),
     installed_image = TARGETFILE_SCHEMA,
     timeserver_time = ISO8601_DATETIME_SCHEMA,
     previous_timeserver_time = ISO8601_DATETIME_SCHEMA,
@@ -79,12 +77,14 @@ VEHICLE_REPORT_TO_DIRECTOR_SCHEMA = SCHEMA.Object(
     software_manifest = VEHICLE_VERSION_MANIFEST_SCHEMA)
 
 
+DESCRIPTION_OF_ATTACKS_SCHEMA = SCHEMA.AnyString()
+
 # This is the format for a single assignment given to an ECU by the Director.
 ECU_SOFTWARE_ASSIGNMENT_SCHEMA = SCHEMA.Object(
     ecu_serial = ECU_SERIAL_SCHEMA,
     previous_time = tuf.formats.ISO8601_DATETIME_SCHEMA, #UTC_DATETIME_SCHEMA,
     current_time = tuf.formats.ISO8601_DATETIME_SCHEMA,
-    security_attack = SCHEMA.Optional(SCHEMA.AnyString()), # TODO: Clear this up
+    security_attack = SCHEMA.Optional(DESCRIPTION_OF_ATTACKS_SCHEMA),
     #image_type = SCHEMA.OneOf('bootloader', 'application', 'other'), # removed from spec
     installed_image = tuf.formats.TARGETFILE_SCHEMA)
     #load_order = SCHEMA.Integer(lo=0, hi=2147483647)) # not in spec

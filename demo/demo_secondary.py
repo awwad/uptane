@@ -56,6 +56,7 @@ current_firmware_fileinfo = {}
 secondary_ecu = None
 ecu_key = None
 nonce = None
+attacks_detected = ''
 
 most_recent_signed_ecu_manifest = None
 
@@ -77,6 +78,7 @@ def clean_slate(
   global _primary_port
   global nonce
   global client_directory
+  global attacks_detected
 
   _vin = vin
   _ecu_serial = ecu_serial
@@ -283,6 +285,8 @@ def update_cycle():
   except tuf.BadSignatureError as e:
     print(RED + "Timeserver attestation from Primary did not check out. Bad "
         "signature. Not updating this Secondary's time." + ENDCOLORS)
+    attacks_detected += 'Timeserver attestation had bad signature.\n'
+
   #else:
   #  print(GREEN + 'Official time has been updated successfully.' + ENDCOLORS)
 
@@ -337,6 +341,7 @@ def update_cycle():
     (image_fname, image) = pserver.get_image(secondary_ecu.ecu_serial)
     generate_signed_ecu_manifest()
     submit_ecu_manifest_to_primary()
+    return
 
   # Download the image for this ECU from the Primary.
   (image_fname, image) = pserver.get_image(secondary_ecu.ecu_serial)
@@ -344,6 +349,7 @@ def update_cycle():
   if image is None:
     print(YELLOW + 'Requested image from Primary but received none. Update '
         'terminated.' + ENDCOLORS)
+    attacks_detected += 'Requested image from Primary but received none.\n'
     generate_signed_ecu_manifest()
     submit_ecu_manifest_to_primary()
     return
@@ -352,6 +358,7 @@ def update_cycle():
     print(RED + 'Requested and received image from Primary, but metadata '
         'indicates no valid targets from the Director intended for this ECU. '
         'Update terminated.' + ENDCOLORS)
+    # TODO: Determine if something should be added to attacks_detected here.
     generate_signed_ecu_manifest()
     submit_ecu_manifest_to_primary()
     return
@@ -362,6 +369,8 @@ def update_cycle():
     print(RED + 'Requested and received image from Primary, but this '
         'Secondary has not validated any target info that matches the given ' +
         'filename. Aborting "install".' + ENDCOLORS)
+    attacks_detected += 'Received unexpected image from Primary with ' + \
+        'unexpected filename.\n'
     generate_signed_ecu_manifest()
     submit_ecu_manifest_to_primary()
     return
@@ -375,7 +384,21 @@ def update_cycle():
 
 
   # Validate the image against the metadata.
-  secondary_ecu.validate_image(image_fname)
+  try:
+    secondary_ecu.validate_image(image_fname)
+  except uptane.DownloadLengthMismatchError:
+    attacks_detected += 'Image from Primary failed to validate: length ' + \
+        'mismatch.\n'
+    generate_signed_ecu_manifest()
+    submit_ecu_manifest_to_primary()
+    return
+  except tuf.BadHashError:
+    attacks_detected += 'Image from Primary failed to validate: length ' + \
+        'mismatch.\n'
+    generate_signed_ecu_manifest()
+    submit_ecu_manifest_to_primary()
+    return
+
 
 
   # Simulate installation. (If the demo eventually uses pictures to move into
@@ -416,10 +439,14 @@ def generate_signed_ecu_manifest():
 
   global secondary_ecu
   global most_recent_signed_ecu_manifest
+  global attacks_detected
 
   # Generate and sign a manifest indicating that this ECU has a particular
   # version/hash/size of file2.txt as its firmware.
-  most_recent_signed_ecu_manifest = secondary_ecu.generate_signed_ecu_manifest()
+  most_recent_signed_ecu_manifest = secondary_ecu.generate_signed_ecu_manifest(
+      attacks_detected)
+
+  attacks_detected = ''
 
 
 

@@ -19,7 +19,7 @@
 
     - Registration of new ECUs, given serial and public key
 
-    - Validation of ECU manifests, supporting BER
+    - Validation of Vehicle manifests, supporting BER
 
     - Validation of ECU manifests, supporting BER
 
@@ -55,25 +55,6 @@ class Director:
 
   Fields:
 
-    Now uses inventory module for this instead:
-    # ecu_public_keys
-    #   A dictionary mapping ECU_SERIAL (uptane.formats.ECU_SERIAL_SCHEMA) to
-    #   the public key for that ECU (tuf.formats.ANYKEY_SCHEMA) for each ECU that
-    #   the Director knows about
-
-    Now uses inventory module for this instead:
-    # ecus_by_vin
-    #   A dictionary mapping VIN - the identifier for a known vehicle for
-    #   which this is responsible - to a list of ECU Serials associated with that
-    #   vehicle.
-    #   This is used to both identify known VINs and associate ECUs with VINs.
-    #   Identifying known ECUs is generally done instead by checking the
-    #   ecu_public_keys field, since that is flat.
-    #   A dictionary of lists of ECU Serials, indexed by VIN.
-    #   e.g.:
-    #       {'vin111': ['ecuserial12345', 'ecuserial6789'],
-    #        'vin112': ['serialabc', 'serialdef']}
-
     key_dirroot_pri
       Private signing key for the root role in the Director's repositories
 
@@ -107,8 +88,8 @@ class Director:
     key_targets_pri,
     key_targets_pub):
 
-    # TODO: Consider allowing multiple keys per role for the Director.
-    # github.com/awwad/uptane/issues/20
+    """
+    """
 
     tuf.formats.RELPATH_SCHEMA.check_match(director_repos_dir)
 
@@ -191,8 +172,6 @@ class Director:
           'signed in the manifest itself (' +
           repr(signed_ecu_manifest['signed']['ecu_serial']) + ').')
 
-    # TODO: Consider mechanism for fetching keys from inventorydb itself,
-    # rather than always registering them after Director svc starts up.
     if ecu_serial not in inventory.ecu_public_keys:
       log.info(
           'Validation failed on an ECU Manifest: ECU ' + repr(ecu_serial) +
@@ -277,7 +256,7 @@ class Director:
         signed_vehicle_manifest)
 
     if vin not in inventory.ecus_by_vin:
-      raise uptane.UnknownVehicle('Recieved a vehicle manifest purportedly '
+      raise uptane.UnknownVehicle('Received a vehicle manifest purportedly '
           'from a vehicle with a VIN that is not known to this Director.')
 
     # Process Primary's signature on full manifest here.
@@ -305,7 +284,7 @@ class Director:
       ecu_manifests = all_ecu_manifests[ecu_serial]
       for manifest in ecu_manifests:
         try:
-          # This calls validate_ecu_manifest and raises appropriate errors,
+          # This calls validate_ecu_manifest, which can raise the errors
           # caught below.
           self.register_ecu_manifest(vin, ecu_serial, manifest)
         except uptane.Spoofing as e:
@@ -385,9 +364,6 @@ class Director:
 
 
 
-  # This is called by the primary through an XMLRPC interface, currently.
-  # It will later become unnecessary, as we will only save ecu manifests when
-  # saving vehicle manifests.
   def register_ecu_manifest(self, vin, ecu_serial, signed_ecu_manifest):
     """
     """
@@ -406,44 +382,6 @@ class Director:
           YELLOW + 'Attacks have been reported by the Secondary ECU ' +
           repr(ecu_serial) + ':\n' +
           signed_ecu_manifest['signed']['attacks_detected'] + ENDCOLORS)
-
-
-
-
-
-  def choose_targets_for_vehicle(self, vin):
-    """
-    Returns a dictionary of target lists, indexed by ECU IDs.
-
-      targets = {
-        "ECUID2": [<target_21>],
-        "ECUID5": [<target_51>, <target53>],
-        ...
-      }
-      where <target*> is an object conforming to tuf.formats.TARGETFILE_SCHEMA
-      and ECUIDs conform to uptane.formats.ECU_SERIAL_SCHEMA.
-    """
-
-    # Check the vehicle manifest(s) / data for anything alarming.
-    # analyze_vehicle(self, vin)
-
-    # Load the vehicle's repository.
-
-
-
-    # ELECT TARGETS HERE.
-
-
-
-
-    # Update the targets in the vehicle's repository
-    # vehiclerepo.targets.add_target(...)
-
-    # Write the metadata for this vehicle.
-    # vehiclerepo.write()
-
-    # Move the new metadata to the live repo...?
-    # Or send straightaway?
 
 
 
@@ -504,7 +442,7 @@ class Director:
 
     # Repository Tool expects to use the current directory.
     # Figure out if this is impactful and needs to be changed.
-    os.chdir(self.director_repos_dir) # <~> Check to see if this edit was finished.
+    os.chdir(self.director_repos_dir) # TODO: Is messing with cwd a bad idea?
 
     # Generates absolute path for a subdirectory with name equal to vin,
     # in the current directory, making (relatively) sure that there isn't

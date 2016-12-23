@@ -69,7 +69,13 @@
 
       All known vehicles should have their VIN in this dictionary.
 
-      e.g. {'vin1': ['ecuserial1', 'ecuserial9', ...], 'vin2': ['ecuserial2']}
+      e.g.
+          {'vin1': ['ecuserial1', 'ecuserial9'],
+           'vin2': ['ecuserial2']}
+
+      This is used to both identify known VINs and associate ECUs with VINs.
+      Identifying known ECUs is generally done instead by checking the
+      ecu_public_keys field, since that is flat.
 
 
     ecu_public_keys

@@ -293,7 +293,6 @@ def listen():
   """
   Listens on DIRECTOR_SERVER_PORT for xml-rpc calls to functions:
     - submit_vehicle_manifest
-    - submit_ecu_manifest
     - register_ecu_serial
 
   Note that you must also run host() in order to serve the metadata files via
@@ -317,12 +316,6 @@ def listen():
   server.register_function(
       director_service_instance.register_vehicle_manifest,
       'submit_vehicle_manifest')
-
-  # # In the longer term, this won't be exposed: it will only be reached via
-  # # register_vehicle_manifest. For now, during development, however, this is
-  # # exposed.
-  # server.register_function(
-  #     director_service_instance.register_ecu_manifest, 'submit_ecu_manifest')
 
   server.register_function(
       director_service_instance.register_ecu_serial, 'register_ecu_serial')
@@ -349,3 +342,4 @@ def kill_server():
   else:
     print('Killing server process with pid: ' + str(repo_server_process.pid))
     repo_server_process.kill()
+    repo_server_process = None

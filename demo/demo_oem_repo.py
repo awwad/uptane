@@ -22,15 +22,20 @@ import demo
 import uptane
 import uptane.formats
 import tuf.formats
+
+import threading # for the interface for the demo website
 import os
 import sys, subprocess, time # For hosting and arguments
 import tuf.repository_tool as rt
 import shutil # for rmtree
 from uptane import GREEN, RED, YELLOW, ENDCOLORS
 
+from six.moves import xmlrpc_server # for the director services interface
+
 
 repo = None
 server_process = None
+xmlrpc_service_thread = None
 
 
 def clean_slate(use_new_keys=False):
@@ -105,9 +110,11 @@ def clean_slate(use_new_keys=False):
   repo.targets('role1').load_signing_key(key_role1_pri)
 
 
-  host()
   write_to_live()
 
+  host()
+
+  listen()
 
 
 
@@ -132,7 +139,7 @@ def write_to_live():
 
 
 
-def add_target_to_oemrepo(target_fname):
+def add_target_to_oemrepo(target_fname, filepath_in_repo):
   """
   For use in attacks and more specific demonstration.
 
@@ -150,7 +157,14 @@ def add_target_to_oemrepo(target_fname):
 
   tuf.formats.RELPATH_SCHEMA.check_match(target_fname)
 
-  repo.targets.add_target(target_fname)
+
+  print('Copying target file into place.')
+  repo_dir = repo._repository_directory
+  destination_filepath = os.path.join(repo_dir, 'targets', filepath_in_repo)
+
+  shutil.copy(target_fname, destination_filepath)
+
+  repo.targets.add_target(destination_filepath)
 
 
 
@@ -196,6 +210,54 @@ def host():
   #  if server_process.returncode is None:
   #    print('Terminating Main Repo server process ' + str(server_process.pid))
   #    server_process.kill()
+
+
+
+
+
+# Restrict xmlrpc requests - to the interface provided for the website's use -
+# to a particular path.
+# Must specify RPC2 here for the XML-RPC interface to work.
+class RequestHandler(xmlrpc_server.SimpleXMLRPCRequestHandler):
+  rpc_paths = ('/RPC2',)
+
+
+def listen():
+  """
+  This is exclusively for the use of the demo website frontend.
+
+  Listens on MAIN_REPO_SERVICE_PORT for xml-rpc calls to functions:
+    - add_target_to_supplier_repo
+    - write_supplier_repo
+
+  Note that you must also run host() in order to serve the metadata files via
+  http.
+  """
+
+  global xmlrpc_service_thread
+
+  if xmlrpc_service_thread is not None:
+    print('Sorry - there is already a Director service thread listening.')
+    return
+
+  # Create server
+  server = xmlrpc_server.SimpleXMLRPCServer(
+      (demo.MAIN_REPO_SERVICE_HOST, demo.MAIN_REPO_SERVICE_PORT),
+      requestHandler=RequestHandler, allow_none=True)
+  #server.register_introspection_functions()
+
+  # Register function that can be called via XML-RPC, allowing a Primary to
+  # submit a vehicle version manifest.
+  server.register_function(
+      add_target_to_oemrepo, 'add_target_to_supplier_repo')
+  server.register_function(write_to_live, 'write_supplier_repo')
+
+
+  print(' Starting Supplier Repo Services Thread: will now listen on port ' +
+      str(demo.MAIN_REPO_SERVICE_PORT))
+  xmlrpc_service_thread = threading.Thread(target=server.serve_forever)
+  xmlrpc_service_thread.setDaemon(True)
+  xmlrpc_service_thread.start()
 
 
 

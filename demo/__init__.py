@@ -32,6 +32,11 @@ DIRECTOR_REPO_DIR = os.path.join(uptane.WORKING_DIR, DIRECTOR_REPO_NAME)
 DIRECTOR_SERVER_HOST = '0.0.0.0' #'localhost'
 DIRECTOR_SERVER_PORT = 30501
 
+# These two are are being added solely to provide an interface to the demo web
+# frontend.
+MAIN_REPO_SERVICE_HOST = 'localhost'
+MAIN_REPO_SERVICE_PORT = 30309
+
 TIMESERVER_HOST = '0.0.0.0' #'localhost'
 TIMESERVER_PORT = 30601
 

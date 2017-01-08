@@ -12,7 +12,7 @@ from __future__ import unicode_literals
 
 import uptane.formats
 import tuf.formats
-import uptane.ber_encoder as ber_encoder
+#import uptane.ber_encoder as ber_encoder
 from uptane.common import sign_signable
 
 import uptane.services.director as director
@@ -728,7 +728,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
 
 
-  def generate_signed_vehicle_manifest(self, use_json=False):
+  def generate_signed_vehicle_manifest(self):#, use_json=False):
     """
     Put ECU manifests into a vehicle manifest and sign it.
     Support multiple manifests from the same ECU.
@@ -754,7 +754,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
         signable_vehicle_manifest)
 
-    # Now sign with that key. (Also do ber encoding of the signed portion.)
+    # Now sign with that key.
     signed_vehicle_manifest = sign_signable(
         signable_vehicle_manifest, [self.primary_key])
     uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
@@ -765,15 +765,17 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
     self.ecu_manifests = dict()
 
-    if use_json:
-      return signed_vehicle_manifest
+    return signed_vehicle_manifest
 
-    # TODO: Once the ber encoder functions are done, do this:
-    original_signed_vehicle_manifest = signed_vehicle_manifest
-    ber_signed_vehicle_manifest = ber_encoder.ber_encode_signable_object(
-        signed_vehicle_manifest)
+    # if use_json:
+    #   return signed_vehicle_manifest
 
-    return ber_signed_vehicle_manifest
+    # # TODO: Once the ber encoder functions are done, do this:
+    # original_signed_vehicle_manifest = signed_vehicle_manifest
+    # ber_signed_vehicle_manifest = ber_encoder.ber_encode_signable_object(
+    #     signed_vehicle_manifest)
+
+    # return ber_signed_vehicle_manifest
 
 
 

@@ -208,6 +208,10 @@ def add_target_to_director(target_fname, filepath_in_repo, vin, ecu_serial):
   tuf.formats.RELPATH_SCHEMA.check_match(target_fname)
   tuf.formats.RELPATH_SCHEMA.check_match(filepath_in_repo)
 
+  if vin not in director_service_instance.vehicle_repositories:
+    raise uptane.UnknownVehicle('The VIN provided, ' + repr(vin) + ' is not '
+        'that of a vehicle known to this Director.')
+
   repo = director_service_instance.vehicle_repositories[vin]
   repo_dir = repo._repository_directory
 
@@ -216,9 +220,7 @@ def add_target_to_director(target_fname, filepath_in_repo, vin, ecu_serial):
 
   # TODO: This should probably place the file into a common targets directory
   # that is then softlinked to all repositories.
-  shutil.copy(
-      target_fname,
-      destination_filepath)
+  shutil.copy(target_fname, destination_filepath)
 
   print('Adding target ' + repr(target_fname) + ' for ECU ' + repr(ecu_serial))
 
@@ -319,6 +321,26 @@ def listen():
 
   server.register_function(
       director_service_instance.register_ecu_serial, 'register_ecu_serial')
+
+
+  # Interface available for the demo website frontend.
+  server.register_function(
+      director_service_instance.add_new_vehicle, 'add_new_vehicle')
+  # Have decided that a function to add an ecu is unnecessary.
+  # Just add targets for it. It'll be registered when that ecu registers itself.
+  # Eventually, we'll want there to be an add ecu function here that takes
+  # an ECU's public key, but that's not reasonable right now.
+
+  # Provide absolute path for this, or path relative to the Director's repo
+  # directory.
+  server.register_function(add_target_to_director, 'add_target_to_director')
+  server.register_function(write_to_live, 'write_director_repo')
+
+  server.register_function(
+      inventory.get_last_vehicle_manifest, 'get_last_vehicle_manifest')
+  server.register_function(
+      inventory.get_last_ecu_manifest, 'get_last_ecu_manifest')
+
 
 
   print(' Starting Director Services Thread: will now listen on port ' +

@@ -162,7 +162,10 @@ def get_vehicle_manifests(vin):
 
 def get_last_vehicle_manifest(vin):
   check_vin_registered(vin)
-  return vehicle_manifests[vin][-1]
+  if not vehicle_manifests[vin]:
+    return None
+  else:
+    return vehicle_manifests[vin][-1]
 
 
 
@@ -178,7 +181,10 @@ def get_ecu_manifests(ecu_serial):
 
 def get_last_ecu_manifest(ecu_serial):
   check_ecu_registered(ecu_serial)
-  return ecu_manifests[ecu_serial][-1]
+  if not ecu_manifests[ecu_serial]:
+    return None
+  else:
+    return ecu_manifests[ecu_serial][-1]
 
 
 

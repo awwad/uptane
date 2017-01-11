@@ -196,7 +196,7 @@ def host():
   if sys.version_info.major < 3:  # Python 2 compatibility
     command = ['python', '-m', 'SimpleHTTPServer', str(demo.MAIN_REPO_PORT)]
   else:
-    command = ['python', '-m', 'http.server', str(demo.MAIN_REPO_PORT)]
+    command = ['python3', '-m', 'http.server', str(demo.MAIN_REPO_PORT)]
 
 
   # Begin hosting mainrepo.

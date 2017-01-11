@@ -144,7 +144,7 @@ def clean_slate(use_new_keys=False):
 
 
 
-def write_to_live():
+def write_to_live(vin_to_update=None):
 
   global director_service_instance
 
@@ -152,6 +152,8 @@ def write_to_live():
   #   - write metadata.staged
   #   - copy metadata.staged to the live metadata directory
   for vin in director_service_instance.vehicle_repositories:
+    if vin_to_update is not None and vin != vin_to_update:
+      continue
     repo = director_service_instance.vehicle_repositories[vin]
     repo_dir = repo._repository_directory
 

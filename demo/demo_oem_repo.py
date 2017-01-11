@@ -13,6 +13,16 @@ do.host()
 # Later:
 do.kill_server()
 
+
+
+
+<Demo Interface Provided Via XMLRPC>
+
+  XMLRPC interface presented TO THE DEMO WEBSITE:
+    add_target_to_supplier_repo(target_filepath, filepath_in_repo)  <--- add to staged supplier repository
+    write_supplier_repo() <--- move staged to live / add newly added targets to live repo
+
+
 """
 from __future__ import print_function
 from __future__ import unicode_literals

@@ -20,6 +20,22 @@ demo_director.kill_server()
   Various attacks / manipulations can be performed before the server is killed.
   Some of these are discussed in uptane_test_instructions.py.
 
+
+<Demo Interfaces Provided Via XMLRPC>
+
+  XMLRPC interface presented TO PRIMARIES:
+    register_ecu_serial(ecu_serial, ecu_public_key, vin, is_primary=False)
+    submit_vehicle_manifest(vin, ecu_serial, signed_ecu_manifest)
+
+  XMLRPC interface presented TO THE DEMO WEBSITE:
+    add_new_vehicle(vin)
+    add_target_to_director(target_filepath, filepath_in_repo, vin, ecu_serial) <--- assign to vehicle
+    write_director_repo() <--- move staged to live / add newly added targets to live repo
+    get_last_vehicle_manifest(vin)
+    get_last_ecu_manifest(ecu_serial)
+    register_ecu_serial(ecu_serial, ecu_key, vin, is_primary=False)
+
+
 """
 from __future__ import print_function
 from __future__ import unicode_literals
@@ -341,7 +357,8 @@ def listen():
   server.register_function(
       inventory.get_last_ecu_manifest, 'get_last_ecu_manifest')
 
-
+  server.register_function(
+      director_service_instance.register_ecu_serial, 'register_ecu_serial')
 
   print(' Starting Director Services Thread: will now listen on port ' +
       str(demo.DIRECTOR_SERVER_PORT))

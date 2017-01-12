@@ -299,13 +299,13 @@ def update_cycle():
 
 
 
-  #
-  # SECOND: VEHICLE VERSION MANIFEST
-  #
+  # #
+  # # SECOND: VEHICLE VERSION MANIFEST
+  # #
 
-  # Generate and send.
-  vehicle_manifest = generate_signed_vehicle_manifest()
-  submit_vehicle_manifest_to_director(vehicle_manifest)
+  # # Generate and send.
+  # vehicle_manifest = generate_signed_vehicle_manifest()
+  # submit_vehicle_manifest_to_director(vehicle_manifest)
 
 
 

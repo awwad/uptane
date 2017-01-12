@@ -14,7 +14,6 @@ from io import open
 
 import uptane
 import uptane.formats
-import uptane.ber_encoder as ber_encoder
 import uptane.common
 
 import tuf.client.updater
@@ -194,8 +193,7 @@ class Secondary(object):
 
   def generate_signed_ecu_manifest(self, description_of_attacks_observed=''):
     """
-    Returns a signed ECU manifest indicating self.firmware_fileinfo,
-    encoded in BER (requires code added to two ber_* functions below).
+    Returns a signed ECU manifest indicating self.firmware_fileinfo.
 
     If the optional description_of_attacks_observed argument is provided,
     the ECU Manifest will include that in the ECU Manifest (attacks_detected).
@@ -219,11 +217,6 @@ class Secondary(object):
     # Now we'll convert it into a signable object and sign it with a key we
     # generate.
 
-
-    # TODO: Once the ber encoder functions are done, do this:
-    original_ecu_manifest = ecu_manifest
-    ecu_manifest = ber_encoder.ber_encode_ecu_manifest(ecu_manifest)
-
     # Wrap the ECU version manifest object into an
     # uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA and check the format.
     # {
@@ -234,18 +227,13 @@ class Secondary(object):
     uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
         signable_ecu_manifest)
 
-    # Now sign with that key. (Also do ber encoding of the signed portion.)
+    # Now sign with that key.
     signed_ecu_manifest = uptane.common.sign_signable(
         signable_ecu_manifest, [self.ecu_key])
     uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
         signed_ecu_manifest)
 
-    # TODO: Once the ber encoder functions are done, do this:
-    original_signed_ecu_manifest = signed_ecu_manifest
-    ber_encoded_signed_ecu_manifest = ber_encoder.ber_encode_signable_object(
-        signed_ecu_manifest)
-
-    return ber_encoded_signed_ecu_manifest
+    return signed_ecu_manifest
 
 
 

@@ -31,6 +31,7 @@ import uptane
 import uptane.common # for canonical key construction and signing
 import uptane.clients.secondary as secondary
 from uptane import GREEN, RED, YELLOW, ENDCOLORS
+from demo.uptane_banners import *
 import tuf.keys
 import tuf.repository_tool as rt
 #import tuf.client.updater
@@ -313,9 +314,14 @@ def update_cycle():
   # flexibility.
 
   if len(secondary_ecu.validated_targets_for_this_ecu) == 0:
-    print(YELLOW + 'No validated targets were found. Either the Director '
+    print_banner(BANNER_NO_UPDATE_NEEDED, color=WHITE+BLACK_BG,
+        text='No validated targets were found. Either the Director '
         'did not instruct this ECU to install anything, or the target info '
-        'the Director provided could not be validated.' + ENDCOLORS)
+        'the Director provided could not be validated.')
+    time.sleep(2)
+    # print(YELLOW + 'No validated targets were found. Either the Director '
+    #     'did not instruct this ECU to install anything, or the target info '
+    #     'the Director provided could not be validated.' + ENDCOLORS)
     generate_signed_ecu_manifest()
     submit_ecu_manifest_to_primary()
     return
@@ -337,7 +343,11 @@ def update_cycle():
   # TODO: <~> Cross-check this: we have the metadata now, so we and the Primary
   # should agree on whether or not there is an image to download.
   if not pserver.update_exists_for_ecu(secondary_ecu.ecu_serial):
-    print(YELLOW + 'Primary reports that there is no update for this ECU.')
+
+    print_banner(BANNER_NO_UPDATE_NEEDED, color=WHITE+BLACK_BG,
+        text='Primary reports that there is no update for this ECU.')
+    time.sleep(2)
+    # print(YELLOW + 'Primary reports that there is no update for this ECU.')
     (image_fname, image) = pserver.get_image(secondary_ecu.ecu_serial)
     generate_signed_ecu_manifest()
     submit_ecu_manifest_to_primary()
@@ -416,8 +426,14 @@ def update_cycle():
   secondary_ecu.firmware_fileinfo = expected_target_info
 
 
-  print(GREEN + 'Installed firmware received from Primary that was fully '
-      'validated by the Director and OEM Repo.' + ENDCOLORS)
+  print_banner(
+      BANNER_UPDATED, color=WHITE+GREEN_BG,
+      text='Installed firmware received from Primary that was fully '
+      'validated by the Director and OEM Repo. Image: ' + repr(image_fname),
+      sound=WON)
+  time.sleep(10)
+  #print(GREEN + 'Installed firmware received from Primary that was fully '
+  #    'validated by the Director and OEM Repo.' + ENDCOLORS)
 
   if expected_target_info['filepath'].endswith('.txt'):
     print('The contents of the newly-installed firmware with filename ' +
@@ -580,3 +596,18 @@ def enforce_jail(fname, expected_containing_dir):
 
   else: 
     return abs_fname
+
+
+
+
+def try_banners():
+  preview_all_banners()
+
+
+def looping_update():
+  while True:
+    try:
+      update_cycle()
+    except Exception:
+      pass
+    time.sleep(2)

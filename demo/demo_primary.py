@@ -26,6 +26,7 @@ import uptane
 import uptane.common # for canonical key construction and signing
 import uptane.clients.primary as primary
 from uptane import GREEN, RED, YELLOW, ENDCOLORS
+from demo.uptane_banners import *
 import tuf.keys
 import tuf.repository_tool as rt
 import tuf.client.updater
@@ -807,3 +808,15 @@ def listen():
   print('Primary will now listen on port ' + str(successful_port))
   server.serve_forever()
 
+
+
+
+def try_banners():
+  preview_all_banners()
+
+
+
+def looping_update():
+  while True:
+    update_cycle()
+    time.sleep(2)

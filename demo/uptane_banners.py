@@ -196,6 +196,7 @@ BANNER_FROZEN = load_banner(demo.DEMO_DIR + "/ascii/frozen.txt")
 BANNER_HACKED = load_banner(demo.DEMO_DIR + "/ascii/hacked.txt")
 BANNER_COMPROMISED = load_banner(demo.DEMO_DIR + "/ascii/compromised.txt")
 BANNER_REPLAY = load_banner(demo.DEMO_DIR + "/ascii/replay.txt")
+BANNER_NO_UPDATE = load_banner(demo.DEMO_DIR + "/ascii/no_update.txt")
 BANNER_NO_UPDATE_NEEDED = load_banner(demo.DEMO_DIR + "/ascii/no_update_needed.txt")
 
 def main():
@@ -220,7 +221,8 @@ def preview_all_banners():
   #print_banner(BANNER_REPLAY, color=RED, color_bg=BLACK_BG, show_for=3, sound=WITCH)
   #print_banner(BANNER_NO_UPDATE_NEEDED, color=RED, color_bg=BLACK_BG, show_for=3)
   print_banner(BANNER_REPLAY, color=WHITE+BLACK_BG, show_for=4, text=text, sound=SATAN)
-  print_banner(BANNER_NO_UPDATE_NEEDED, color=RED+BLACK_BG, text=text, show_for=4)
+  print_banner(BANNER_NO_UPDATE, color=WHITE+BLACK_BG, text=text, show_for=4)
+  print_banner(BANNER_NO_UPDATE_NEEDED, color=WHITE+BLACK_BG, text=text, show_for=4)
 
 
 

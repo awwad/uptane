@@ -280,9 +280,9 @@ def update_cycle():
   try:
     secondary_ecu.validate_time_attestation(time_attestation)
   except uptane.BadTimeAttestation as e:
-    print(YELLOW + "Timeserver attestation from Primary does not check out: "
+    print("Timeserver attestation from Primary does not check out: "
         "This Secondary's nonce was not found. Not updating this Secondary's "
-        "time this cycle." + ENDCOLORS)
+        "time this cycle.")
   except tuf.BadSignatureError as e:
     print(RED + "Timeserver attestation from Primary did not check out. Bad "
         "signature. Not updating this Secondary's time." + ENDCOLORS)
@@ -327,11 +327,11 @@ def update_cycle():
     return
 
 
-  elif len(secondary_ecu.validated_targets_for_this_ecu) > 1:
-    assert False, 'Multiple targets for an ECU not supported in this demo.'
+  #elif len(secondary_ecu.validated_targets_for_this_ecu) > 1:
+  #  assert False, 'Multiple targets for an ECU not supported in this demo.'
 
 
-  expected_target_info = secondary_ecu.validated_targets_for_this_ecu[0]
+  expected_target_info = secondary_ecu.validated_targets_for_this_ecu[-1]
 
   expected_image_fname = expected_target_info['filepath']
   if expected_image_fname[0] == '/':
@@ -344,7 +344,7 @@ def update_cycle():
   # should agree on whether or not there is an image to download.
   if not pserver.update_exists_for_ecu(secondary_ecu.ecu_serial):
 
-    print_banner(BANNER_NO_UPDATE_NEEDED, color=WHITE+BLACK_BG,
+    print_banner(BANNER_NO_UPDATE, color=WHITE+BLACK_BG,
         text='Primary reports that there is no update for this ECU.')
     time.sleep(2)
     # print(YELLOW + 'Primary reports that there is no update for this ECU.')
@@ -410,6 +410,16 @@ def update_cycle():
     return
 
 
+
+  if secondary_ecu.firmware_fileinfo == expected_target_info:
+    print_banner(
+      BANNER_NO_UPDATE_NEEDED, color=WHITE+BLACK_BG,
+      text='We already have installed the firmware that the Director wants us '
+          'to install. Image: ' + repr(image_fname))
+    generate_signed_ecu_manifest()
+    submit_ecu_manifest_to_primary()
+    time.sleep(5)
+    return
 
   # Simulate installation. (If the demo eventually uses pictures to move into
   # place or something, here is where to do it.)
@@ -594,7 +604,7 @@ def enforce_jail(fname, expected_containing_dir):
         repr(expected_containing_dir) + '. When appending ' + repr(fname) +
         ' to the given directory, the result was not in the given directory.')
 
-  else: 
+  else:
     return abs_fname
 
 
@@ -608,6 +618,7 @@ def looping_update():
   while True:
     try:
       update_cycle()
-    except Exception:
+    except Exception as e:
+      print(repr(e))
       pass
     time.sleep(2)

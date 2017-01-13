@@ -738,7 +738,7 @@ def get_time_attestation_for_ecu(ecu_serial):
         repr(ecu_serial) + ') does not appear in the mapping of ECU Serials '
         'to CAN IDs. Sending time attestation back.')
 
-    print('Distributing metadata to ECU ' + repr(ecu_serial))
+    print('Distributing time attestation to ECU ' + repr(ecu_serial))
     return attestation
 
 
@@ -818,5 +818,8 @@ def try_banners():
 
 def looping_update():
   while True:
-    update_cycle()
+    try:
+      update_cycle()
+    except Exception as e:
+      print(repr(e))
     time.sleep(2)

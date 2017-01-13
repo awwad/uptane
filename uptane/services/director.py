@@ -352,7 +352,7 @@ class Director:
     if not valid:
       log.debug(
           'Rejecting a vehicle manifest because the Primary signature on it is '
-          'not valid.It must be correctly signed by the expected Primary ECU '
+          'not valid. It must be correctly signed by the expected Primary ECU '
           'key.')
       # Raise a fault for the offending ECU's XMLRPC request.
       raise tuf.BadSignatureError('Sender supplied an invalid signature. '

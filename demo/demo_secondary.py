@@ -263,6 +263,7 @@ def update_cycle():
 
   global secondary_ecu
   global current_firmware_fileinfo
+  global attacks_detected
 
   # Connect to the Primary
   pserver = xmlrpc_client.ServerProxy(
@@ -379,6 +380,11 @@ def update_cycle():
     print(RED + 'Requested and received image from Primary, but this '
         'Secondary has not validated any target info that matches the given ' +
         'filename. Aborting "install".' + ENDCOLORS)
+    # print_banner(
+    #     BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG,
+    #     text='Image from Primary is not listed in trusted metadata. Possible '
+    #     'attack from Primary averted. Image: ' +
+    #     repr(image_fname))#, sound=TADA)
     attacks_detected += 'Received unexpected image from Primary with ' + \
         'unexpected filename.\n'
     generate_signed_ecu_manifest()
@@ -397,13 +403,23 @@ def update_cycle():
   try:
     secondary_ecu.validate_image(image_fname)
   except uptane.DownloadLengthMismatchError:
+    print_banner(
+        BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG,
+        text='Image from Primary failed to validate: length mismatch. Image: ' +
+        repr(image_fname))#, sound=TADA)
+    # TODO: Add length comparison instead, from error.
     attacks_detected += 'Image from Primary failed to validate: length ' + \
         'mismatch.\n'
     generate_signed_ecu_manifest()
     submit_ecu_manifest_to_primary()
     return
   except tuf.BadHashError:
-    attacks_detected += 'Image from Primary failed to validate: length ' + \
+    print_banner(
+        BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG,
+        text='Image from Primary failed to validate: hash mismatch. Image: ' +
+        repr(image_fname))#, sound=TADA)
+    # TODO: Add hash comparison instead, from error.
+    attacks_detected += 'Image from Primary failed to validate: hash ' + \
         'mismatch.\n'
     generate_signed_ecu_manifest()
     submit_ecu_manifest_to_primary()
@@ -416,6 +432,24 @@ def update_cycle():
       BANNER_NO_UPDATE_NEEDED, color=WHITE+BLACK_BG,
       text='We already have installed the firmware that the Director wants us '
           'to install. Image: ' + repr(image_fname))
+    generate_signed_ecu_manifest()
+    submit_ecu_manifest_to_primary()
+    time.sleep(5)
+    return
+
+  elif 'evil' in expected_image_fname:
+    # If every safeguard is defeated and a compromised update is delivered,
+    # a real Secondary can't necessarily know it has been compromised, as every
+    # check has passed. For the purposes of the demo, of course, we know when
+    # a compromise has been delivered, and we'll flash a Compromised screen to
+    # indicate a successful attack. We know this has happened because the demo
+    # should employ 'evil' in the name of evil updates.
+    # This requires, generally, compromised of both Supplier and Director keys.
+    print_banner(
+        BANNER_COMPROMISED, color=WHITE+RED_BG,
+        text='A malicious update has been installed! Arbitrary package attack '
+        'successful: this Secondary has been compromised! Image: ' +
+        repr(expected_image_fname))#, sound=WITCH)
     generate_signed_ecu_manifest()
     submit_ecu_manifest_to_primary()
     time.sleep(5)
@@ -439,8 +473,8 @@ def update_cycle():
   print_banner(
       BANNER_UPDATED, color=WHITE+GREEN_BG,
       text='Installed firmware received from Primary that was fully '
-      'validated by the Director and OEM Repo. Image: ' + repr(image_fname),
-      sound=WON)
+      'validated by the Director and OEM Repo. Image: ' + repr(image_fname))#,
+      #sound=WON)
   time.sleep(10)
   #print(GREEN + 'Installed firmware received from Primary that was fully '
   #    'validated by the Director and OEM Repo.' + ENDCOLORS)

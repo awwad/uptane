@@ -804,12 +804,16 @@ def listen():
   server.register_function(
       primary_ecu.update_exists_for_ecu, 'update_exists_for_ecu')
 
+  # server.register_function(compromise_primary_and_deliver_arbitrary,
+  #     'compromise_primary_and_deliver_arbitrary')
+
 
   print('Primary will now listen on port ' + str(successful_port))
   server.serve_forever()
 
 
-
+# def compromise_primary_and_deliver_arbitrary():
+#   pass
 
 def try_banners():
   preview_all_banners()

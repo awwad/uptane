@@ -362,11 +362,68 @@ def listen():
   server.register_function(
       director_service_instance.register_ecu_serial, 'register_ecu_serial')
 
+  server.register_function(clear_vehicle_targets, 'clear_vehicle_targets')
+
+  server.register_function(attack_mitm, 'attack_mitm')
+  server.register_function(recover_mitm, 'recover_mitm')
+
   print(' Starting Director Services Thread: will now listen on port ' +
       str(demo.DIRECTOR_SERVER_PORT))
   director_service_thread = threading.Thread(target=server.serve_forever)
   director_service_thread.setDaemon(True)
   director_service_thread.start()
+
+
+
+
+def attack_mitm(vin, target_filepath):
+  # Arbitrary package attack, no compromised keys.
+  # Move evil target file into place on Director without updating metadata
+  # (simulate bad mirror).
+  full_fname = os.path.join(
+      demo.DIRECTOR_REPO_DIR, vin, 'targets', target_filepath)
+  # TODO: NOTE THAT THIS ATTACK SCRIPT BREAKS IF THE TARGET FILE IS IN A
+  # SUBDIRECTORY IN THE REPOSITORY.
+  backup_fname = os.path.join(
+      demo.DIRECTOR_REPO_DIR, vin, 'targets', '_backup__' + target_filepath)
+
+  if not os.path.exist(full_fname):
+    raise Exception('The provided target file does not exist. Cannot attack.')
+  elif os.path.exist(backup_fname):
+    raise Exception('The attack is already in progress. Not running twice.')
+
+  shutil.copy(full_fname, backup_fname)
+
+  fobj = open(full_fname, 'w')
+  fobj.write('EVIL UPDATE: ARBITRARY PACKAGE ATTACK TO BE DELIVERED FROM '
+      'MITM / bad mirror (no keys compromised).')
+  fobj.close()
+
+
+
+def recover_mitm(vin, target_filepath):
+  # Arbitrary package attack recovery.
+  # Move evil target file out and normal target file back in.
+  full_fname = os.path.join(
+      demo.DIRECTOR_REPO_DIR, vin, 'targets', target_filepath)
+  # TODO: NOTE THAT THIS ATTACK SCRIPT BREAKS IF THE TARGET FILE IS IN A
+  # SUBDIRECTORY IN THE REPOSITORY.
+  backup_fname = os.path.join(
+      demo.DIRECTOR_REPO_DIR, vin, 'targets', '_backup__' + target_filepath)
+
+  if not os.path.exist(full_fname):
+    raise Exception('The provided target file does not exist. Cannot attack.')
+  elif not os.path.exist(backup_fname):
+    raise Exception('The attack is not in progress. No recovery to run.')
+
+  shutil.move(backup_fname, full_fname)
+
+
+
+
+
+def clear_vehicle_targets(vin):
+  director_service_instance.vehicle_repositories[vin].targets.clear_targets()
 
 
 

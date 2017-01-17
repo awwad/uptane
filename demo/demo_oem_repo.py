@@ -282,4 +282,4 @@ def kill_server():
   else:
     print('Killing server process with pid: ' + str(server_process.pid))
     server_process.kill()
-    repo_server_process = None
+    server_process = None

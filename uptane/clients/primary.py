@@ -449,6 +449,13 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
             'Try again, but if this happens often, you may be connecting to an '
             'untrustworthy Director, or the Director and OEM Repository may be '
             'out of sync.' + ENDCOLORS)
+        from uptane_banners import *
+        print_banner(BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG,
+            text='The image delivered to us is not validated by the combination'
+            ' of Director and Image repositories. File: ' +
+            repr(target_filepath))
+        import time
+        time.sleep(10)
 
     # Have instead decided to have get_validated_target_info() call above return
     # only one fileinfo, that from the Director (after validating it fully as

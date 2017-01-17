@@ -380,19 +380,32 @@ def attack_mitm(vin, target_filepath):
   # Arbitrary package attack, no compromised keys.
   # Move evil target file into place on Director without updating metadata
   # (simulate bad mirror).
+  print(repr(vin))
+  print(repr(target_filepath))
+  fobj = open('/Users/s/w/potato', 'w')
+  fobj.write('Working so far.')
+  fobj.close()
+
   full_fname = os.path.join(
       demo.DIRECTOR_REPO_DIR, vin, 'targets', target_filepath)
   # TODO: NOTE THAT THIS ATTACK SCRIPT BREAKS IF THE TARGET FILE IS IN A
   # SUBDIRECTORY IN THE REPOSITORY.
+  print(full_fname)
   backup_fname = os.path.join(
       demo.DIRECTOR_REPO_DIR, vin, 'targets', '_backup__' + target_filepath)
+  print(backup_fname)
 
-  if not os.path.exist(full_fname):
+  if not os.path.exists(full_fname):
+    print('The provided target file does not exist. Cannot attack.')
     raise Exception('The provided target file does not exist. Cannot attack.')
-  elif os.path.exist(backup_fname):
+  elif os.path.exists(backup_fname):
+    print('The attack is already in progress. Not running twice.')
     raise Exception('The attack is already in progress. Not running twice.')
 
+  print('Before shutil.')
   shutil.copy(full_fname, backup_fname)
+
+  print('copy complete')
 
   fobj = open(full_fname, 'w')
   fobj.write('EVIL UPDATE: ARBITRARY PACKAGE ATTACK TO BE DELIVERED FROM '

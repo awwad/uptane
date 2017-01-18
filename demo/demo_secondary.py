@@ -315,7 +315,7 @@ def update_cycle():
   # flexibility.
 
   if len(secondary_ecu.validated_targets_for_this_ecu) == 0:
-    print_banner(BANNER_NO_UPDATE_NEEDED, color=WHITE+BLACK_BG,
+    print_banner(BANNER_NO_UPDATE, color=WHITE+BLACK_BG,
         text='No validated targets were found. Either the Director '
         'did not instruct this ECU to install anything, or the target info '
         'the Director provided could not be validated.')
@@ -434,7 +434,7 @@ def update_cycle():
           'to install. Image: ' + repr(image_fname))
     generate_signed_ecu_manifest()
     submit_ecu_manifest_to_primary()
-    time.sleep(5)
+    time.sleep(3)
     return
 
   elif 'evil' in expected_image_fname:
@@ -475,7 +475,7 @@ def update_cycle():
       text='Installed firmware received from Primary that was fully '
       'validated by the Director and OEM Repo. Image: ' + repr(image_fname))#,
       #sound=WON)
-  time.sleep(10)
+  time.sleep(5)
   #print(GREEN + 'Installed firmware received from Primary that was fully '
   #    'validated by the Director and OEM Repo.' + ENDCOLORS)
 
@@ -655,4 +655,4 @@ def looping_update():
     except Exception as e:
       print(repr(e))
       pass
-    time.sleep(2)
+    time.sleep(1)

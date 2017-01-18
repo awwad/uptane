@@ -14,7 +14,7 @@ import uptane.formats
 import tuf.formats
 #import uptane.ber_encoder as ber_encoder
 from uptane.common import sign_signable
-
+from demo.uptane_banners import *
 import uptane.services.director as director
 import uptane.services.timeserver as timeserver
 
@@ -443,19 +443,18 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
       except tuf.UnknownTargetError:
         log.warning(RED + 'Director has instructed us to download a target (' +
             target_filepath + ') that is not validated by the combination of '
-            'Director + OEM repositories. Such an unvalidated file must not and'
-            ' WILL NOT be downloaded, so IT IS BEING SKIPPED. It may be that '
-            'files have changed in the last few moments on the repositories. '
-            'Try again, but if this happens often, you may be connecting to an '
-            'untrustworthy Director, or the Director and OEM Repository may be '
-            'out of sync.' + ENDCOLORS)
-        from uptane_banners import *
+            'Director + OEM repositories. That update IS BEING SKIPPED. It may '
+            'be that files have changed in the last few moments on the '
+            'repositories. Try again, but if this happens often, you may be '
+            'connecting to an untrustworthy Director, or there may be an '
+            'untrustworthy Supplier, or the Director and OEM '
+            'Repository may be out of sync.' + ENDCOLORS)
         print_banner(BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG,
-            text='The image delivered to us is not validated by the combination'
-            ' of Director and Image repositories. File: ' +
-            repr(target_filepath))
+            text='The Director has instructed us to download a file that does '
+            ' does not exactly match the Image Repository metadata. '
+            'File: ' + repr(target_filepath))
         import time
-        time.sleep(10)
+        time.sleep(3)
 
     # Have instead decided to have get_validated_target_info() call above return
     # only one fileinfo, that from the Director (after validating it fully as
@@ -557,15 +556,23 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
           print('    ' + type(e.mirror_errors[mirror]).__name__ + ' from ' + mirror)
         print(ENDCOLORS)
 
-        # If this was our firmware, notify that we're not installing.
-        if filepath.startswith('/') and filepath[1:] == firmware_filename or \
-          not filepath.startswith('/') and filepath == firmware_filename:
+        print_banner(BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG,
+            text='No image was found that exactly matches the signed metadata '
+            'from the Director and Image Repositories. Not keeping '
+            'untrustworthy files. ' + repr(target_filepath))
+        import time
+        time.sleep(3)
 
-          print()
-          print(YELLOW + ' While the Director and OEM provided consistent metadata'
-              ' for new firmware,')
-          print(' mirrors we contacted provided only untrustworthy images. ')
-          print(GREEN + 'We have rejected these. Firmware not updated.\n' + ENDCOLORS)
+
+        # # If this was our firmware, notify that we're not installing.
+        # if filepath.startswith('/') and filepath[1:] == firmware_filename or \
+        #   not filepath.startswith('/') and filepath == firmware_filename:
+
+        print()
+        print(YELLOW + ' While the Director and OEM provided consistent metadata'
+            ' for new firmware,')
+        print(' mirrors we contacted provided only untrustworthy images. ')
+        print(GREEN + 'We have rejected these. Firmware not updated.\n' + ENDCOLORS)
 
       else:
         assert(os.path.exists(full_fname)), 'Programming error: no download ' + \

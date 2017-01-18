@@ -395,7 +395,14 @@ def attack_mitm(vin, target_filepath):
       demo.DIRECTOR_REPO_DIR, vin, 'targets', '_backup__' + target_filepath)
   print(backup_fname)
 
-  if not os.path.exists(full_fname):
+
+  full_mr_fname = os.path.join(
+      demo.MAIN_REPO_TARGETS_DIR, target_filepath)
+  backup_mr_fname = os.path.join(
+      demo.MAIN_REPO_TARGETS_DIR, '_backup__' + target_filepath)
+
+
+  if not os.path.exists(full_fname) or not os.path.exists(full_mr_fname):
     print('The provided target file does not exist. Cannot attack.')
     raise Exception('The provided target file does not exist. Cannot attack.')
   elif os.path.exists(backup_fname):
@@ -404,6 +411,7 @@ def attack_mitm(vin, target_filepath):
 
   print('Before shutil.')
   shutil.copy(full_fname, backup_fname)
+  shutil.copy(full_mr_fname, backup_mr_fname)
 
   print('copy complete')
 
@@ -411,6 +419,7 @@ def attack_mitm(vin, target_filepath):
   fobj.write('EVIL UPDATE: ARBITRARY PACKAGE ATTACK TO BE DELIVERED FROM '
       'MITM / bad mirror (no keys compromised).')
   fobj.close()
+  shutil.copy(full_fname, full_mr_fname)
 
 
 
@@ -424,12 +433,20 @@ def recover_mitm(vin, target_filepath):
   backup_fname = os.path.join(
       demo.DIRECTOR_REPO_DIR, vin, 'targets', '_backup__' + target_filepath)
 
-  if not os.path.exist(full_fname):
+  full_mr_fname = os.path.join(
+      demo.MAIN_REPO_TARGETS_DIR, target_filepath)
+  backup_mr_fname = os.path.join(
+      demo.MAIN_REPO_TARGETS_DIR, '_backup__' + target_filepath)
+
+  if not os.path.exists(full_fname) or not os.path.exists(full_mr_fname):
+    print('The provided target file does not exist. Cannot attack.')
     raise Exception('The provided target file does not exist. Cannot attack.')
-  elif not os.path.exist(backup_fname):
+  elif not os.path.exists(backup_fname):
+    print('The attack is not in progress. No recovery to run.')
     raise Exception('The attack is not in progress. No recovery to run.')
 
   shutil.move(backup_fname, full_fname)
+  shutil.move(backup_mr_fname, full_mr_fname)
 
 
 

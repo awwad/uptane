@@ -826,4 +826,4 @@ def looping_update():
       update_cycle()
     except Exception as e:
       print(repr(e))
-    time.sleep(2)
+    time.sleep(1)

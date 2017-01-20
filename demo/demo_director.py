@@ -145,6 +145,7 @@ def clean_slate(use_new_keys=False):
 
 
 def write_to_live(vin_to_update=None):
+  # Release updated metadata.
 
   global director_service_instance
 
@@ -157,7 +158,8 @@ def write_to_live(vin_to_update=None):
     repo = director_service_instance.vehicle_repositories[vin]
     repo_dir = repo._repository_directory
 
-    repo.write()
+    repo.mark_dirty(['timestamp', 'snapshot'])
+    repo.write() # will be writeall() in most recent TUF branch
 
     assert(os.path.exists(os.path.join(repo_dir, 'metadata.staged'))), \
         'Programming error: a repository write just occurred; why is ' + \

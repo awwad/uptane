@@ -134,7 +134,8 @@ def write_to_live():
   global repo
 
   # Write the metadata files out to mainrepo's 'metadata.staged'
-  repo.write()
+  repo.mark_dirty(['timestamp', 'snapshot'])
+  repo.write() # will be writeall() in most recent TUF branch
 
   # Move staged metadata (from the write above) to live metadata directory.
 

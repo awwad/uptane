@@ -449,12 +449,16 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
             'connecting to an untrustworthy Director, or there may be an '
             'untrustworthy Supplier, or the Director and OEM '
             'Repository may be out of sync.' + ENDCOLORS)
+
+        # The following is code intended for a demonstration, inserted here
+        # into the reference implementation as a temporary measure.
         print_banner(BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG,
             text='The Director has instructed us to download a file that does '
             ' does not exactly match the Image Repository metadata. '
-            'File: ' + repr(target_filepath))
+            'File: ' + repr(target_filepath), sound=TADA)
         import time
         time.sleep(3)
+        # End demo code.
 
     # Have instead decided to have get_validated_target_info() call above return
     # only one fileinfo, that from the Director (after validating it fully as
@@ -559,7 +563,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
         print_banner(BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG,
             text='No image was found that exactly matches the signed metadata '
             'from the Director and Image Repositories. Not keeping '
-            'untrustworthy files. ' + repr(target_filepath))
+            'untrustworthy files. ' + repr(target_filepath), sound=TADA)
         import time
         time.sleep(3)
 

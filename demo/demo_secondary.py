@@ -406,7 +406,7 @@ def update_cycle():
     print_banner(
         BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG,
         text='Image from Primary failed to validate: length mismatch. Image: ' +
-        repr(image_fname))#, sound=TADA)
+        repr(image_fname), sound=TADA)
     # TODO: Add length comparison instead, from error.
     attacks_detected += 'Image from Primary failed to validate: length ' + \
         'mismatch.\n'
@@ -417,7 +417,7 @@ def update_cycle():
     print_banner(
         BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG,
         text='Image from Primary failed to validate: hash mismatch. Image: ' +
-        repr(image_fname))#, sound=TADA)
+        repr(image_fname), sound=TADA)
     # TODO: Add hash comparison instead, from error.
     attacks_detected += 'Image from Primary failed to validate: hash ' + \
         'mismatch.\n'
@@ -449,7 +449,7 @@ def update_cycle():
         BANNER_COMPROMISED, color=WHITE+RED_BG,
         text='A malicious update has been installed! Arbitrary package attack '
         'successful: this Secondary has been compromised! Image: ' +
-        repr(expected_image_fname))#, sound=WITCH)
+        repr(expected_image_fname), sound=WITCH)
     generate_signed_ecu_manifest()
     submit_ecu_manifest_to_primary()
     time.sleep(5)
@@ -473,8 +473,8 @@ def update_cycle():
   print_banner(
       BANNER_UPDATED, color=WHITE+GREEN_BG,
       text='Installed firmware received from Primary that was fully '
-      'validated by the Director and OEM Repo. Image: ' + repr(image_fname))#,
-      #sound=WON)
+      'validated by the Director and OEM Repo. Image: ' + repr(image_fname),
+      sound=WON)
   time.sleep(5)
   #print(GREEN + 'Installed firmware received from Primary that was fully '
   #    'validated by the Director and OEM Repo.' + ENDCOLORS)

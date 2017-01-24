@@ -760,7 +760,14 @@ def listen():
   XML-RPC calls from demo Secondaries for Primary interface calls.
   """
 
-  # Create server
+  # Create server to listen for messages from Secondaries. In this
+  # demonstration, an XMLRPC server is used and communications are sent in the
+  # clear. While this cannot affect the validity of ECU Manifests or violate
+  # the validity of images or metadata due to the protections of Uptane,
+  # whatever mechanism of transit an OEM employs should nonetheless be
+  # secured per the Uptane Deployment Considerations document.
+  # The server code employed should be hardened against buffer overflows and
+  # the like.
   server = None
   successful_port = None
   last_error = None
@@ -786,10 +793,17 @@ def listen():
 
   # Register functions that can be called via XML-RPC, allowing Secondaries to
   # submit ECU Version Manifests, requests timeserver attestations, etc.
+  # Implementers should carefully consider what protocol to use for sending
+  # ECU manifests. They may not want them sent in the clear, for example.
+  # In general, the interface below is not expected to be secure in this
+  # demonstration.
 
   server.register_function(
       primary_ecu.register_ecu_manifest, 'submit_ecu_manifest')
 
+  # Please note that registrations here are NOT secure, and intended for
+  # convenience of the demonstration. An OEM will have their own mechanisms for
+  # adding ECUs to their inventory server.
   server.register_function(
       primary_ecu.register_new_secondary, 'register_new_secondary')
 
@@ -797,10 +811,19 @@ def listen():
       primary_ecu.get_last_timeserver_attestation,
       'get_last_timeserver_attestation')
 
+  # Distributing images this way is not ideal: there is no method here (as
+  # there IS in TUF in general) of detecting endless data attacks or slow
+  # retrieval attacks. OEMs will have their own mechanisms for distribution
+  # from Primary to Secondary, and these should follow advice in the Uptane
+  # Deployment Considerations document.
   server.register_function(get_image_for_ecu, 'get_image')
 
   server.register_function(get_metadata_for_ecu, 'get_metadata')
 
+  # This again is for convenience in the demo. While I don't see an obvious
+  # security issue, it should be considered whether or not checking such a bit
+  # before trying to update foils reporting or otherwise creates a security
+  # issue.
   server.register_function(
       primary_ecu.update_exists_for_ecu, 'update_exists_for_ecu')
 
@@ -812,8 +835,6 @@ def listen():
   server.serve_forever()
 
 
-# def compromise_primary_and_deliver_arbitrary():
-#   pass
 
 def try_banners():
   preview_all_banners()

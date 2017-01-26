@@ -29,15 +29,15 @@ If you're going to be running the ASN.1 encoding scripts once they are ready, yo
 
 
 ## Running
-The code below is intended to be run IN FIVE PANES:
-- WINDOW 1: Python shell for the OEM. This serves HTTP (repository files).
+The code below is intended to be run in five or more consoles:
+- WINDOW 1: Python shell for the Image Repository. This serves HTTP (repository files).
 - WINDOW 2: Python shell for the Director (Repository and Service). This serves metadata and image files via HTTP receives manifests from the Primary via XMLRPC (manifests).
 - WINDOW 3: Bash shell for the Timeserver. This serves signed times in response to requests from the Primary via XMLRPC.
 - WINDOW 4: Python shell for a Primary client in the vehicle. This fetches images and metadata from the repositories via HTTP, and communicates with the Director service, Timeserver, and any Secondaries via XMLRPC. (More of these can be run, simulating more vehicles with one Primary each.)
 - WINDOW 5: Python shell for a Secondary in the vehicle. This communicates directly only with the Primary via XMLRPC, and will perform full metadata verification. (More of these can be run, simulating more ECUs in one or more vehicles.)
 
 
-###*WINDOW 1: the Supplier/OEM Repository*
+###*WINDOW 1: the Image Repository*
 These instructions start a demonstration version of an OEM's or Supplier's main repository
 for software, hosting images and the metadata Uptane requires.
 
@@ -96,7 +96,7 @@ python demo/demo_timeserver.py
 ```
 
 ###*WINDOW 4(+): the Primary client(s):*
-(ONLY AFTER SUPPLIER, DIRECTOR, AND TIMESERVER HAVE FINISHED STARTING UP AND ARE HOSTING)
+(Image Repo, Director, and Timeserver must already have finished starting up.)
 The Primary client started below is likely to run on a more capable and
 connected ECU in the vehicle - potentially the head unit / infotainment. It will
 obtain metadata and images from the OEM Repository as instructed by the Director
@@ -110,8 +110,8 @@ dp.update_cycle()
 ```
 
 The Primary's update_cycle() call:
-- fetches and validates all signed metadata for the vehicle, from the Director and Supplier repositories
-- fetches all images that the Director instructs this vehicle to install, excluding any that do not exactly match corresponding images on the Supplier repository. Any images fetched from the repositories that do not match validated metadata are discarded.
+- fetches and validates all signed metadata for the vehicle, from the Director and Image repositories
+- fetches all images that the Director instructs this vehicle to install, excluding any that do not exactly match corresponding images on the Image repository. Any images fetched from the repositories that do not match validated metadata are discarded.
 - queries the Timeserver for a signed attestation about the current time, including in it any nonces sent by Secondaries, so that Secondaries may trust that the time returned is at least as recent as their sent nonce
 - generates a Vehicle Version Manifest with some vehicle metadata and all ECU Version Manifests received from Secondaries, describing currently installed images, most recent times available to each ECU, and reports of any attacks observed by Secondaries (can also be called directly: `dp.generate_signed_vehicle_manifest()`)
 - sends that Vehicle Version Manifest to the Director (can also be called directly: `dp.submit_vehicle_manifest_to_director()`)
@@ -128,7 +128,7 @@ dp.update_cycle()
 
 
 ###*WINDOW 5(+): the Secondary client(s):*
-(ONLY AFTER SUPPLIER, DIRECTOR, TIMESERVER, AND PRIMARY HAVE FINISHED STARTING UP AND ARE HOSTING)
+(The following assumes that the Image Repository, Director, Timeserver, and Primary have finished starting up and are hosting/listening.)
 Here, we start a single Secondary ECU and generate a signed ECU Manifest
 with information about the "firmware" that it is running, which we send to the
 Primary.
@@ -145,7 +145,7 @@ If the Secondary is in a different vehicle from the default vehicle, this call s
 
 The Secondary's update_cycle() call:
 - fetches and validates the signed metadata for the vehicle from the Primary
-- fetches any image that the Primary assigns us, validating that against the instructions of the Director in the Director's metadata, and against file info available in the Supplier's metadata. If the image from the Primary does not match validated metadata, it is discarded.
+- fetches any image that the Primary assigns us, validating that against the instructions of the Director in the Director's metadata, and against file info available in the Image Repository's metadata. If the image from the Primary does not match validated metadata, it is discarded.
 - fetches the latest Timeserver attestation from the Primary, checking for the nonce this Secondary last sent. If that nonce is included in the signed attestation from the Timeserver and the signature checks out, this time is saved as valid and reasonably recent.
 - generates an ECU Version Manifest that indicates the secure hash of the image currently installed on this Secondary, the latest validated times, and a string describing attacks detected (can also be called directly: `ds.generate_signed_ecu_manifest()`)
 - submits the ECU Version Manifest to the Primary (can also be called directly: `ds.submit_ecu_manifest_to_primary()`)

@@ -45,6 +45,7 @@ import demo
 import uptane
 import uptane.services.director as director
 import uptane.services.inventorydb as inventory
+import uptane.ber_encoder as ber_encoder
 import tuf.formats
 
 import threading # for the director services interface
@@ -165,6 +166,17 @@ def write_to_live(vin_to_update=None):
         'Programming error: a repository write just occurred; why is ' + \
         'there no metadata.staged directory where it is expected?'
 
+    # Now, generate a BER-encoded ASN.1 version of the Director targets.json
+    # metadata file, specifically for Partial Verification Secondaries,
+    # re-signing it.
+    filename_of_targets_json = os.path.join(
+        demo.DIRECTOR_REPO_DIR, vin, 'metadata.staged', 'targets.json')
+    filename_of_targets_ber = os.path.join(
+        demo.DIRECTOR_REPO_DIR, vin, 'metadata.staged', 'targets.ber')
+    targets_ber = ber_encoder.encode_signed_json_metadata_as_ber(
+        filename_of_targets_json)
+    open(filename_of_targets_ber, 'wb').write(targets_ber)
+
     # This shouldn't exist, but just in case something was interrupted,
     # warn and remove it.
     if os.path.exists(os.path.join(repo_dir, 'metadata.livetemp')):
@@ -187,9 +199,6 @@ def write_to_live(vin_to_update=None):
     os.rename(
         os.path.join(repo_dir, 'metadata.livetemp'),
         os.path.join(repo_dir, 'metadata'))
-
-  # TODO: <~> Call the encoders here to convert the metadata files into BER
-  # versions and also host those!
 
 
 

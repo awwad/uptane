@@ -183,8 +183,8 @@ def write_to_live(vin_to_update=None):
           demo.DIRECTOR_REPO_DIR, vin, 'metadata.staged', 'targets.json')
       filename_of_targets_ber = os.path.join(
           demo.DIRECTOR_REPO_DIR, vin, 'metadata.staged', 'targets.ber')
-      targets_ber = ber_encoder.encode_signed_json_metadata_as_ber(
-          filename_of_targets_json)
+      targets_ber = ber_encoder.convert_signed_json_to_signed_ber(
+          filename_of_targets_json, director_service_instance.key_dirtarg_pri)
       open(filename_of_targets_ber, 'wb').write(targets_ber)
 
     # This shouldn't exist, but just in case something was interrupted,

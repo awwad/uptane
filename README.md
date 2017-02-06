@@ -2,9 +2,10 @@
 Reference Implementation and demonstration code for UPTANE.
 
 Please note that extensive documentation on design can be found in the following documents:
-- [Uptane Design Overview](https://docs.google.com/document/d/13XXQZ6KXCK_MiZj_Q84PQyMDmBiHnhEfgJgj8drKWRI/edit#heading=h.8swqb4rerhs3)
-- [Uptane Implementation Specification](https://docs.google.com/document/d/1noDyg2t5jB6y3R5-Y3TXXj1tocv_y24NjmOw8rAcaAc/edit?pli=1#)
 
+* [Design Overview](https://docs.google.com/document/d/1pBK--40BCg_ofww4GES0weYFB6tZRedAjUy6PJ4Rgzk/edit?usp=sharing)
+* [Implementation Specification](https://docs.google.com/document/d/1wjg3hl0iDLNh7jIRaHl3IXhwm0ssOtDje5NemyTBcaw/edit?usp=sharing)
+* [Deployment Considerations](https://docs.google.com/document/d/17wOs-T7mugwte5_Dt-KLGMsp-3_yAARejpFmrAMefSE/edit?usp=sharing)
 
 # Instructions on use of the Uptane demonstration code
 ## Installation

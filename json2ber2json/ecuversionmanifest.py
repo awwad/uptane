@@ -112,7 +112,7 @@ def get_json_signed(asn_metadata):
 
 
 if __name__ == '__main__':
-  metadata.test('ecuversionmanifest.json', 'ecuversionmanifest.ber',
+  metadata.test('ecuversionmanifest.json', 'ecuversionmanifest.der',
                   get_asn_signed, get_json_signed,
                   metadata.identity_update_json_signature,
                   ECUVersionManifest)

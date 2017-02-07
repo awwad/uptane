@@ -47,6 +47,6 @@ def get_json_signed(asn_metadata):
 
 
 if __name__ == '__main__':
-  metadata.test('timeserver.json', 'timeserver.ber', get_asn_signed,
+  metadata.test('timeserver.json', 'timeserver.der', get_asn_signed,
                 get_json_signed, metadata.identity_update_json_signature,
                 CurrentTime)

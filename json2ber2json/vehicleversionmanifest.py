@@ -29,11 +29,11 @@ def get_asn_signed(json_signed):
 
   for manifest in json_signed['ecu_version_manifests']:
     json_signed, json_signatures = manifest['signed'], manifest['signatures']
-    asn_signed, ber_signed = \
-              metadata.get_asn_and_ber_signed(ecuversionmanifest.get_asn_signed,
+    asn_signed, der_signed = \
+              metadata.get_asn_and_der_signed(ecuversionmanifest.get_asn_signed,
                                               json_signed)
     ecuVersionManifest = \
-        metadata.json_to_asn_metadata(asn_signed, ber_signed, json_signatures,
+        metadata.json_to_asn_metadata(asn_signed, der_signed, json_signatures,
                                       ECUVersionManifest)
     ecuVersionManifests[numberOfECUVersionManifests] = ecuVersionManifest
     numberOfECUVersionManifests += 1
@@ -67,7 +67,7 @@ def get_json_signed(asn_metadata):
 
 
 if __name__ == '__main__':
-  metadata.test('vehicleversionmanifest.json', 'vehicleversionmanifest.ber',
+  metadata.test('vehicleversionmanifest.json', 'vehicleversionmanifest.der',
                 get_asn_signed, get_json_signed,
                 metadata.identity_update_json_signature,
                 VehicleVersionManifest)

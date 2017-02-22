@@ -382,12 +382,6 @@ def attack_mitm(vin, target_filepath):
   # Arbitrary package attack, no compromised keys.
   # Move evil target file into place on Director without updating metadata
   # (simulate bad mirror).
-  print(repr(vin))
-  print(repr(target_filepath))
-  fobj = open('/Users/s/w/potato', 'w')
-  fobj.write('Working so far.')
-  fobj.close()
-
   full_fname = os.path.join(
       demo.DIRECTOR_REPO_DIR, vin, 'targets', target_filepath)
   # TODO: NOTE THAT THIS ATTACK SCRIPT BREAKS IF THE TARGET FILE IS IN A

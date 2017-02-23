@@ -386,11 +386,8 @@ def attack_mitm(vin, target_filepath):
       demo.DIRECTOR_REPO_DIR, vin, 'targets', target_filepath)
   # TODO: NOTE THAT THIS ATTACK SCRIPT BREAKS IF THE TARGET FILE IS IN A
   # SUBDIRECTORY IN THE REPOSITORY.
-  print(full_fname)
   backup_fname = os.path.join(
       demo.DIRECTOR_REPO_DIR, vin, 'targets', '_backup__' + target_filepath)
-  print(backup_fname)
-
 
   full_mr_fname = os.path.join(
       demo.MAIN_REPO_TARGETS_DIR, target_filepath)
@@ -398,18 +395,24 @@ def attack_mitm(vin, target_filepath):
       demo.MAIN_REPO_TARGETS_DIR, '_backup__' + target_filepath)
 
 
-  if not os.path.exists(full_fname) or not os.path.exists(full_mr_fname):
-    print('The provided target file does not exist. Cannot attack.')
-    raise Exception('The provided target file does not exist. Cannot attack.')
+  if not os.path.exists(full_fname) and not os.path.exists(full_mr_fname):
+    raise Exception('The provided target file is not already in either the '
+        'Director or Image repositories. This attack is intended to be run on '
+        'an existing target that is already set to be delivered to a client.')
   elif os.path.exists(backup_fname):
-    print('The attack is already in progress. Not running twice.')
-    raise Exception('The attack is already in progress. Not running twice.')
+    raise Exception('The attack is already in progress, or was never recovered '
+        'from. Not running twice. Please check state and if everything is '
+        'otherwise okay, delete ' + repr(backup_fname))
 
-  print('Before shutil.')
-  shutil.copy(full_fname, backup_fname)
-  shutil.copy(full_mr_fname, backup_mr_fname)
+  # If the image file exists already on the Director (not necessary), then
+  # back it up.
+  if os.path.exists(full_fname):
+    shutil.copy(full_fname, backup_fname)
 
-  print('copy complete')
+  # Hide file on Main Repo so that client doesn't just grab an intact file from
+  # there, making the attack moot.
+  if os.path.exists(full_mr_fname):
+    os.rename(full_mr_fname, backup_mr_fname)
 
   fobj = open(full_fname, 'w')
   fobj.write('EVIL UPDATE: ARBITRARY PACKAGE ATTACK TO BE DELIVERED FROM '
@@ -434,15 +437,23 @@ def recover_mitm(vin, target_filepath):
   backup_mr_fname = os.path.join(
       demo.MAIN_REPO_TARGETS_DIR, '_backup__' + target_filepath)
 
-  if not os.path.exists(full_fname) or not os.path.exists(full_mr_fname):
-    print('The provided target file does not exist. Cannot attack.')
-    raise Exception('The provided target file does not exist. Cannot attack.')
-  elif not os.path.exists(backup_fname):
-    print('The attack is not in progress. No recovery to run.')
-    raise Exception('The attack is not in progress. No recovery to run.')
+  if not os.path.exists(backup_fname) or not os.path.exists(full_fname):
+    raise Exception('The expected backup or attacked files do not exist. No '
+        'attack is in progress to recover from, or manual manipulation has '
+        'broken the expected state.')
 
-  shutil.move(backup_fname, full_fname)
-  shutil.move(backup_mr_fname, full_mr_fname)
+  # In the case of the Director repo, we expect there to be a file replaced,
+  # so we restore the backup over it.
+  os.rename(backup_fname, full_fname)
+
+  # If the file existed on the Main Repo, was backed up and hidden by the
+  # attack, and hasn't since been replaced (by some other attack or manual
+  # manipulation), restore that file to its place. Either way, delete the
+  # backup so that it's not there the next time to potentially confuse this.
+  if os.path.exists(backup_mr_fname) and not os.path.exists(full_mr_fname):
+    os.rename(full_mr_fname, backup_mr_fname)
+  elif os.path.exists(backup_mr_fname):
+    os.remove(backup_mr_fname)
 
 
 

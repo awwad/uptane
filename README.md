@@ -175,7 +175,7 @@ new_target_fname = filepath_in_repo = 'file5.txt'
 ecu_serial = '22222'
 vin = '111'
 dd.add_target_to_director(new_target_fname, filepath_in_repo, vin, ecu_serial)
-dd.write_to_live()
+dd.write_to_live(vin_to_update='111')
 ```
 
 Next, you can update the Primary in the Primary's window:

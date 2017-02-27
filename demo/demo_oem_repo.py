@@ -107,17 +107,17 @@ def clean_slate(use_new_keys=False):
 
   # Perform delegation from mainrepo's targets role to mainrepo's role1 role.
 
+  # TODO: <~> Re-enable delegations below. Currently, ASN1 conversion fails
+  # when there are delegations. This is, of course, untenable, but for now, it
+  # is more important to experiment with ASN1 than to have a sample delegation.
   # Delegate to a new Supplier.
-  repo.targets.delegate('role1', [key_role1_pub],
-      [os.path.join(demo.MAIN_REPO_NAME, 'targets/file1.txt'),
-       os.path.join(demo.MAIN_REPO_NAME, 'targets/infotainment_firmware.txt')],
-      threshold=1, backtrack=True,
-      restricted_paths=[os.path.join(demo.MAIN_REPO_TARGETS_DIR, '*')])
-
-
+  # repo.targets.delegate('role1', [key_role1_pub],
+  #     [os.path.join(demo.MAIN_REPO_NAME, 'targets/file1.txt'),
+  #      os.path.join(demo.MAIN_REPO_NAME, 'targets/infotainment_firmware.txt')],
+  #     threshold=1, backtrack=True,
+  #     restricted_paths=[os.path.join(demo.MAIN_REPO_TARGETS_DIR, '*')])
   # Add delegated role keys to repo
-
-  repo.targets('role1').load_signing_key(key_role1_pri)
+  # repo.targets('role1').load_signing_key(key_role1_pri)
 
 
   write_to_live()

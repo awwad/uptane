@@ -12,6 +12,7 @@ from __future__ import unicode_literals
 
 import uptane.formats
 import tuf.formats
+import tuf.conf
 #import uptane.ber_encoder as ber_encoder
 from uptane.common import sign_signable
 from demo.uptane_banners import *
@@ -220,10 +221,13 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     self.distributable_full_metadata_archive_fname = os.path.join(
         full_client_dir, 'metadata', 'full_metadata_archive.zip')
 
+    # TODO: Some of these assumptions are unseemly. Reconsider.
     self.temp_partial_metadata_fname = os.path.join(
-        full_client_dir, 'metadata', 'temp_director_targets.json')
+        full_client_dir, 'metadata', 'temp_director_targets.' +
+        tuf.conf.METADATA_FORMAT)
     self.distributable_partial_metadata_fname = os.path.join(
-        full_client_dir, 'metadata', 'director_targets.json')
+        full_client_dir, 'metadata', 'director_targets.' +
+        tuf.conf.METADATA_FORMAT)
 
     # Initializations not directly related to arguments.
     self.nonces_to_send = []
@@ -394,9 +398,9 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
       uptane.Error
         - If Director repo fails to include an ECU Serial in the custom metadata
           for a given target file.
-        - If a non-'.json' metadata file exists in the metadata directory in
-          which validated files are deposited by TUF.
-
+        - If a file exists in the metadata directory in which validated files
+          are deposited by TUF that does not have an extension that befits a
+          file of type tuf.conf.METADATA_FORMAT.
     """
     log.debug('Refreshing top level metadata from all repositories.')
     self.refresh_toplevel_metadata_from_repositories()
@@ -1006,11 +1010,15 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
           role_abs_fname = os.path.join(abs_repo_dir, role_fname)
 
           # Make sure it's the right type of file. Should be a file, not a
-          # directory. Symlinks are OK. Should end in '.json'.
-          if not os.path.isfile(role_abs_fname) or not role_abs_fname.endswith('.json'):
+          # directory. Symlinks are OK. Should end in an extension matching
+          # tuf.conf.METADATA_FORMAT (presumably .json or .ber, depending on
+          # that setting).
+          if not os.path.isfile(role_abs_fname) or not role_abs_fname.endswith(
+              '.' + tuf.conf.METADATA_FORMAT):
             # Consider special error type.
             raise uptane.Error('Unexpected file type in a metadata '
-              'directory: ' + repr(role_abs_fname) + ' Expecting only .json files.')
+                'directory: ' + repr(role_abs_fname) + ' Expecting only ' +
+                tuf.conf.METADATA_FORMAT + 'files.')
 
           # Write the file to the archive, adjusting the path in the archive so
           # that when expanded, it resembles repository structure rather than
@@ -1027,7 +1035,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
         'metadata',
         self.director_repo_name,
         'current',
-        'targets.json')
+        'targets.' + tuf.conf.METADATA_FORMAT)
     if os.path.exists(self.temp_partial_metadata_fname):
       os.remove(self.temp_partial_metadata_fname)
     shutil.copyfile(director_targets_file, self.temp_partial_metadata_fname)

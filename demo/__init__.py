@@ -7,12 +7,16 @@ import uptane
 import os
 import tuf.formats
 import tuf.repository_tool as rt
+import tuf.conf
 import random, string # To generate random strings for Secondary directory names
 
 from six.moves import range
 
+METADATA_EXTENSION = '.' + tuf.conf.METADATA_FORMAT
+
 DEMO_DIR = os.path.join(uptane.WORKING_DIR, 'demo')
 DEMO_KEYS_DIR = os.path.join(DEMO_DIR, 'keys')
+# Pinning files are still always JSON.
 DEMO_PINNING_FNAME = os.path.join(DEMO_DIR, 'pinned.json')
 DEMO_SECONDARY_PINNING_FNAME = os.path.join(DEMO_DIR, 'pinned_secondary_template.json')
 DEMO_PRIMARY_PINNING_FNAME = os.path.join(DEMO_DIR, 'pinned_primary_template.json')
@@ -22,7 +26,8 @@ MAIN_REPO_PORT = 30301
 MAIN_REPO_NAME = 'mainrepo'
 MAIN_REPO_DIR = os.path.join(uptane.WORKING_DIR, MAIN_REPO_NAME)
 MAIN_REPO_TARGETS_DIR = os.path.join(MAIN_REPO_DIR, 'targets')
-MAIN_REPO_ROOT_FNAME = os.path.join(MAIN_REPO_DIR, 'metadata', 'root.json')
+MAIN_REPO_ROOT_FNAME = os.path.join(
+    MAIN_REPO_DIR, 'metadata', 'root' + METADATA_EXTENSION)
 
 DIRECTOR_REPO_HOST = 'localhost' #'http://192.168.1.124'
 DIRECTOR_REPO_PORT = 30401

@@ -132,7 +132,7 @@ def clean_slate(
         client_directory, create_primary_pinning_file(),
         {demo.MAIN_REPO_NAME: demo.MAIN_REPO_ROOT_FNAME,
         demo.DIRECTOR_REPO_NAME: os.path.join(demo.DIRECTOR_REPO_DIR, vin,
-        'metadata', 'root.json')})
+        'metadata', 'root' + demo.METADATA_EXTENSION)})
   except FileNotFoundError:
     raise Exception(RED + 'Unable to create Primary client directory '
         'structure. Does the Director Repo for the vehicle exist yet?' +

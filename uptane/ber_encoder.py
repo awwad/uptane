@@ -88,7 +88,15 @@ def convert_signed_json_to_signed_ber(json_filename, private_key):
   relevant_asn_module = SUPPORTED_METADATA_MODULES[metadata_type]
   asn_signed = relevant_asn_module.get_asn_signed(json_signed) # Python3 breaks here.
 
+  # Encode the ASN.1 as BER using pyasn1.
   ber_signed = p_ber_encoder.encode(asn_signed)
+
+  # This hashing is redundant and temporary. Eventually, the hash will
+  # consistently be performed in securesystemslib/keys.py in the
+  # create_signature() function, so we shouldn't be taking a hash here.
+  # For the time being, I do this so that it always uses a hash even for ed25519
+  # and also so that the canonicalization that is currently called by
+  # create_signature() doesn't choke on the BER I want to sign.
   hash_of_ber = hashlib.sha256(ber_signed).hexdigest()
 
   # Now sign the metadata. (This signs a cryptographic hash of the metadata.)
@@ -127,11 +135,19 @@ def convert_signed_json_to_signed_ber(json_filename, private_key):
 
 
 # TODO: Make this and previous function consistent. This one takes data.
-# Previous one takes a file. Make that and naming consistent.
-def convert_signed_ber_to_unsigned_json(ber_data):
+# Previous one takes a file.
+def convert_signed_ber_to_bersigned_json(ber_data):
   """
-  Convert the given ber_data to JSON, retaining only the 'signed'
-  segment (and not the signatures themselves). This is for testing.
+  Convert the given ber_data to a Python dictionary representation consistent
+  with TUF's typical JSON encoding.
+
+  The 'signed' portion will be a JSON-style (essentially Python dict)
+  translation of the ber data's 'signed' portion. Likewise for the 'signatures'
+  portion. The result will be a dict containing a 'signatures' section that has
+  signatures over not what is in the 'signed' section, but rather over a
+  different format and encoding of what is in the 'signed' section. Please take
+  care.
+
   """
   # "_signed" here refers to the portion of the metadata that will be signed.
   # The metadata is divided into "signed" and "signature" portions. The
@@ -160,11 +176,11 @@ def convert_signed_ber_to_unsigned_json(ber_data):
 
   # Now we have to figure out what type of metadata the ASN.1 metadata is
   # so that we can use the appropriate spec to convert it back to JSON.
-  # For example, if it's targets metadata, we do this:
-  # TODO: <~> DETERMINE THE METADATA TYPE FIRST.
-  # (Even those this takes asn_metadata, it only uses asn_metadata[0],
+
+  # (Even though this takes asn_metadata, it only uses asn_metadata[0],
   # asn_signed_metadata....)
   asn_type_data = asn_signed_metadata[0] # This is the RoleType info, a class.
+
   # This is how we'd extract the name of the type from the enumeration that is
   # in the class (namedValues), indexed by the underlying "value" of
   # asn_type_data.
@@ -179,10 +195,21 @@ def convert_signed_ber_to_unsigned_json(ber_data):
   # Handle for the corresponding module.
   relevant_asn_module = SUPPORTED_METADATA_MODULES[metadata_type]
 
-  # Finally, convert into the basic Python dict we use in the JSON encoding.
+  # Convert into the basic Python dict we use in the JSON encoding.
   json_signed = relevant_asn_module.get_json_signed(asn_metadata)
 
-  return json_signed
+  # Extract the signatures from the ASN.1 representation.
+  asn_signatures = asn_metadata[2]
+  json_signatures = []
+
+  for asn_signature in asn_signatures:
+    json_signatures.append({
+        'keyid': asn_signature['keyid'],
+        'method': asn_signature['method'],
+        'sig': asn_signature['value']})
+
+  return {'signatures': json_signatures, 'signed': json_signed}
+
 
 
 

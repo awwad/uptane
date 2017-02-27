@@ -13,31 +13,44 @@ import uptane.encoding.metadata as metadata
 
 
 def get_asn_signed(json_signed):
-  timestampMetadata = TimestampMetadata()\
+  asn_signed = TimestampMetadata()\
                       .subtype(implicitTag=tag.Tag(tag.tagClassContext,
                                                    tag.tagFormatConstructed, 3))
-  filename = 'snapshot.json'
-  meta = json_signed['meta'][filename]
-  timestampMetadata['filename'] = filename
-  timestampMetadata['version'] = meta['version']
-  timestampMetadata['length'] = meta['length']
-  timestampMetadata['numberOfHashes'] = 1
-  hashes = Hashes().subtype(implicitTag=tag.Tag(tag.tagClassContext,
-                                                tag.tagFormatSimple, 4))
-  hash = Hash()
-  hash['function'] = int(HashFunction('sha256'))
-  digest = BinaryData().subtype(explicitTag=tag.Tag(tag.tagClassContext,
+  if len(json_signed['meta']) != 1:
+    raise tuf.Error('Expecting only one file to be identified in timestamp '
+        'metadata: snapshot. Contents of timestamp metadata: ' +
+        repr(json_signed['meta']))
+
+  # Get the only key in the dictionary, the filename of the file timestamp
+  # contains a hash for (snapshot.*).
+  filename = list(json_signed['meta'])[0]
+
+  fileinfo = json_signed['meta'][filename]
+  asn_signed['filename'] = filename
+  asn_signed['version'] = fileinfo['version']
+  asn_signed['length'] = fileinfo['length']
+  asn_signed['numberOfHashes'] = len(fileinfo['hashes']) # TODO: <~> Ascertain this rather than assuming.
+  asn_hashes = Hashes().subtype(
+      implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 4))
+
+  i = 0 # counter for hashes, as Hashes() object must be indexed (no append)
+  for hashtype in fileinfo['hashes']:
+    asn_hash = Hash()
+    asn_hash['function'] = int(HashFunction(hashtype))
+    digest = BinaryData().subtype(explicitTag=tag.Tag(tag.tagClassContext,
                                                     tag.tagFormatConstructed,
                                                     1))
-  digest['hexString'] = meta['hashes']['sha256']
-  hash['digest'] = digest
-  hashes[0] = hash
-  timestampMetadata['hashes'] = hashes
+    digest['hexString'] = fileinfo['hashes'][hashtype]
+    asn_hash['digest'] = digest
+    asn_hashes[i] = asn_hash
+    i += 1
+
+  asn_signed['hashes'] = asn_hashes
 
   signedBody = SignedBody()\
                .subtype(explicitTag=tag.Tag(tag.tagClassContext,
                                             tag.tagFormatConstructed, 3))
-  signedBody['timestampMetadata'] = timestampMetadata
+  signedBody['timestampMetadata'] = asn_signed
 
   signed = Signed().subtype(implicitTag=tag.Tag(tag.tagClassContext,
                                                 tag.tagFormatConstructed, 0))
@@ -60,7 +73,7 @@ def get_json_signed(asn_metadata):
 
   timestampMetadata = asn_signed['body']['timestampMetadata']
   json_signed['meta'] = {
-    'snapshot.json' : {
+    filename : {
       'hashes': {
         'sha256': str(timestampMetadata['hashes'][0]['digest']['hexString'])
       },

@@ -174,18 +174,18 @@ def write_to_live(vin_to_update=None):
         'Programming error: a repository write just occurred; why is ' + \
         'there no metadata.staged directory where it is expected?'
 
-    # Now, generate a BER-encoded ASN.1 version of the Director targets.json
-    # metadata file, specifically for Partial Verification Secondaries,
-    # re-signing it. Limit to only doing this when pyasn1 is installed so as
-    # not to disrupt people trying to just use JSON.
-    if PYASN1_EXISTS:
-      filename_of_targets_json = os.path.join(
-          demo.DIRECTOR_REPO_DIR, vin, 'metadata.staged', 'targets.json')
-      filename_of_targets_ber = os.path.join(
-          demo.DIRECTOR_REPO_DIR, vin, 'metadata.staged', 'targets.ber')
-      targets_ber = ber_encoder.convert_signed_json_to_signed_ber(
-          filename_of_targets_json, director_service_instance.key_dirtarg_pri)
-      open(filename_of_targets_ber, 'wb').write(targets_ber)
+    # # Now, generate a BER-encoded ASN.1 version of the Director targets.json
+    # # metadata file, specifically for Partial Verification Secondaries,
+    # # re-signing it. Limit to only doing this when pyasn1 is installed so as
+    # # not to disrupt people trying to just use JSON.
+    # if PYASN1_EXISTS:
+    #   filename_of_targets_json = os.path.join(
+    #       demo.DIRECTOR_REPO_DIR, vin, 'metadata.staged', 'targets.json')
+    #   filename_of_targets_ber = os.path.join(
+    #       demo.DIRECTOR_REPO_DIR, vin, 'metadata.staged', 'targets.ber')
+    #   targets_ber = ber_encoder.convert_signed_json_to_signed_ber(
+    #       filename_of_targets_json, director_service_instance.key_dirtarg_pri)
+    #   open(filename_of_targets_ber, 'wb').write(targets_ber)
 
     # This shouldn't exist, but just in case something was interrupted,
     # warn and remove it.

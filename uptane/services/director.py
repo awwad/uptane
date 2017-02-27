@@ -37,7 +37,7 @@ import uptane.services.inventorydb as inventory
 import tuf
 import tuf.formats
 import tuf.repository_tool as rt
-#import asn1_conversion as asn1
+#import uptane.ber_encoder as ber_encoder
 from uptane import GREEN, RED, YELLOW, ENDCOLORS
 
 import os

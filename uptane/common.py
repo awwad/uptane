@@ -63,7 +63,8 @@ def sign_signable(signable, keys_to_sign_with):
     # Else, all is well. Sign the signable with the given key, adding that
     # signature to the signatures list in the signable.
     signable['signatures'].append(
-        tuf.keys.create_signature(signing_key, signable['signed']))
+        tuf.keys.create_signature(
+        signing_key, signable['signed'], force_treat_as_pydict=True))
 
 
   # Confirm that the formats match what is expected post-signing, including a
@@ -180,7 +181,8 @@ def create_directory_structure_for_client(
     # Set the root of trust we have for that repository.
     shutil.copyfile(
       root_fnames_by_repository[repo_name],
-      os.path.join(client_dir, 'metadata', repo_name, 'current', 'root.json'))
+      os.path.join(client_dir, 'metadata', repo_name, 'current',
+          'root.' + tuf.conf.METADATA_FORMAT))
 
 
   # Configure tuf with the client's metadata directories (where it stores the

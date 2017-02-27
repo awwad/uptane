@@ -21,12 +21,12 @@ To download and install the Uptane code and its dependencies, run the following:
 ```shell
 git clone https://github.com/uptane/uptane
 cd uptane
-pip install cffi==1.7.0 pycrypto==2.6.1 pynacl==1.0.1 cryptography canonicaljson
-pip install git+git://github.com/awwad/tuf.git@pinning_w_dirtywrites
+pip install cffi==1.7.0 pycrypto==2.6.1 pynacl==1.0.1 cryptography canonicaljson pyasn1
+pip install git+git://github.com/awwad/tuf.git@pinning_w_ber
 pip install -e .
 ```
 
-If you're going to be running the ASN.1 encoding scripts once they are ready, you'll also need to `pip install pyasn1`
+Note that the demonstration now operates using ASN.1 / DER format and encoding for metadata files by default. This can be switched back to JSON (which is human readable) by changing the tuf.conf.METADATA_FORMAT option in uptane/__init__.py.
 
 
 ## Running
@@ -154,3 +154,60 @@ The Secondary's update_cycle() call:
 - fetches the latest Timeserver attestation from the Primary, checking for the nonce this Secondary last sent. If that nonce is included in the signed attestation from the Timeserver and the signature checks out, this time is saved as valid and reasonably recent.
 - generates an ECU Version Manifest that indicates the secure hash of the image currently installed on this Secondary, the latest validated times, and a string describing attacks detected (can also be called directly: `ds.generate_signed_ecu_manifest()`)
 - submits the ECU Version Manifest to the Primary (can also be called directly: `ds.submit_ecu_manifest_to_primary()`)
+
+
+
+
+###*Delivering an Update*
+To try delivering an Update via Uptane, you'll need to add the image file to the Image Repository, then assign it to a vehicle and ECU in the Director Repository. Then, the Primary will obtain the new files, and the Secondary will update from the Primary.
+
+Perform this *in the Image Repo's window* to create a new file, add it to the repository, and host newly-written metadata:
+```python
+new_target_fname = filepath_in_repo = 'file5.txt'
+open(new_target_fname, 'w').write('Fresh target file')
+do.add_target_to_oemrepo(new_target_fname, filepath_in_repo)
+do.write_to_live()
+```
+
+Perform this *in the Director Repository's window* to assign that Image file to vehicle 111, ECU 22222:
+```python
+new_target_fname = filepath_in_repo = 'file5.txt'
+ecu_serial = '22222'
+vin = '111'
+dd.add_target_to_director(new_target_fname, filepath_in_repo, vin, ecu_serial)
+dd.write_to_live()
+```
+
+Next, you can update the Primary in the Primary's window:
+```python
+dp.update_cycle()
+```
+
+When the Primary has finished, you can update the Secondary in the Secondary's window:
+```python
+ds.update_cycle()
+```
+
+You should see an Updated banner on the Secondary, indicating a successful, validated update.
+
+
+
+###*Running an Arbitrary Package Attack w/ No Compromised Keys*
+This is a simple sample attack simulating a Man in the Middle attack that provides a malicious image file. In this attack, the attacker does not have the keys to correctly sign any metadata (and so it is an exceptionally basic attack).
+
+In the Director's window, run this:
+```python
+dd.attack_mitm(vin, new_target_fname)
+```
+
+Now, in the Primary's window, run this:
+```python
+dp.update_cycle()
+```
+
+Now, when the Primary runs dp.update_cycle(), it'll play the Defended banner and sound, as it's able to discard the manipulated file without even sending it to the Secondary.
+
+If you want to resume toying with the repositories, you can then run the script to put the repository back in a normal state (undoing what the attack did) by running this in the Director window:
+```python
+dd.recover_mitm(vin, new_target_fname)
+```

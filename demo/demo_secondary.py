@@ -122,7 +122,7 @@ def clean_slate(
       client_directory, create_secondary_pinning_file(),
       {demo.MAIN_REPO_NAME: demo.MAIN_REPO_ROOT_FNAME,
       demo.DIRECTOR_REPO_NAME: os.path.join(demo.DIRECTOR_REPO_DIR, vin,
-      'metadata', 'root.json')})
+      'metadata', 'root' + demo.METADATA_EXTENSION)})
 
   # Configure tuf with the client's metadata directories (where it stores the
   # metadata it has collected from each repository, in subdirectories).

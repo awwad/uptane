@@ -14,9 +14,16 @@ import uptane
 import uptane.formats
 import uptane.common  # for sign_signable and canonical_key_from_pub_and_pri
 import tuf
-import tuf.repository_tool as rt
-#import asn1_conversion as asn1
-#from uptane import GREEN, RED, YELLOW, ENDCOLORS
+PYASN1_EXISTS = False
+try:
+ import pyasn1.type
+except ImportError:
+ print('Minor: pyasn1 library not found. Proceeding using JSON only.')
+else:
+ #import uptane.ber_encoder as ber_encoder
+ # TODO: Add the modules necessary to handle timeserver attestation ASN1
+ # conversion to Uptane.
+ PYASN1_EXISTS = True
 
 import time
 #log = uptane.logging.getLogger('timeserver')
@@ -67,7 +74,11 @@ def get_signed_time_ber(nonces):
   """
   Same as get_signed_time, but re-encodes the resulting JSON into a BER
   file.
+  In progress.
   """
+  if not PYASN1_EXISTS:
+    raise uptane.Error('This Timeserver does not support BER; pyasn1 is not '
+        'installed.')
   signable_time_attestation_as_dict = get_signed_time(nonces)
 
 
@@ -77,13 +88,14 @@ def get_signed_time_ber(nonces):
 
   signed_dict = signable_time_attestation_as_dict['signed']
   dict_signatures = signable_time_attestation_as_dict['signatures']
-  asn_signed, ber_signed = timeserver.get_asn_and_ber_signed(timeservermetadata.get_asn_signed, signed_dict)
-  ber_metadata = timeserver.json_to_ber_metadata(asn_signed, ber_signed, dict_signatures)
+  #asn_signed, ber_signed = timeserver.get_asn_and_ber_signed(timeservermetadata.get_asn_signed, signed_dict)
+  #ber_metadata = timeserver.json_to_ber_metadata(asn_signed, ber_signed, dict_signatures)
   # To decode on other side:
   # dict_again = timeserver.ber_to_json_metadata(timeservermetadata.get_json_signed, ber_metadata)
 
   #signable_time_attestation_in_ber = \
   #    time_to_ber.get_asn_signed(signable_time_attestation_as_dict)
 
-  return ber_metadata
+#  return ber_metadata
 
+  raise NotImplementedError('Current code must be reconciled with new encodings for Timeserver.')

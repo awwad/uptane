@@ -47,6 +47,8 @@ import uptane.services.director as director
 import uptane.services.inventorydb as inventory
 import tuf.formats
 
+import tuf.asn1_codec as asn1_codec
+
 import threading # for the director services interface
 import os # For paths and symlink
 import shutil # For copying directory trees
@@ -187,9 +189,6 @@ def write_to_live(vin_to_update=None):
     os.rename(
         os.path.join(repo_dir, 'metadata.livetemp'),
         os.path.join(repo_dir, 'metadata'))
-
-  # TODO: <~> Call the encoders here to convert the metadata files into BER
-  # versions and also host those!
 
 
 

@@ -37,7 +37,7 @@ import uptane.services.inventorydb as inventory
 import tuf
 import tuf.formats
 import tuf.repository_tool as rt
-#import asn1_conversion as asn1
+#import uptane.ber_encoder as ber_encoder
 from uptane import GREEN, RED, YELLOW, ENDCOLORS
 
 import os
@@ -187,7 +187,8 @@ class Director:
     valid = tuf.keys.verify_signature(
         ecu_public_key,
         signed_ecu_manifest['signatures'][0], # TODO: Fix assumptions.
-        signed_ecu_manifest['signed'])
+        signed_ecu_manifest['signed'],
+        force_treat_as_pydict=True) # Tell tuf this is "JSON" and not BER.
 
     if not valid:
       log.info(
@@ -347,7 +348,8 @@ class Director:
     valid = tuf.keys.verify_signature(
         ecu_public_key,
         vehicle_manifest['signatures'][0], # TODO: Fix assumptions.
-        vehicle_manifest['signed'])
+        vehicle_manifest['signed'],
+        force_treat_as_pydict=True) # Tell tuf this is "JSON" and not BER.
 
     if not valid:
       log.debug(

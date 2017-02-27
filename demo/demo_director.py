@@ -47,14 +47,7 @@ import uptane.services.director as director
 import uptane.services.inventorydb as inventory
 import tuf.formats
 
-PYASN1_EXISTS = False
-try:
-  import pyasn1.type
-except ImportError:
-  print('Minor: pyasn1 library not found. Proceeding using JSON only.')
-else:
-  import uptane.ber_encoder as ber_encoder
-  PYASN1_EXISTS = True
+import tuf.asn1_ber_codec as asn1_codec
 
 import threading # for the director services interface
 import os # For paths and symlink
@@ -173,19 +166,6 @@ def write_to_live(vin_to_update=None):
     assert(os.path.exists(os.path.join(repo_dir, 'metadata.staged'))), \
         'Programming error: a repository write just occurred; why is ' + \
         'there no metadata.staged directory where it is expected?'
-
-    # # Now, generate a BER-encoded ASN.1 version of the Director targets.json
-    # # metadata file, specifically for Partial Verification Secondaries,
-    # # re-signing it. Limit to only doing this when pyasn1 is installed so as
-    # # not to disrupt people trying to just use JSON.
-    # if PYASN1_EXISTS:
-    #   filename_of_targets_json = os.path.join(
-    #       demo.DIRECTOR_REPO_DIR, vin, 'metadata.staged', 'targets.json')
-    #   filename_of_targets_ber = os.path.join(
-    #       demo.DIRECTOR_REPO_DIR, vin, 'metadata.staged', 'targets.ber')
-    #   targets_ber = ber_encoder.convert_signed_json_to_signed_ber(
-    #       filename_of_targets_json, director_service_instance.key_dirtarg_pri)
-    #   open(filename_of_targets_ber, 'wb').write(targets_ber)
 
     # This shouldn't exist, but just in case something was interrupted,
     # warn and remove it.

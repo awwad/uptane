@@ -13,7 +13,6 @@ from __future__ import unicode_literals
 import uptane.formats
 import tuf.formats
 import tuf.conf
-#import uptane.ber_encoder as ber_encoder
 from uptane.common import sign_signable
 from demo.uptane_banners import *
 import uptane.services.director as director
@@ -946,7 +945,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
         self.timeserver_public_key,
         timeserver_attestation['signatures'][0],
         timeserver_attestation['signed'],
-        force_treat_as_pydict=True) # Tell tuf this is "JSON" and not BER.
+        force_treat_as_pydict=True) # Tell tuf this is "JSON" and not "DER".
 
     if not valid:
       raise tuf.BadSignatureError('Timeserver returned an invalid signature. '
@@ -989,7 +988,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
 
     # Save a gzipped version of all of the metadata.
-    # TODO: <~> Update this for ASN.1 / BER.
+    # TODO: <~> Update this for ASN.1 / DER.
     # Note that some stale metadata may be retained, but should never affect
     # security. Worth confirming.
     # What we want here, basically, is:
@@ -1011,7 +1010,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
           # Make sure it's the right type of file. Should be a file, not a
           # directory. Symlinks are OK. Should end in an extension matching
-          # tuf.conf.METADATA_FORMAT (presumably .json or .ber, depending on
+          # tuf.conf.METADATA_FORMAT (presumably .json or .der, depending on
           # that setting).
           if not os.path.isfile(role_abs_fname) or not role_abs_fname.endswith(
               '.' + tuf.conf.METADATA_FORMAT):

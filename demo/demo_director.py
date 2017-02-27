@@ -47,7 +47,7 @@ import uptane.services.director as director
 import uptane.services.inventorydb as inventory
 import tuf.formats
 
-import tuf.asn1_ber_codec as asn1_codec
+import tuf.asn1_codec as asn1_codec
 
 import threading # for the director services interface
 import os # For paths and symlink

@@ -26,7 +26,7 @@ pip install git+git://github.com/awwad/tuf.git@pinning_w_ber
 pip install -e .
 ```
 
-Note that the demonstration now operates using ASN.1 / DER format and encoding for metadata files by default. This can be switched back to JSON (which is human readable) by changing the tuf.conf.METADATA_FORMAT option in uptane/__init__.py.
+Note that the demonstration now operates using ASN.1 / DER format and encoding for metadata files by default. The TUF branch in use has been switched accordingly (so please run the command above again if you have an existing installation). This can be switched back to JSON (which is human readable) by changing the tuf.conf.METADATA_FORMAT option in uptane/__init__.py.
 
 
 ## Running

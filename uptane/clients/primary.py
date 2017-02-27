@@ -941,7 +941,8 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     valid = tuf.keys.verify_signature(
         self.timeserver_public_key,
         timeserver_attestation['signatures'][0],
-        timeserver_attestation['signed'])
+        timeserver_attestation['signed'],
+        force_treat_as_pydict=True) # Tell tuf this is "JSON" and not BER.
 
     if not valid:
       raise tuf.BadSignatureError('Timeserver returned an invalid signature. '

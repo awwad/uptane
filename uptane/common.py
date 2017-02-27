@@ -63,7 +63,8 @@ def sign_signable(signable, keys_to_sign_with):
     # Else, all is well. Sign the signable with the given key, adding that
     # signature to the signatures list in the signable.
     signable['signatures'].append(
-        tuf.keys.create_signature(signing_key, signable['signed']))
+        tuf.keys.create_signature(
+        signing_key, signable['signed'], force_treat_as_pydict=True))
 
 
   # Confirm that the formats match what is expected post-signing, including a

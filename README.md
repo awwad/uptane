@@ -21,7 +21,7 @@ To download and install the Uptane code and its dependencies, run the following:
 ```shell
 git clone https://github.com/uptane/uptane
 cd uptane
-pip install cffi==1.7.0 pycrypto==2.6.1 pynacl==1.0.1 cryptography canonicaljson pyasn1
+pip install cffi==1.7.0 pycrypto==2.6.1 pynacl==1.0.1 cryptography canonicaljson pyasn1==0.2.2
 pip install git+git://github.com/awwad/tuf.git@pinning_w_ber
 pip install -e .
 ```

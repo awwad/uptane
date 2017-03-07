@@ -133,7 +133,7 @@ def clean_slate(
         {demo.MAIN_REPO_NAME: demo.MAIN_REPO_ROOT_FNAME,
         demo.DIRECTOR_REPO_NAME: os.path.join(demo.DIRECTOR_REPO_DIR, vin,
         'metadata', 'root' + demo.METADATA_EXTENSION)})
-  except FileNotFoundError:
+  except IOError:
     raise Exception(RED + 'Unable to create Primary client directory '
         'structure. Does the Director Repo for the vehicle exist yet?' +
         ENDCOLORS)

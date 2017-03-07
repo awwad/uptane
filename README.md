@@ -21,9 +21,7 @@ To download and install the Uptane code and its dependencies, run the following:
 ```shell
 git clone https://github.com/uptane/uptane
 cd uptane
-pip install cffi==1.7.0 pycrypto==2.6.1 pynacl==1.0.1 cryptography canonicaljson pyasn1==0.2.2
-pip install git+git://github.com/awwad/tuf.git@pinning_w_ber
-pip install -e .
+pip install -r dev-requirements.txt
 ```
 
 Note that the demonstration now operates using ASN.1 / DER format and encoding for metadata files by default. The TUF branch in use has been switched accordingly (so please run the command above again if you have an existing installation). This can be switched back to JSON (which is human readable) by changing the tuf.conf.METADATA_FORMAT option in uptane/__init__.py.

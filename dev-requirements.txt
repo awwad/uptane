@@ -1,0 +1,10 @@
+--editable .
+
+cffi==1.7.0
+pycrypto==2.6.1
+pynacl==1.0.1
+cryptography==1.7.2
+canonicaljson==1.0.0
+pyasn1==0.2.2
+
+--editable git://github.com/awwad/tuf.git@pinning_w_ber#egg=tuf

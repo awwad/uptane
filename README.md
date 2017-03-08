@@ -16,6 +16,16 @@ Some development libraries are necessary to install some of Uptane's dependencie
 sudo apt-get install build-essential libssl-dev libffi-dev python-dev python3-dev
 ```
 
+Fedora-based distributions can install these libraries with dnf.
+::
+
+    $ dnf install libffi-devel redhat-rpm-config openssl-devel
+
+OS X users can install these header libraries with the `Homebrew <http://brew.sh/>`_ package manager.
+::
+
+    $ brew install python
+    $ brew install libffi
 
 To download and install the Uptane code and its dependencies, run the following:
 ```shell

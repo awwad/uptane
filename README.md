@@ -13,25 +13,25 @@ Please note that extensive documentation on design can be found in the following
 
 Some development libraries are necessary to install some of Uptane's dependencies. If your system uses apt, the command to install them will be:
 ```shell
-sudo apt-get install build-essential libssl-dev libffi-dev python-dev python3-dev
+$ sudo apt-get install build-essential libssl-dev libffi-dev python-dev python3-dev
 ```
 
 Fedora-based distributions can install these libraries with dnf.
-::
-
-    $ dnf install python-devel python3-devel libffi-devel redhat-rpm-config openssl-devel
+```shell
+$ dnf install python-devel python3-devel libffi-devel redhat-rpm-config openssl-devel
+```
 
 OS X users can install these header libraries with the `Homebrew <http://brew.sh/>`_ package manager.
-::
-
-    $ brew install python
-    $ brew install libffi
+```shell
+$ brew install python
+$ brew install libffi
+```
 
 To download and install the Uptane code and its dependencies, run the following:
 ```shell
-git clone https://github.com/uptane/uptane
-cd uptane
-pip install -r dev-requirements.txt
+$ git clone https://github.com/uptane/uptane
+$ cd uptane
+$ pip install -r dev-requirements.txt
 ```
 
 Note that the demonstration now operates using ASN.1 / DER format and encoding for metadata files by default. The TUF branch in use has been switched accordingly (so please run the command above again if you have an existing installation). This can be switched back to JSON (which is human readable) by changing the tuf.conf.METADATA_FORMAT option in uptane/__init__.py.

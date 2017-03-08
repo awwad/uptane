@@ -1,9 +1,9 @@
 """
 <Program Name>
-  test_ber_encoder.py
+  test_der_encoder.py
 
 <Purpose>
-  Unit testing for BER Encoding, uptane/ber_encoder.py
+  Unit testing for DER Encoding, uptane/encoding/asn1_codec.py
 
 """
 from __future__ import unicode_literals

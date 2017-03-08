@@ -16,7 +16,7 @@
 
 from pyasn1.type import tag
 
-from uptane.encoding.uptane_asn1_definitions import *
+from uptane.encoding.asn1_definitions import *
 
 import calendar
 from datetime import datetime

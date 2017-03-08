@@ -29,7 +29,7 @@ Note that the demonstration now operates using ASN.1 / DER format and encoding f
 
 ## Running the demo
 The code below is intended to be run in five or more consoles:
-- WINDOW 1: Python shell for the Image Repository. This serves HTTP (repository files).
+- WINDOW 1: Python shell for the Image Repository. This serves HTTP (repository files, including metadata).
 - WINDOW 2: Python shell for the Director (Repository and Service). This serves metadata and image files via HTTP,1
  and receives manifests from the Primary via XMLRPC.
 - WINDOW 3: Bash shell for the Timeserver. This serves signed times in response to requests from the Primary via XMLRPC.
@@ -62,8 +62,8 @@ software is running on the ECUs, along with signed reports of any attacks
 observed by those ECUs.
 
 ```python
-import demo.demo_director as dd
-dd.clean_slate()
+>>> import demo.demo_director as dd
+>>> dd.clean_slate()
 ```
 
 After that, proceed to the following Windows to prepare clients.
@@ -72,20 +72,20 @@ Once those are ready, you can perform a variety of modifications / attacks.
 For example, to try to have the director list a new file not validated by the
 oem:
 ```python
-new_target_fname = 'file5.txt' # filename of file to create
-open(new_target_fname, 'w').write('Director-created target') # you could use an existing file, of course
-filepath_in_repo = 'file5.txt' # The path that will identify the file in the repository.
-ecu_serial = '11111' # The ECU Serial Number of the ECU to which this image should be delivered.
-vin = '111' # The VIN of the vehicle containing that ECU.
-dd.add_target_to_director(new_target_fname, filepath_in_repo, vin, ecu_serial)
-dd.write_to_live()
+>>> new_target_fname = 'file5.txt' # filename of file to create
+>>> open(new_target_fname, 'w').write('Director-created target') # you could use an existing file, of course
+>>> filepath_in_repo = 'file5.txt' # The path that will identify the file in the repository.
+>>> ecu_serial = '11111' # The ECU Serial Number of the ECU to which this image should be delivered.
+>>> vin = '111' # The VIN of the vehicle containing that ECU.
+>>> dd.add_target_to_director(new_target_fname, filepath_in_repo, vin, ecu_serial)
+>>> dd.write_to_live()
 ```
 As a result of the above, the Director will instruct ECU 11111 in vehicle 111 to install file5.txt. Since this file is not on (and validated by) the Image Repository, the Primary will refuse to download it (and a Full Verification Secondary would likewise refuse it even if a compromised Primary delivered it to the Secondary).
 
 After the demo, to end HTTP hosting (but not XMLRPC serving, which requires
 exiting the shell), do this (or else you'll have a zombie Python process to kill)
 ```python
-dd.kill_server()
+>>> dd.kill_server()
 ```
 
 
@@ -109,9 +109,9 @@ and distribute them appropriately to other, Secondary ECUs in the vehicle,
 and it will receive ECU Manifests indicating the software on each Secondary ECU,
 and bundle these into a Vehicle Manifest which it will send to the Director.
 ```python
-import demo.demo_primary as dp
-dp.clean_slate() # sets up a fresh Primary that has never been updated
-dp.update_cycle()
+>>> import demo.demo_primary as dp
+>>> dp.clean_slate() # sets up a fresh Primary that has never been updated
+>>> dp.update_cycle()
 ```
 
 The Primary's update_cycle() call:
@@ -125,9 +125,9 @@ If you wish to run the demo with multiple vehicles (one Primary each), you can o
 window for each vehicle's Primary and provide a unique VIN and ECU for each of them. Find the port that is chosen in the Primary's initialization and make note of it so that it can be provided to any Secondaries you set up in a moment (e.g. "Primary will now listen on port 30702")
 For example:
 ```python
-import demo.demo_primary as dp
-dp.clean_slate(vin='112', ecu_serial='PRIMARY_ECU_2', primary_port='30702') # Make sure the port matches the Primary's reported port, if there are multiple vehicles running.
-dp.update_cycle()
+>>> import demo.demo_primary as dp
+>>> dp.clean_slate(vin='112', ecu_serial='PRIMARY_ECU_2', primary_port='30702') # Make sure the port matches the Primary's reported port, if there are multiple vehicles running.
+>>> dp.update_cycle()
 ```
 
 
@@ -138,9 +138,9 @@ Here, we start a single Secondary ECU and generate a signed ECU Manifest
 with information about the "firmware" that it is running, which we send to the
 Primary.
 ```python
-import demo.demo_secondary as ds
-ds.clean_slate()
-ds.update_cycle()
+>>> import demo.demo_secondary as ds
+>>> ds.clean_slate()
+>>> ds.update_cycle()
 ```
 
 Optionally, multiple windows with different Secondary clients can be run simultaneously. In each additional window, you can run the same calls as above to set up a new ECU in the same, default vehicle by modifying the clean_slate() call to include a distinct ECU Serial. e.g. `ds.clean_slate(ecu_serial='33333')`
@@ -163,29 +163,29 @@ To try delivering an Update via Uptane, you'll need to add the image file to the
 
 Perform this *in the Image Repo's window* to create a new file, add it to the repository, and host newly-written metadata:
 ```python
-new_target_fname = filepath_in_repo = 'file5.txt'
-open(new_target_fname, 'w').write('Fresh target file')
-do.add_target_to_oemrepo(new_target_fname, filepath_in_repo)
-do.write_to_live()
+>>> new_target_fname = filepath_in_repo = 'file5.txt'
+>>> open(new_target_fname, 'w').write('Fresh target file')
+>>> do.add_target_to_oemrepo(new_target_fname, filepath_in_repo)
+>>> do.write_to_live()
 ```
 
 Perform this *in the Director Repository's window* to assign that Image file to vehicle 111, ECU 22222:
 ```python
-new_target_fname = filepath_in_repo = 'file5.txt'
-ecu_serial = '22222'
-vin = '111'
-dd.add_target_to_director(new_target_fname, filepath_in_repo, vin, ecu_serial)
-dd.write_to_live(vin_to_update='111')
+>>> new_target_fname = filepath_in_repo = 'file5.txt'
+>>> ecu_serial = '22222'
+>>> vin = '111'
+>>> dd.add_target_to_director(new_target_fname, filepath_in_repo, vin, ecu_serial)
+>>> dd.write_to_live(vin_to_update='111')
 ```
 
 Next, you can update the Primary in the Primary's window:
 ```python
-dp.update_cycle()
+>>> dp.update_cycle()
 ```
 
 When the Primary has finished, you can update the Secondary in the Secondary's window:
 ```python
-ds.update_cycle()
+>>> ds.update_cycle()
 ```
 
 You should see an Updated banner on the Secondary, indicating a successful, validated update.
@@ -197,17 +197,17 @@ This is a simple sample attack simulating a Man in the Middle attack that provid
 
 In the Director's window, run this:
 ```python
-dd.attack_mitm(vin, new_target_fname)
+>>> dd.attack_mitm(vin, new_target_fname)
 ```
 
 Now, in the Primary's window, run this:
 ```python
-dp.update_cycle()
+>>> dp.update_cycle()
 ```
 
 Now, when the Primary runs dp.update_cycle(), it'll play the Defended banner and sound, as it's able to discard the manipulated file without even sending it to the Secondary.
 
 If you want to resume toying with the repositories, you can then run the script to put the repository back in a normal state (undoing what the attack did) by running this in the Director window:
 ```python
-dd.recover_mitm(vin, new_target_fname)
+>>> dd.recover_mitm(vin, new_target_fname)
 ```

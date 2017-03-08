@@ -27,10 +27,11 @@ pip install -r dev-requirements.txt
 Note that the demonstration now operates using ASN.1 / DER format and encoding for metadata files by default. The TUF branch in use has been switched accordingly (so please run the command above again if you have an existing installation). This can be switched back to JSON (which is human readable) by changing the tuf.conf.METADATA_FORMAT option in uptane/__init__.py.
 
 
-## Running
+## Running the demo
 The code below is intended to be run in five or more consoles:
 - WINDOW 1: Python shell for the Image Repository. This serves HTTP (repository files).
-- WINDOW 2: Python shell for the Director (Repository and Service). This serves metadata and image files via HTTP receives manifests from the Primary via XMLRPC (manifests).
+- WINDOW 2: Python shell for the Director (Repository and Service). This serves metadata and image files via HTTP,1
+ and receives manifests from the Primary via XMLRPC.
 - WINDOW 3: Bash shell for the Timeserver. This serves signed times in response to requests from the Primary via XMLRPC.
 - WINDOW 4: Python shell for a Primary client in the vehicle. This fetches images and metadata from the repositories via HTTP, and communicates with the Director service, Timeserver, and any Secondaries via XMLRPC. (More of these can be run, simulating more vehicles with one Primary each.)
 - WINDOW 5: Python shell for a Secondary in the vehicle. This communicates directly only with the Primary via XMLRPC, and will perform full metadata verification. (More of these can be run, simulating more ECUs in one or more vehicles.)
@@ -41,12 +42,13 @@ These instructions start a demonstration version of an OEM's or Supplier's main 
 for software, hosting images and the metadata Uptane requires.
 
 ```python
-import demo.demo_oem_repo as do
-do.clean_slate()
+$ python
+>>> import demo.demo_oem_repo as do
+>>> do.clean_slate()
 ```
 After the demo, to end hosting:
 ```python
-do.kill_server()
+>>> do.kill_server()
 ```
 
 

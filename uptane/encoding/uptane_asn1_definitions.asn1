@@ -1,0 +1,225 @@
+--
+--
+--
+
+UptaneASN1Definitions DEFINITIONS AUTOMATIC TAGS ::= BEGIN
+
+  EXPORTS ALL;
+
+
+  -- Start of common, general purpose definitions
+
+
+  RoleType        ::= ENUMERATED {root, targets, snapshot, timestamp}
+
+  -- String types.
+  Filename        ::= VisibleString (SIZE(1..32))
+  -- No known path separator allowed in a strict filename.
+  StrictFilename  ::= VisibleString (SIZE(1..32))
+                                    (PATTERN "[^/\\]+")
+  BitString       ::= BIT STRING    (SIZE(1..1024))
+  OctetString     ::= OCTET STRING  (SIZE(1..1024))
+  -- Adjust length of SEQUENCE OF to your needs.
+  Paths           ::= SEQUENCE (SIZE(1..8)) OF Path
+  Path            ::= VisibleString (SIZE(1..32))
+                                    (PATTERN "[\w\*\\/]+")
+  -- Adjust length of SEQUENCE OF to your needs.
+  URLs            ::= SEQUENCE (SIZE(0..8)) OF URL
+  URL             ::= VisibleString (SIZE(1..1024))
+  -- A generic identifier for vehicles, primaries, secondaries.
+  Identifier      ::= VisibleString (SIZE(1..32))
+
+  Natural         ::= INTEGER (0..MAX)
+  Positive        ::= INTEGER (1..MAX)
+  Length          ::= Positive
+  Threshold       ::= Positive
+  Version         ::= Natural
+  -- The date and time in UTC encoded as a UNIX timestamp.
+  UTCDateTime     ::= Positive
+
+  BinaryData      ::= CHOICE {
+    bitString     BitString,
+    octetString   OctetString
+  }
+
+  -- Adjust length of SEQUENCE OF to your needs.
+  Hashes          ::= SEQUENCE (SIZE(1..8)) OF Hash
+  Hash            ::= SEQUENCE {
+    function      HashFunction,
+    digest        BinaryData
+  }
+  HashFunction ::= ENUMERATED {sha224, sha256, sha384, sha512, sha512-224,
+                               sha512-256, ...}
+
+  -- Adjust length of SEQUENCE OF to your needs.
+  Keyids          ::= SEQUENCE (SIZE(1..8)) OF Keyid
+  -- Usually, a hash of a public key.
+  Keyid           ::= BinaryData
+
+  -- Adjust length of SEQUENCE OF to your needs.
+  Signatures      ::= SEQUENCE (SIZE(1..8)) OF Signature
+  Signature       ::= SEQUENCE {
+    keyid         Keyid,
+    method        SignatureMethod,
+    -- The signature itself.
+    value         BinaryData
+  }
+  SignatureMethod ::= ENUMERATED {rsassa-pss, ed25519, ...}
+
+  -- Adjust length of SEQUENCE OF to your needs.
+  PublicKeys      ::= SEQUENCE (SIZE(1..8)) OF PublicKey
+  PublicKey       ::= SEQUENCE {
+    publicKeyid     Keyid,
+    publicKeyType   PublicKeyType,
+    publicKeyValue  BinaryData
+  }
+  PublicKeyType   ::= ENUMERATED {rsa, ed25519, ...}
+
+
+
+
+
+
+  -- Start of Timeserver metadata definitions
+
+  IMPORTS Length,
+          Signatures,
+          UTCDateTime FROM CommonModule;
+
+  -- What a primary sends the time server: a token from each of its secondaries.
+  SequenceOfTokens ::= SEQUENCE {
+    numberOfTokens  Length,
+    tokens          Tokens
+  }
+  -- Adjust length of SEQUENCE OF to your needs.
+  Tokens  ::= SEQUENCE (SIZE(1..128)) OF Token
+  Token   ::= INTEGER
+
+  -- What the time server sends in response.
+  TokensAndTimestampSignable   ::= SEQUENCE {
+    signed              TokensAndTimestamp,
+    numberOfSignatures  Length,
+    signatures          Signatures
+  }
+  TokensAndTimestamp ::= SEQUENCE {
+    numberOfTokens  Length,
+    tokens          Tokens,
+    timestamp       UTCDateTime,
+    -- https://tools.ietf.org/html/rfc6025#section-2.4.2
+    ...
+  }
+
+
+
+
+
+  -- Start of ECU metadata definitions
+
+  --  IMPORTS BinaryData,
+  --          Filename,
+  --          Identifier,
+  --          Length,
+  --          Positive,
+  --          Signatures,
+  --!         UTCDateTime FROM CommonModule
+  --!         Metadata    FROM MetadataModule
+  --!         Target      FROM TargetsModule
+  --          Token       FROM TimeServerModule;
+
+  -- What a primary sends the director repository.
+  VehicleVersionManifest ::= SEQUENCE {
+    -- The signed portion of the manifest.
+    signed    VehicleVersionManifestSigned,
+    -- The signature on the hash of the signed portion.
+    numberOfSignatures  Length,
+    signatures          Signatures
+  }
+  VehicleVersionManifestSigned ::= SEQUENCE {
+    -- A unique identifier for the vehicle.
+    vehicleIdentifier           Identifier,
+    -- A unique identifier for the primary sending this manifest.
+    primaryIdentifier           Identifier,
+    numberOfECUVersionManifests Length,
+    -- An ECU version manifest per secondary.
+    ecuVersionManifests         ECUVersionManifests,
+    -- A message about a detected security attack, if any.
+    securityAttack  VisibleString (SIZE(1..1024)) OPTIONAL,
+    -- https://tools.ietf.org/html/rfc6025#section-2.4.2
+    ...
+  }
+  -- Adjust length of SEQUENCE OF to your needs.
+  ECUVersionManifests ::= SEQUENCE (SIZE(1..128)) OF ECUVersionManifest
+
+  -- What a secondary sends its primary after installation.
+  VersionReport ::= SEQUENCE {
+    -- Token for the time server.
+    tokenForTimeServer Token,
+    -- The ECU version manifest for the director.
+    ecuVersionManifest ECUVersionManifest,
+    ...
+  }
+  ECUVersionManifest ::= SEQUENCE {
+    -- The signed portion of the manifest.
+    signed      ECUVersionManifestSigned,
+    -- The signature on the hash of the signed portion.
+    numberOfSignatures  Length,
+    signatures          Signatures
+  }
+  ECUVersionManifestSigned ::= SEQUENCE {
+    -- A unique identifier for the ECU.
+    ecuIdentifier   Identifier,
+    -- The previous time seen on the time server.
+    previousTime    UTCDateTime,
+    -- The latest known time seen on the time server.
+    currentTime     UTCDateTime,
+    -- A message about a detected security attack, if any.
+    securityAttack  VisibleString (SIZE(1..1024)) OPTIONAL,
+    -- Metadata about the installed image.
+    installedImage  Target,
+    ...
+  }
+
+  -- A signal from a primary to its secondaries that new metadata will be sent.
+  MetadataFiles ::= SEQUENCE {
+    -- A globally unique identifier (e.g., a monotonically increasing counter)
+    -- for this set of metadata files.
+    setGUID INTEGER,
+    -- The number of metadata files that will be sent in this set.
+    numberOfMetadataFiles Length
+  }
+  MetadataFile ::= SEQUENCE {
+    -- The GUID associated with this set of metadata files.
+    setGUID INTEGER,
+    -- The file number in this set.
+    fileNumber    Positive,
+    -- The metadata filename.
+    filename      Filename,
+    -- The metadata itself.
+    metadata      Metadata
+  }
+
+  -- What a secondary without additional storage sends its primary to request an
+  -- image.
+  ImageRequest ::= SEQUENCE {
+    filename Filename,
+    -- https://tools.ietf.org/html/rfc6025#section-2.4.2
+    ...
+  }
+  ImageFile ::= SEQUENCE {
+    -- An image filename.
+    filename        Filename,
+    -- The number of blocks in this image file.
+    numberOfBlocks  Positive,
+    -- The size of each block.
+    blockSize       Positive
+  }
+  ImageBlock ::= SEQUENCE {
+    -- The filename of the image associated with this block.
+    filename    Filename,
+    -- The block number of the image file.
+    blockNumber Positive,
+    -- The image block itself.
+    block       BinaryData
+  }
+
+END

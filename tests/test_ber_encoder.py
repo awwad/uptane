@@ -327,6 +327,10 @@ class TestASN1(unittest.TestCase):
 
 
 
+  def test_06_encode_and_validate_resigned_time_attestation(self):
+    # TODO: <~> Test signing over DER.
+    raise NotImplementedError()
+
 
 
 

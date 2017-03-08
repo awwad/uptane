@@ -71,7 +71,10 @@ def listen(use_new_keys=False):
   # Register function that can be called via XML-RPC, allowing a Primary to
   # request the time for its Secondaries.
   server.register_function(timeserver.get_signed_time, 'get_signed_time')
-  server.register_function(timeserver.get_signed_time_ber, 'get_signed_time_ber')
+  server.register_function(timeserver.get_signed_time_der, 'get_signed_time_der')
+
+  # Test locally
+  print(timeserver.get_signed_time([1]))
 
   print('Timeserver will now listen on port ' + str(demo.TIMESERVER_PORT))
   server.serve_forever()

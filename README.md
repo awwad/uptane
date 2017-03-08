@@ -19,7 +19,7 @@ sudo apt-get install build-essential libssl-dev libffi-dev python-dev python3-de
 Fedora-based distributions can install these libraries with dnf.
 ::
 
-    $ dnf install libffi-devel redhat-rpm-config openssl-devel
+    $ dnf install python-devel libffi-devel redhat-rpm-config openssl-devel
 
 OS X users can install these header libraries with the `Homebrew <http://brew.sh/>`_ package manager.
 ::

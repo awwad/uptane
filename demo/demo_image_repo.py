@@ -1,17 +1,17 @@
 """
-demo_oem_repo.py
+demo_image_repo.py
 
 Demonstration code handling an OEM repository.
 
 Use:
 
-import demo.demo_oem_repo as do
-do.clean_slate()
-do.write_to_live()
-do.host()
+import demo.demo_image_repo as di
+di.clean_slate()
+di.write_to_live()
+di.host()
 
 # Later:
-do.kill_server()
+di.kill_server()
 
 
 
@@ -150,7 +150,7 @@ def write_to_live():
 
 
 
-def add_target_to_oemrepo(target_fname, filepath_in_repo):
+def add_target_to_imagerepo(target_fname, filepath_in_repo):
   """
   For use in attacks and more specific demonstration.
 
@@ -159,10 +159,10 @@ def add_target_to_oemrepo(target_fname, filepath_in_repo):
 
   <Arguments>
     target_fname
-      The full filename of the file to be added as a target to the OEM's
-      targets role metadata. This file should be in the targets subdirectory of
-      the repository directory.
-      This doesn't employ delegations, which would have to be done manually.
+      The full filename of the file to be added as a target to the image
+      repository's targets role metadata. This file should be in the targets
+      subdirectory of the repository directory.  This doesn't employ
+      delegations, which would have to be done manually.
   """
   global repo
 
@@ -260,7 +260,7 @@ def listen():
   # Register function that can be called via XML-RPC, allowing a Primary to
   # submit a vehicle version manifest.
   server.register_function(
-      add_target_to_oemrepo, 'add_target_to_supplier_repo')
+      add_target_to_imagerepo, 'add_target_to_supplier_repo')
   server.register_function(write_to_live, 'write_supplier_repo')
 
 

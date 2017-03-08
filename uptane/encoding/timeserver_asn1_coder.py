@@ -1,15 +1,25 @@
-#!/usr/bin/env python
+"""
+<Name>
+  uptane/encoding/timeserver_asn1_coder.py
+
+<Purpose>
+  This module contains conversion functions (get_asn_signed and get_json_signed)
+  for converting Timeserver time attestation metadata to and from TUF's standard
+  Python dictionary metadata format (usually serialized as JSON) and an ASN.1
+  format that conforms to pyasn1 specifications and Uptane's ASN.1 definitions.
+
+<Functions>
+  get_asn_signed(pydict_signed)
+  get_json_signed(asn_signed)    # TODO: Rename to get_pydict_signed in all mods
 
 """
-<Author>
-  Trishank Karthik Kuppusamy
-"""
 
-from pyasn1.type import univ, char, namedtype, namedval, tag, constraint, useful
+from pyasn1.type import tag
 
-from timeservermodule import *
+from uptane.encoding.uptane_asn1_definitions import *
 
-import metadata
+import calendar
+from datetime import datetime
 
 
 def get_asn_signed(json_signed):
@@ -19,13 +29,15 @@ def get_asn_signed(json_signed):
   numberOfTokens = 0
   tokens = Tokens().subtype(implicitTag=tag.Tag(tag.tagClassContext,
                                                 tag.tagFormatSimple, 1))
-  for token in json_signed['tokens']:
+  for token in json_signed['nonces']:
     # Some damned bug in pyasn1 I could not care less to fix right now.
     tokens.setComponentByPosition(numberOfTokens, token, False)
     numberOfTokens += 1
   signed['numberOfTokens'] = numberOfTokens
   signed['tokens'] = tokens
-  signed['timestamp'] = metadata.iso8601_to_epoch(json_signed['time'])
+  signed['timestamp'] = calendar.timegm(datetime.strptime(
+      json_signed['time'], "%Y-%m-%dT%H:%M:%SZ").timetuple())
+
   return signed
 
 
@@ -33,7 +45,7 @@ def get_json_signed(asn_metadata):
   asn_signed = asn_metadata['signed']
 
   json_signed = {
-    'time': metadata.epoch_to_iso8601(asn_signed['timestamp'])
+    'time': datetime.utcfromtimestamp(asn_signed['timestamp']).isoformat() + 'Z'
   }
 
   numberOfTokens = int(asn_signed['numberOfTokens'])
@@ -41,12 +53,6 @@ def get_json_signed(asn_metadata):
   json_tokens = []
   for i in range(numberOfTokens):
     json_tokens.append(int(tokens[i]))
-  json_signed['tokens'] = json_tokens
+  json_signed['nonces'] = json_tokens
 
   return json_signed
-
-
-if __name__ == '__main__':
-  metadata.test('timeserver.json', 'timeserver.der', get_asn_signed,
-                get_json_signed, metadata.identity_update_json_signature,
-                CurrentTime)

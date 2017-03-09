@@ -26,6 +26,7 @@ import uptane.common
 import tuf.formats
 
 from six.moves import xmlrpc_server
+from six.moves import xmlrpc_client # for Binary data encapsulation
 import uptane.services.timeserver as timeserver
 
 
@@ -46,6 +47,24 @@ def load_timeserver_key(use_new_keys=False):
   tuf.formats.ANYKEY_SCHEMA.check_match(timeserver_key) # Is this redundant?
 
   return timeserver_key
+
+
+
+
+
+def get_signed_time_der_wrapper(nonces):
+  """
+  Encapsulates the binary data of the DER encoding of the timeserver attestation
+  in an XMLPRC Binary object, for delivery via XMLRPC within the demo.
+
+  This is only necessary when using DER format instead of the standard
+  Uptane Python dictionary format.
+  """
+
+  der_attestation = timeserver.get_signed_time_der(nonces)
+
+  return xmlrpc_client.Binary(der_attestation)
+
 
 
 
@@ -71,10 +90,12 @@ def listen(use_new_keys=False):
   # Register function that can be called via XML-RPC, allowing a Primary to
   # request the time for its Secondaries.
   server.register_function(timeserver.get_signed_time, 'get_signed_time')
-  server.register_function(timeserver.get_signed_time_der, 'get_signed_time_der')
+  server.register_function(
+      get_signed_time_der_wrapper, 'get_signed_time_der')
 
   # Test locally
-  print(timeserver.get_signed_time([1]))
+  print(timeserver.get_signed_time([1, 2]))
+  print(timeserver.get_signed_time_der([2]))
 
   print('Timeserver will now listen on port ' + str(demo.TIMESERVER_PORT))
   server.serve_forever()

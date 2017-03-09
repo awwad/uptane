@@ -17,6 +17,7 @@ from uptane.common import sign_signable
 from demo.uptane_banners import *
 import uptane.services.director as director
 import uptane.services.timeserver as timeserver
+import uptane.encoding.asn1_codec as asn1_codec
 
 import os # For paths and makedirs
 import shutil # For copyfile
@@ -26,6 +27,7 @@ import tuf.keys
 import random # for nonces
 from uptane import GREEN, RED, YELLOW, ENDCOLORS
 import zipfile
+import hashlib # if we're using DER encoding
 
 log = uptane.logging.getLogger('primary')
 log.addHandler(uptane.file_handler)
@@ -932,19 +934,45 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     by the previous call to get_nonces_to_send_and_rotate), then the Primary's
     time is updated and the attestation will be saved so that it can be provided
     to Secondaries.
+
+    If the Primary is using ASN.1/DER metadata, then timeserver_attestation is
+    expected to be in that format, as a byte string.
+    Otherwise, we're using simple Python dictionaries and timeserver_attestation
+    conforms to uptane.formats.SIGNABLE_TIMESERVER_ATTESTATION_SCHEMA.
     """
+
+    # If we're using DER format, convert the attestation into something
+    # comprehensible instead.
+    if tuf.conf.METADATA_FORMAT == 'der':
+      timeserver_attestation = asn1_codec.convert_signed_der_to_dersigned_json(
+          timeserver_attestation)
 
     # Check format.
     uptane.formats.SIGNABLE_TIMESERVER_ATTESTATION_SCHEMA.check_match(
         timeserver_attestation)
 
-    # Assume there's only one signature.
+
+    # Assume there's only one signature. This assumption is made for simplicity
+    # in this reference implementation. If the Timeserver needs to sign with
+    # multiple keys for some reason, that can be accomodated.
     assert len(timeserver_attestation['signatures']) == 1
+
+    # The signature validation method depends on whether the signature was
+    # made over a DER encoding of ASN.1 or directly over Uptane's standard
+    # Python dictionary.
+    if tuf.conf.METADATA_FORMAT != 'der':
+      data_to_validate = timeserver_attestation['signed']
+
+    else:
+      der_signed = der_signed = asn1_codec.convert_signed_metadata_to_der(
+        timeserver_attestation, only_signed=True)
+      data_to_validate = hashlib.sha256(der_signed).hexdigest()
+
 
     valid = tuf.keys.verify_signature(
         self.timeserver_public_key,
         timeserver_attestation['signatures'][0],
-        timeserver_attestation['signed'],
+        data_to_validate,
         force_treat_as_pydict=True) # Tell tuf this is "JSON" and not "DER".
 
     if not valid:

@@ -78,23 +78,21 @@ def get_signed_time(nonces):
 
 def get_signed_time_der(nonces):
   """
-  Same as get_signed_time, but re-encodes the resulting JSON into a BER
-  file.
-  In progress.
+  Same as get_signed_time, but converts the resulting Python dictionary into
+  an ASN.1 representation, encodes it as DER (Distinguished Encoding Rules),
+  replaces the signature with a signature over the hash of the DER encoding of
+  the 'signed' portion of the data (the time and nonces).
   """
   if not PYASN1_EXISTS:
     raise uptane.Error('This Timeserver does not support DER: pyasn1 is not '
         'installed.')
-  signable_time_attestation_as_dict = get_signed_time(nonces)
+  signable_time_attestation = get_signed_time(nonces)
 
-  signed_dict = signable_time_attestation_as_dict['signed']
-  dict_signatures = signable_time_attestation_as_dict['signatures']
-
-
-  # Converts it, re-signing over the DER encoding of the attestation
+  # Convert it, re-signing over the hash of the DER encoding of the attestation.
   der_attestation = asn1_codec.convert_signed_metadata_to_der(
-      signable_time_attestation_as_dict,
-      private_key=timeserver_key, resign=True)
+      signable_time_attestation,
+      private_key=timeserver_key,
+      resign=True)
 
 
   return der_attestation

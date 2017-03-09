@@ -8,6 +8,8 @@
 """
 from __future__ import unicode_literals
 
+import tuf.formats
+import tuf.keys
 import uptane
 import uptane.formats
 
@@ -19,6 +21,7 @@ import pyasn1.codec.der.decoder as p_der_decoder
 from pyasn1.type import tag, univ
 
 import sys # to test Python version 2 vs 3, for byte string behavior
+import hashlib
 import unittest
 import os.path
 import time
@@ -328,13 +331,62 @@ class TestASN1(unittest.TestCase):
 
 
   def test_06_encode_and_validate_resigned_time_attestation(self):
-    # TODO: <~> Test signing over DER.
-    raise NotImplementedError()
+    """
+    Test signing over DER.
+    """
+
+    signable_attestation = {
+        str('signatures'): [
+        {str('keyid'):
+        str('79c796d7e87389d1ebad04edce49faef611d139ee41ea9fb1931732afbfaac2e'),
+        str('sig'):
+        str('a5ea6a3b685ad64f96c8c12145beda4efafddfac60bcdb45def35fe43c7d1150a182a1b50a1463bfffb0ef8d30b6203aa8b5365b0b7176312e1e9d7e355e550e'),
+        str('method'): str('ed25519')}],
+        str('signed'): {str('nonces'): [1],
+        str('time'): str('2017-03-08T17:09:56Z')}}
+
+    # Load the timeserver's private key to sign a time attestation, and public
+    # key to verify that signature.
+    timeserver_key = demo.import_private_key('timeserver')
+    timeserver_key_pub = demo.import_public_key('timeserver')
+    tuf.formats.ANYKEY_SCHEMA.check_match(timeserver_key)
+    tuf.formats.ANYKEY_SCHEMA.check_match(timeserver_key_pub)
+
+
+    # First, calculate what we'll be verifying at the end of this test.
+    # The re-signing in the previous line produces a signature over the SHA256
+    # hash of the DER encoding of the ASN.1 format of the 'signed' portion of
+    # signable_attestation. We produce it here so that we can check it against
+    # the result of encoding, resigning, and decoding.
+    der_signed = asn1_codec.convert_signed_metadata_to_der(
+        signable_attestation, only_signed=True)
+    der_signed_hash = hashlib.sha256(der_signed).hexdigest()
+
+
+    # Now perform the actual conversion to ASN.1/DER of the full
+    # signable_attestation, replacing the signature (which was given as
+    # signatures over the Python 'signed' dictionary) with a signature over
+    # the hash of the DER encoding of the 'signed' ASN.1 data.
+    # This is the final product to be distributed back to a Primary client.
+    der_attestation = asn1_codec.convert_signed_metadata_to_der(
+        signable_attestation, private_key=timeserver_key, resign=True)
+
+
+    # Now, in order to test the final product, decode it back from DER into
+    # pyasn1 ASN.1, and convert back into Uptane's standard Python dictionary
+    # form.
+    pydict_again = asn1_codec.convert_signed_der_to_dersigned_json(
+        der_attestation)
+
+    # Check the extracted signature against the hash we produced earlier.
+    self.assertTrue(tuf.keys.verify_signature(
+        timeserver_key_pub, pydict_again['signatures'][0],
+        der_signed_hash))
 
 
 
 
 
-# Run unit test.
+# Run unit tests.
 if __name__ == '__main__':
   unittest.main()

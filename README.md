@@ -75,10 +75,15 @@ observed by those ECUs.
 
 After that, proceed to the following Windows to prepare clients.
 Once those are ready, you can perform a variety of modifications / attacks.
+Various manipulations can be made here to the Director's interface. Examples
+will be discussed below in the [Delivering an Update](#delivering-an-update)
+and [Blocking Attacks](#blocking-attacks) sections.
 
-Various manipulations can be made here to the Director's interface. Examples will
-be discussed below in the [Delivering an Update](#delivering-an-update) and
-[Blocking Attacks](#blocking-attacks) sections.
+After the demo, to end HTTP hosting (but not XMLRPC serving, which requires
+exiting the shell), do this (or else you'll have a zombie Python process to kill)
+```python
+>>> dd.kill_server()
+```
 
 
 
@@ -88,7 +93,7 @@ times, bundled by the Primary, and produces a signed attestation that includes
 the nonces each Secondary ECU sent the Primary to include along with the
 time request, so that each ECU can better establish that it is not being tricked
 into accepting a false time.
-```shell
+```Bash
 #!/bin/bash
 python demo/demo_timeserver.py
 ```
@@ -185,28 +190,16 @@ When the Primary has finished, you can update the Secondary in the Secondary's w
 
 You should see an Updated banner on the Secondary, indicating a successful, validated update.
 
-###*Blocking Attacks*
-For example, to try to have the director list a new file not validated by the
-oem:
-```python
->>> new_target_fname = 'file5.txt' # filename of file to create
->>> open(new_target_fname, 'w').write('Director-created target') # you could use an existing file, of course
->>> filepath_in_repo = 'file5.txt' # The path that will identify the file in the repository.
->>> ecu_serial = '11111' # The ECU Serial Number of the ECU to which this image should be delivered.
->>> vin = '111' # The VIN of the vehicle containing that ECU.
->>> dd.add_target_to_director(new_target_fname, filepath_in_repo, vin, ecu_serial)
->>> dd.write_to_live()
-```
-As a result of the above, the Director will instruct ECU 11111 in vehicle 111 to install file5.txt. Since this file is not on (and validated by) the Image Repository, the Primary will refuse to download it (and a Full Verification Secondary would likewise refuse it even if a compromised Primary delivered it to the Secondary).
 
-After the demo, to end HTTP hosting (but not XMLRPC serving, which requires
-exiting the shell), do this (or else you'll have a zombie Python process to kill)
-```python
->>> dd.kill_server()
-```
+
+###*Blocking Attacks*
+Uptane is designed to secure the software updates delivered between repositories and vehicles.  Section
+7.3 of the [Uptane Design Overview](https://docs.google.com/document/d/1pBK--40BCg_ofww4GES0weYFB6tZRedAjUy6PJ4Rgzk/edit?usp=sharing) covers all of the known attacks in more detail.  We begin this section with a demonstration of
+the Arbitrary Package attack.
+
 
 ####*Running an Arbitrary Package Attack w/ No Compromised Keys*
-This is a simple sample attack simulating a Man in the Middle attack that provides a malicious image file. In this attack, the attacker does not have the keys to correctly sign any metadata (and so it is an exceptionally basic attack).
+This is a simple attack simulating a Man in the Middle attack that provides a malicious image file. In this attack, the attacker does not have the keys to correctly sign any metadata (and so it is an exceptionally basic attack).
 
 In the Director's window, run this:
 ```python
@@ -224,3 +217,17 @@ If you want to resume toying with the repositories, you can then run the script 
 ```python
 >>> dd.recover_mitm(vin, new_target_fname)
 ```
+
+To manually demonstrate the arbitrary package attack, issue the following commands in the Director console:
+```python
+>>> new_target_fname = 'file5.txt' # filename of file to create
+>>> open(new_target_fname, 'w').write('Director-created target') # you could use an existing file, of course
+>>> filepath_in_repo = 'file5.txt' # The path that will identify the file in the repository.
+>>> ecu_serial = '11111' # The ECU Serial Number of the ECU to which this image should be delivered.
+>>> vin = '111' # The VIN of the vehicle containing that ECU.
+>>> dd.add_target_to_director(new_target_fname, filepath_in_repo, vin, ecu_serial)
+>>> dd.write_to_live()
+```
+As a result of the above, the Director will instruct ECU 11111 in vehicle 111 to install file5.txt. Since this file is not on (and validated by) the Image Repository, the Primary will refuse to download it (and a Full Verification Secondary would likewise refuse it even if a compromised Primary delivered it to the Secondary).
+
+

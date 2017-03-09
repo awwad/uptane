@@ -41,8 +41,15 @@ The code below is intended to be run in five or more consoles:
 These instructions start a demonstration version of an OEM's or Supplier's main repository
 for software, hosting images and the metadata Uptane requires.
 
-```python
+```Bash
 $ python
+Python 2.7.6 (default, Oct 26 2016, 20:30:19) 
+[GCC 4.8.4] on linux2
+Type "help", "copyright", "credits" or "license" for more information.
+>>> 
+```
+
+```python
 >>> import demo.demo_oem_repo as do
 >>> do.clean_slate()
 ```
@@ -112,7 +119,9 @@ window for each vehicle's Primary and provide a unique VIN and ECU for each of t
 For example:
 ```python
 >>> import demo.demo_primary as dp
->>> dp.clean_slate(vin='112', ecu_serial='PRIMARY_ECU_2', primary_port='30702') # Make sure the port matches the Primary's reported port, if there are multiple vehicles running.
+
+# Make sure the port matches the Primary's reported port, if there are multiple vehicles running.
+>>> dp.clean_slate(vin='112', ecu_serial='PRIMARY_ECU_2', primary_port='30702') 
 >>> dp.update_cycle()
 ```
 

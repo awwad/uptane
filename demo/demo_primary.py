@@ -295,7 +295,7 @@ def update_cycle():
     time_attestation = tserver.get_signed_time_der(nonces_to_send).data
 
   else:
-    time_attestation = tserver.get_signed_time_der(nonces_to_send)
+    time_attestation = tserver.get_signed_time(nonces_to_send)
 
   # At this point, time_attestation might be a simple Python dictionary or
   # a DER-encoded ASN.1 representation of one.

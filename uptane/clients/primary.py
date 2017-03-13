@@ -886,8 +886,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
     # And add the nonce the Secondary provided to the list of nonces to send
     # in the next Timeserver request.
-    if nonce not in self.nonces_to_send:
-      self.nonces_to_send.append(nonce)
+    self.nonces_to_send.append(nonce)
 
 
     log.debug(GREEN + ' Primary received an ECU manifest from ECU ' +
@@ -965,7 +964,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
       data_to_validate = timeserver_attestation['signed']
 
     else:
-      der_signed = asn1_codec.convert_signed_metadata_to_der(
+      der_signed = der_signed = asn1_codec.convert_signed_metadata_to_der(
         timeserver_attestation, only_signed=True)
       data_to_validate = hashlib.sha256(der_signed).hexdigest()
 

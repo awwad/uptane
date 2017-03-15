@@ -193,10 +193,15 @@ class TestASN1(unittest.TestCase):
     portion.
 
     Employing the asn1_codec code instead of using
-       the lower level code from pyasn1.der, asn1_spec, and
+     - the lower level code from pyasn1.der, asn1_spec, and
        timeserver_asn1_coder.
      - using a signable version of the time attestation (encapsulated in
        'signed', with 'signatures')
+
+    This test doesn't re-sign the attestation over the hash of the DER encoding.
+    One of the other tests below does that. The signatures here remain over
+    the human-readable internal representation of the time attestation.
+
     """
     # Using str() here because in Python2, I'll get u'' if I don't, and the
     # self.assertEqual(signable_attestation, attestation_again) will fail
@@ -332,7 +337,8 @@ class TestASN1(unittest.TestCase):
 
   def test_06_encode_and_validate_resigned_time_attestation(self):
     """
-    Test signing over DER.
+    Test timeserver attestation encoding and decoding, with signing over DER
+    ('re-sign' functionality in asn1_codec) and signature validation.
     """
 
     signable_attestation = {

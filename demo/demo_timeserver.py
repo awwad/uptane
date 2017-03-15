@@ -116,10 +116,23 @@ def test_demo_timeserver():
   Test the demo timeserver.
   # TODO: Consider moving these tests into a demo integration test module.
   """
+  # Prepare to validate signatures.
+  timeserver_key_pub = demo.import_public_key('timeserver')
+  tuf.formats.ANYKEY_SCHEMA.check_match(timeserver_key_pub)
+
 
   # Fetch a normal signed time attestation, without ASN.1 format or DER
-  # encoding.
-  timeserver.get_signed_time([1, 2])
+  # encoding, and validate the signature.
+  signed_time = timeserver.get_signed_time([1, 2])
+
+  assert len(signed_time['signatures']) == 1, 'Unexpected number of signatures.'
+  assert tuf.keys.verify_signature(
+      timeserver_key_pub,
+      signed_time['signatures'][0],
+      signed_time['signed'],
+      force_treat_as_pydict=True
+      ), 'Demo Timeserver self-test fail: unable to verify signature over JSON.'
+
 
 
   # Fetch a DER-encoded converted-to-ASN.1 signed time attestation, with a
@@ -129,14 +142,10 @@ def test_demo_timeserver():
   # Encapsulate that in a Binary object for XML-RPC.
   xb_der_signed_time = xmlrpc_client.Binary(der_signed_time)
   assert der_signed_time == xb_der_signed_time.data, \
-      'Demo Timeserver self-test failed: xmlrpc Binary encapsulation issue'
+      'Demo Timeserver self-test fail: xmlrpc Binary encapsulation issue'
 
 
   # Validate that signature.
-  timeserver_key_pub = demo.import_public_key('timeserver')
-  tuf.formats.ANYKEY_SCHEMA.check_match(timeserver_key_pub)
-
-
   for pydict_again in [
       asn1_codec.convert_signed_der_to_dersigned_json(der_signed_time),
       asn1_codec.convert_signed_der_to_dersigned_json(xb_der_signed_time.data)]:
@@ -144,9 +153,10 @@ def test_demo_timeserver():
           pydict_again, only_signed=True)
     der_signed_hash = hashlib.sha256(der_signed).hexdigest()
     assert tuf.keys.verify_signature(
-        timeserver_key_pub, pydict_again['signatures'][0],
-        der_signed_hash), \
-        'Demo Timeserver self-test failed: unable to verify signature over DER.'
+        timeserver_key_pub,
+        pydict_again['signatures'][0],
+        der_signed_hash
+        ), 'Demo Timeserver self-test fail: unable to verify signature over DER'
 
 
 

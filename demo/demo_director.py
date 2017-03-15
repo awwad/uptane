@@ -458,6 +458,127 @@ def recover_mitm(vin, target_filepath):
 
 
 
+"""
+How to simulate a rollback attack:
+
+>>> import demo.demo_director as dd
+>>> dd.clean_slate()
+
+Primary performs an update cycle...
+
+Copy timestamp.der to backup_timestamp.der
+1. dd.backup_timestamp()
+
+A new timestamp.der & snapshot.der are written
+2. dd.write_to_live()
+
+Primary ECU successfully performs update...
+>>> import demo.demo_primary as dp
+
+3. dp.update_cycle()
+
+Move backup_timestamp to timestamp.der (timestamp.der is saved to
+current_timestamp.der)
+4. dd.rollback_timestamp()
+
+Primary ECU performs an update cycle, but it detects a rollback attack.
+5. dp.update_cycle()
+
+Restore timestamp.der.  The valid, current timestamp is moved back into place.
+6. dd.restore_timestamp()
+"""
+
+def backup_timestamp(vin):
+  """
+  Copy timestamp.der to backup_timestamp.der
+
+  Example:
+  >>> import demo.demo_director as dd
+  >>> dd.clean_slate()
+  >>> dd.backup_timestamp('111')
+  """
+
+  timestamp_filename = 'timestamp.' + tuf.conf.METADATA_FORMAT
+  timestamp_path = os.path.join(demo.DIRECTOR_REPO_DIR, vin, 'metadata',
+      timestamp_filename)
+
+  backup_timestamp_path = os.path.join(demo.DIRECTOR_REPO_DIR, vin,
+      'backup_' + timestamp_filename)
+
+  shutil.copyfile(timestamp_path, backup_timestamp_path)
+
+
+
+
+
+def rollback_timestamp(vin):
+  """
+  Move 'backup_timestamp.der' to 'timestamp.der', effectively rolling back
+  timestamp to a previous version.  'backup_timestamp.der' must already exist
+  at the expected path (can be created via backup_timestamp(vin)).
+  Prior to rolling back timestamp.der, the current timestamp is saved to
+  'current_timestamp.der'.
+
+  Example:
+  >>> import demo.demo_director as dd
+  >>> dd.clean_slate()
+  >>> dd.backup_timestamp('111')
+  >>> dd.rollback_timestamp()
+  """
+
+  timestamp_filename = 'timestamp.' + tuf.conf.METADATA_FORMAT
+  backup_timestamp_path = os.path.join(demo.DIRECTOR_REPO_DIR, vin,
+      'backup_' + timestamp_filename)
+
+  if not os.path.exists(backup_timestamp_path):
+    raise Exception('Cannot rollback the Timestamp'
+        ' file.  ' + repr(backup_timestamp_path) + ' must already exist.'
+        '  It can be created by calling backup_timestamp(vin).')
+
+  else:
+    timestamp_path = os.path.join(demo.DIRECTOR_REPO_DIR, vin, 'metadata',
+        timestamp_filename)
+    current_timestamp_backup = os.path.join(demo.DIRECTOR_REPO_DIR, vin,
+        'current_' + timestamp_filename)
+
+    # First backup the current timestamp.
+    shutil.move(timestamp_path, current_timestamp_backup)
+    shutil.move(backup_timestamp_path, timestamp_path)
+
+
+
+
+
+
+def restore_timestamp(vin):
+  """
+  # restore timestamp.der (first move current_timestamp.der to timestamp.der).
+
+  Example:
+  >>> import demo.demo_director as dd
+  >>> dd.clean_slate()
+  >>> dd.backup_timestamp('111')
+  >>> dd.rollback_timestamp()
+  >>> dd.restore_timestamp()
+  """
+
+  timestamp_filename = 'timestamp.' + tuf.conf.METADATA_FORMAT
+  current_timestamp_backup = os.path.join(demo.DIRECTOR_REPO_DIR, vin,
+      'current_' + timestamp_filename)
+
+  if not os.path.exists(current_timestamp_backup):
+    raise Exception('A backup copy of the timestamp file'
+        ' could not be found.  Missing: ' + repr(current_timestamp_backup))
+
+  else:
+    timestamp_path = os.path.join(demo.DIRECTOR_REPO_DIR, vin, 'metadata',
+        timestamp_filename)
+    shutil.move(current_timestamp_backup, timestamp_path)
+
+
+
+
+
 def clear_vehicle_targets(vin):
   director_service_instance.vehicle_repositories[vin].targets.clear_targets()
 

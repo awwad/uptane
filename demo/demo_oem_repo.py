@@ -274,6 +274,27 @@ def listen():
 
 
 
+def add_target_and_write_to_live(filename, file_content):
+  """
+  High-level version of add_target_to_oemrepo() that creates the target
+  file, and writes the changes to the live repository.
+  """
+
+  # Create 'filename' in the current working directory, but it should
+  # ideally be to a temporary destination.  The demo code will eventually
+  # be modified to use temporary directories (which will cleaned up after
+  # running demo code).
+  with open(filename, 'w') as file_object:
+    file_object.write(file_content.decode('utf-8'))
+
+  filepath_in_repo = filename
+  add_target_to_oemrepo(filename, filepath_in_repo)
+  write_to_live()
+
+
+
+
+
 def kill_server():
   global server_process
   if server_process is None:

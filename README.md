@@ -201,7 +201,7 @@ Uptane is designed to secure the software updates delivered between repositories
 the Arbitrary Package attack.
 
 
-#### *Running an Arbitrary Package Attack w/ No Compromised Keys*
+#### *Running an Arbitrary Package Attack w/ no Compromised Keys*
 This is a simple attack simulating a Man in the Middle attack that provides a malicious image file. In this attack, the attacker does not have the keys to correctly sign any metadata (and so it is an exceptionally basic attack).
 
 In the Director's window, run this:
@@ -233,6 +233,14 @@ To manually demonstrate the arbitrary package attack, issue the following comman
 ```
 As a result of the above, the Director will instruct ECU 11111 in vehicle 111 to install file5.txt. Since this file is not on (and validated by) the Image Repository, the Primary will refuse to download it (and a Full Verification Secondary would likewise refuse it even if a compromised Primary delivered it to the Secondary).
 
+
+#### *Running an Arbitrary Attack on the Image repository w/ no compromised keys
+
+>>> do.arbitrary_package_attack(new_target_fname)
+
+>>> dp.update_cycle()
+
+>>> do.undo_arbitrary_package_attack(new_target_fname)
 
 
 #### *Running a Rollback Attack w/ a compromised Director*
@@ -277,11 +285,31 @@ Finally, restore `timestamp.der`.  The valid, current timestamp is moved back in
 #### *Revoke compromised Director key*
 
 
-#### *Running an Arbitrary Package Attack w/ a compromised Image repository*
+#### *Running an Arbitrary Package Attack w/ a compromised Director key*
+
+To start, add a new file to the image and director repositories.
+>>> do.add_target_and_write_to_live(filename='evil', file_content='original content')
+
+The new file is also added to the director repository...
+>>> dd.add_target_and_write_to_live(filename='evil', file_content='original content', vin='111', ecu_serial='1111')
+
+To simulate a compromised directory key, we simply signn for a new "evil" version of the original file.
+>>> dd.add_target_and_write_to_live(filename='evil', file_content='evil content', vin='111', ecu_serial='1111')
 
 
-#### *Compromise the Director repository to also serve arbitrary package*
+The primary ECU now attempts to download the malicious file.
+>>> dp.update_cycle()
 
+
+#### *Compromise the Image repository to also serve arbitrary package*
+>>> do.add_target_and_write_to_live(filename='evil', file_content='evil content')
+
+The seconday (or primary) should detect that a malicious file was installed.  Since
+both director and image repositories were compromised, the client would normally
+be unable to detect this attack.  For demonstration purposes, the secondary ECU
+in the demo code prints a banner indicating that the "evil" file was malicously 
+installed.
+>>> dp.update_cycle()
 
 #### *Revoke compromised Image repository key*
 

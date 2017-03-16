@@ -238,40 +238,55 @@ As a result of the above, the Director will instruct ECU 11111 in vehicle 111 to
 #### *Running a Rollback Attack w/ a compromised Director*
 Continuing from the previous attack...                                      
 
+First, switch to the director window and copy `timestamp.der` to
+`backup_timestamp.der`  Functions are available to perform this step,
+and the ones that follow.
+```
+>>> dd.backup_timestamp()                                                        
+```                                                                               
 
-Switch to the director window and copy `timestamp.der` to `backup_timestamp.der`
-Functions are available to perform this step, and the ones that follow.
+A new `timestamp.der` and `snapshot.der` can then be written to the live
+Director repository                                 
+```
+>>> dd.write_to_live()                                                           
+```
 
-1. dd.backup_timestamp()                                                        
-                                                                                
-A new `timestamp.der` and `snapshot.der` are then written to the live Director repository                                 
-2. dd.write_to_live()                                                           
-                                                                                 
 Primary ECU successfully performs update...                                                                                
-3. dp.update_cycle()                                                            
-                                                                                 
+```
+>>> dp.update_cycle()                                                            
+```                                                                             
+
 Next, move `backup_timestamp` to `timestamp.der` (timestamp.der is saved to               
 current_timestamp.der)                                                          
-4. dd.rollback_timestamp()                                                      
-                                                                                 
-Primary ECU many now perform an update cycle, which should detect the rollback attack.         
-5. dp.update_cycle()                                                            
-                                                                                 
-Finally, restore `timestamp.der`.  The valid, current timestamp is moved back into place.  
-6. dd.restore_timestamp()
- 
- 
+```
+>>> dd.rollback_timestamp()                                                      
+```
 
+Primary ECU many now perform an update cycle, which should detect the rollback attack.         
+```
+>>> dp.update_cycle()                                                            
+```
+
+Finally, restore `timestamp.der`.  The valid, current timestamp is moved back into place.  
+```
+>>> dd.restore_timestamp()
+``` 
+ 
+ 
 #### *Revoke compromised Director key*
+
 
 #### *Running an Arbitrary Package Attack w/ a compromised Image repository*
 
+
 #### *Compromise the Director repository to also serve arbitrary package*
+
 
 #### *Revoke compromised Image repository key*
 
 
+#### *Restore Primary and Seconday ECUs*
 
 
-
+#### *Running another arbitrary attack*
 

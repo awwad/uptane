@@ -236,7 +236,7 @@ As a result of the above, the Director will instruct ECU 11111 in vehicle 111 to
 
 
 #### *Running a Rollback Attack w/ a compromised Director*
-Continuing from the previous attack...                                      
+Continuing from the previous section...                                      
 
 First, switch to the director window and copy `timestamp.der` to
 `backup_timestamp.der`  Functions are available to perform this step,
@@ -246,7 +246,7 @@ and the ones that follow.
 ```                                                                               
 
 A new `timestamp.der` and `snapshot.der` can then be written to the live
-Director repository                                 
+Director repository.                                 
 ```
 >>> dd.write_to_live()                                                           
 ```
@@ -256,8 +256,9 @@ Primary ECU successfully performs update...
 >>> dp.update_cycle()                                                            
 ```                                                                             
 
-Next, move `backup_timestamp` to `timestamp.der` (timestamp.der is saved to               
-current_timestamp.der)                                                          
+Next, move `backup_timestamp` to `timestamp.der` (`timestamp.der` is saved to               
+`current_timestamp.der`), effectively rolling back timestamp to a previous
+version.
 ```
 >>> dd.rollback_timestamp()                                                      
 ```

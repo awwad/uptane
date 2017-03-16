@@ -15,6 +15,8 @@ from io import open
 import uptane
 import uptane.formats
 import uptane.common
+import uptane.encoding.asn1_codec as asn1_codec
+import hashlib
 
 import tuf.client.updater
 import tuf.formats
@@ -253,11 +255,19 @@ class Secondary(object):
     # Assume there's only one signature.
     assert len(timeserver_attestation['signatures']) == 1
 
+    # The following if/else is duplicated in primary.py as well. Refactor.
+    if tuf.conf.METADATA_FORMAT != 'der':
+      data_to_validate = timeserver_attestation['signed']
+
+    else:
+      der_signed = asn1_codec.convert_signed_metadata_to_der(
+        timeserver_attestation, only_signed=True)
+      data_to_validate = hashlib.sha256(der_signed).hexdigest()
+
     valid = tuf.keys.verify_signature(
         self.timeserver_public_key,
         timeserver_attestation['signatures'][0],
-        timeserver_attestation['signed'],
-        force_treat_as_pydict=True)
+        data_to_validate)
 
     if not valid:
       raise tuf.BadSignatureError('Timeserver returned an invalid signature. '

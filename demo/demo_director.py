@@ -465,6 +465,29 @@ def clear_vehicle_targets(vin):
 
 
 
+def add_target_and_write_to_live(filename, file_content, vin, ecu_serial):
+  """
+  High-level version of add_target_to_director() that creates 'filename'
+  and writes the changes to the live directory repository.
+  """
+
+  # Create 'filename' in the current working directory, but it should
+  # ideally be to a temporary destination.  The demo code will eventually
+  # be modified to use temporary directories (which will cleaned up after
+  # running the demo code).
+  with open(filename, 'w') as file_object:
+    file_object.write(file_content.decode('utf-8'))
+
+  # The path that will identify the file in the repository.
+  filepath_in_repo = filename
+
+  add_target_to_director(filename, filepath_in_repo, vin, ecu_serial)
+  write_to_live()
+
+
+
+
+
 def kill_server():
 
   global repo_server_process

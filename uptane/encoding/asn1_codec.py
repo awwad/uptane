@@ -364,8 +364,7 @@ def convert_signed_metadata_to_der(
 
 
     # Because 'method' is an enum, extracting the string value is a bit messy.
-    asn_sig['method'] = int(asn1_spec.SignatureMethod(
-        pydict_sig['method'].encode('ascii')))
+    asn_sig['method'] = int(asn1_spec.SignatureMethod(pydict_sig['method']))
 
     # This hideous stuff constructs a BinaryData() object to hold the actual
     # signature itself, and assigns it the value from pydict_sig['sig'] through

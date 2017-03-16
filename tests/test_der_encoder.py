@@ -97,7 +97,7 @@ class TestASN1(unittest.TestCase):
     # decoding.
     (decoded, remainder) = p_der_decoder.decode(
         t_der, asn1_spec.Token())
-    self.assertTrue(remainder == '')
+    self.assertFalse(remainder) # '' != b''; thus for Python3, don't test it
     self.assertEqual(t, decoded)
 
 
@@ -130,7 +130,7 @@ class TestASN1(unittest.TestCase):
         tag.tagClassContext, tag.tagFormatSimple, 1)))
 
 
-    self.assertTrue(remainder == '')
+    self.assertFalse(remainder)
     self.assertEqual(tokens, tokens_again)
 
 
@@ -175,7 +175,7 @@ class TestASN1(unittest.TestCase):
     (asn1_attestation_again, remainder) = p_der_decoder.decode(
         der_attestation, asn1Spec=exemplar_object)
 
-    self.assertTrue(remainder == '')
+    self.assertFalse(remainder)
     self.assertEqual(asn1_attestation, asn1_attestation_again)
 
 
@@ -285,7 +285,7 @@ class TestASN1(unittest.TestCase):
           hexValue=pydict_sig['keyid']).subtype(implicitTag=tag.Tag(
           tag.tagClassContext, tag.tagFormatSimple, 1))
       asn_sig['method'] = int(asn1_spec.SignatureMethod(
-          pydict_sig['method'].encode('ascii')))
+          pydict_sig['method']))
       asn_sig['value'] = asn1_spec.BinaryData().subtype(
           explicitTag=tag.Tag(tag.tagClassContext,
           tag.tagFormatConstructed, 2))
@@ -324,7 +324,7 @@ class TestASN1(unittest.TestCase):
     (asn1_attestation_again, remainder) = p_der_decoder.decode(
         der_attestation, asn1Spec=exemplar_object)
 
-    self.assertTrue(remainder == '')
+    self.assertFalse(remainder)
     self.assertEqual(asn1_attestation_again, asn_signable)
 
     # TODO: Test rest of the way back: ASN1 to Python dictionary.

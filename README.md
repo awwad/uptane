@@ -74,13 +74,16 @@ observed by those ECUs.
 ```
 
 After that, proceed to the following Windows to prepare clients.
-Once those are ready, you can perform a variety of modifications / attacks.
+Once those are ready, you can perform a variety of modifications and attacks.
 Various manipulations can be made here to the Director's interface. Examples
 will be discussed below in the [Delivering an Update](#delivering-an-update)
 and [Blocking Attacks](#blocking-attacks) sections.
 
-After the demo, to end HTTP hosting (but not XMLRPC serving, which requires
-exiting the shell), do this (or else you'll have a zombie Python process to kill)
+To end HTTP hosting of the image and director repositories, kill_server()
+should be called, otherwise you'll have a zombie Python process.
+Killing the HTTP server does not terminate the XMLRPC server, which requires
+exiting the shell.
+
 ```python
 >>> dd.kill_server()
 ```
@@ -159,7 +162,7 @@ The Secondary's update_cycle() call:
 
 
 ### *Delivering an Update*
-To try delivering an Update via Uptane, you'll need to add the image file to the Image Repository, then assign it to a vehicle and ECU in the Director Repository. Then, the Primary will obtain the new files, and the Secondary will update from the Primary.
+To deliver an Update via Uptane, you'll need to add the image file to the Image Repository, then assign it to a vehicle and ECU in the Director Repository. Then, the Primary will obtain the new files, and the Secondary will update from the Primary.
 
 Perform this *in the Image Repo's window* to create a new file, add it to the repository, and host newly-written metadata:
 ```python
@@ -233,7 +236,31 @@ As a result of the above, the Director will instruct ECU 11111 in vehicle 111 to
 
 
 #### *Running a Rollback Attack w/ a compromised Director*
+Continuing from the previous attack...                                      
 
+
+Switch to the director window and copy `timestamp.der` to `backup_timestamp.der`
+Functions are available to perform this step, and the ones that follow.
+
+1. dd.backup_timestamp()                                                        
+                                                                                
+A new `timestamp.der` and `snapshot.der` are then written to the live Director repository                                 
+2. dd.write_to_live()                                                           
+                                                                                 
+Primary ECU successfully performs update...                                                                                
+3. dp.update_cycle()                                                            
+                                                                                 
+Next, move `backup_timestamp` to `timestamp.der` (timestamp.der is saved to               
+current_timestamp.der)                                                          
+4. dd.rollback_timestamp()                                                      
+                                                                                 
+Primary ECU many now perform an update cycle, which should detect the rollback attack.         
+5. dp.update_cycle()                                                            
+                                                                                 
+Finally, restore `timestamp.der`.  The valid, current timestamp is moved back into place.  
+6. dd.restore_timestamp()
+ 
+ 
 
 #### *Revoke compromised Director key*
 

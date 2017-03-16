@@ -236,12 +236,13 @@ As a result of the above, the Director will instruct ECU 11111 in vehicle 111 to
 
 #### *Running an Arbitrary Attack on the Image repository w/ no compromised keys
 
+```
 >>> do.arbitrary_package_attack(new_target_fname)
 
 >>> dp.update_cycle()
 
 >>> do.undo_arbitrary_package_attack(new_target_fname)
-
+```
 
 #### *Running a Rollback Attack w/ a compromised Director*
 Continuing from the previous section...                                      
@@ -283,6 +284,7 @@ Finally, restore `timestamp.der`.  The valid, current timestamp is moved back in
  
  
 #### *Revoke compromised Director key*
+TODO: Need to add a function to revoke keys for specific roles.
 
 
 #### *Running an Arbitrary Package Attack w/ a compromised Director key*
@@ -322,10 +324,14 @@ installed.
 ```
 
 #### *Revoke compromised Image repository key*
-
+TODO: Need to add a function to revoke keys for specific roles.
 
 #### *Restore Primary and Seconday ECUs*
 
+```
+>>> dp.clean_slate()
+
+>>> ds.clean_slate()
 
 #### *Running another arbitrary attack*
 

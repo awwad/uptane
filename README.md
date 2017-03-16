@@ -288,28 +288,38 @@ Finally, restore `timestamp.der`.  The valid, current timestamp is moved back in
 #### *Running an Arbitrary Package Attack w/ a compromised Director key*
 
 To start, add a new file to the image and director repositories.
+```
 >>> do.add_target_and_write_to_live(filename='evil', file_content='original content')
+```
 
 The new file is also added to the director repository...
+```
 >>> dd.add_target_and_write_to_live(filename='evil', file_content='original content', vin='111', ecu_serial='1111')
+```
 
 To simulate a compromised directory key, we simply signn for a new "evil" version of the original file.
+```
 >>> dd.add_target_and_write_to_live(filename='evil', file_content='evil content', vin='111', ecu_serial='1111')
-
+```
 
 The primary ECU now attempts to download the malicious file.
+```
 >>> dp.update_cycle()
-
+```
 
 #### *Compromise the Image repository to also serve arbitrary package*
+```
 >>> do.add_target_and_write_to_live(filename='evil', file_content='evil content')
+```
 
 The seconday (or primary) should detect that a malicious file was installed.  Since
 both director and image repositories were compromised, the client would normally
 be unable to detect this attack.  For demonstration purposes, the secondary ECU
 in the demo code prints a banner indicating that the "evil" file was malicously 
 installed.
+```
 >>> dp.update_cycle()
+```
 
 #### *Revoke compromised Image repository key*
 

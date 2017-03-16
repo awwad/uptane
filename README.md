@@ -287,6 +287,7 @@ Finally, restore `timestamp.der`.  The valid, current timestamp is moved back in
 TODO: Need to add a function to revoke keys for specific roles.
 
 
+
 #### *Running an Arbitrary Package Attack w/ a compromised Director key*
 
 To start, add a new file to the image and director repositories.
@@ -326,12 +327,21 @@ installed.
 #### *Revoke compromised Image repository key*
 TODO: Need to add a function to revoke keys for specific roles.
 
+
+
 #### *Restore Primary and Seconday ECUs*
 
 ```
 >>> dp.clean_slate()
 
 >>> ds.clean_slate()
+```
 
-#### *Running another arbitrary attack*
+#### *Running another arbitrary package attack*
+```
+>>> do.arbitrary_package_attack(new_target_fname)
 
+>>> dp.update_cycle()
+
+>>> do.undo_arbitrary_package_attack(new_target_fname)
+```

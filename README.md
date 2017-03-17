@@ -284,8 +284,9 @@ Finally, restore `timestamp.der`.  The valid, current timestamp is moved back in
  
  
 #### *Revoke compromised Director key*
-TODO: Need to add a function to revoke keys for specific roles.
-
+```
+dd.revoke_and_add_new_key_and_write_to_live()
+```
 
 
 #### *Running an Arbitrary Package Attack w/ a compromised Director key*

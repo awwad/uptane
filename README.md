@@ -46,7 +46,7 @@ The code below is intended to be run in five or more consoles:
 - WINDOW 5: Python shell for a Secondary in the vehicle. This communicates directly only with the Primary via XMLRPC, and will perform full metadata verification. (More of these can be run, simulating more ECUs in one or more vehicles.)
 
 
-###*WINDOW 1: the Image Repository*
+### WINDOW 1: the Image Repository
 These instructions start a demonstration version of an OEM's or Supplier's main repository
 for software, hosting images and the metadata Uptane requires.
 
@@ -60,7 +60,7 @@ do.kill_server()
 ```
 
 
-###*WINDOW 2: the Director*
+### WINDOW 2: the Director
 The following starts a Director server, which generates metadata for specific
 vehicles indicating which ECUs should install what firmware (validated against
 and obtained from the OEM's main repository). It also receives and validates
@@ -97,7 +97,7 @@ dd.kill_server()
 ```
 
 
-###*WINDOW 3: the Timeserver:*
+### WINDOW 3: the Timeserver:
 The following starts a simple Timeserver, which receives requests for signed
 times, bundled by the Primary, and produces a signed attestation that includes
 the nonces each Secondary ECU sent the Primary to include along with the
@@ -108,7 +108,7 @@ into accepting a false time.
 python demo/demo_timeserver.py
 ```
 
-###*WINDOW 4(+): the Primary client(s):*
+### WINDOW 4(+): the Primary client(s):
 (Image Repo, Director, and Timeserver must already have finished starting up.)
 The Primary client started below is likely to run on a more capable and
 connected ECU in the vehicle - potentially the head unit / infotainment. It will
@@ -140,7 +140,7 @@ dp.update_cycle()
 
 
 
-###*WINDOW 5(+): the Secondary client(s):*
+### WINDOW 5(+): the Secondary client(s):
 (The following assumes that the Image Repository, Director, Timeserver, and Primary have finished starting up and are hosting/listening.)
 Here, we start a single Secondary ECU and generate a signed ECU Manifest
 with information about the "firmware" that it is running, which we send to the
@@ -166,7 +166,7 @@ The Secondary's update_cycle() call:
 
 
 
-###*Delivering an Update*
+### Delivering an Update
 To try delivering an Update via Uptane, you'll need to add the image file to the Image Repository, then assign it to a vehicle and ECU in the Director Repository. Then, the Primary will obtain the new files, and the Secondary will update from the Primary.
 
 Perform this *in the Image Repo's window* to create a new file, add it to the repository, and host newly-written metadata:
@@ -200,7 +200,7 @@ You should see an Updated banner on the Secondary, indicating a successful, vali
 
 
 
-###*Running an Arbitrary Package Attack w/ No Compromised Keys*
+### Running an Arbitrary Package Attack w/ No Compromised Keys
 This is a simple sample attack simulating a Man in the Middle attack that provides a malicious image file. In this attack, the attacker does not have the keys to correctly sign any metadata (and so it is an exceptionally basic attack).
 
 In the Director's window, run this:

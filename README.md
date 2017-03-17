@@ -326,8 +326,9 @@ installed.
 ```
 
 #### *Revoke compromised Image repository key*
-TODO: Need to add a function to revoke keys for specific roles.
-
+```
+do.revoke_and_add_new_key_and_write_to_live()
+```
 
 
 #### *Restore Primary and Seconday ECUs*

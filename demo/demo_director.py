@@ -58,7 +58,7 @@ import demo.demo_oem_repo as demo_oem_repo # for the main repo directory /:
 from uptane import GREEN, RED, YELLOW, ENDCOLORS
 
 from six.moves import xmlrpc_server # for the director services interface
-
+import six
 
 KNOWN_VINS = ['111', '112', '113']
 
@@ -189,6 +189,67 @@ def write_to_live(vin_to_update=None):
     os.rename(
         os.path.join(repo_dir, 'metadata.livetemp'),
         os.path.join(repo_dir, 'metadata'))
+
+
+
+
+def revoke_and_add_new_key_and_write_to_live():
+  """
+  <Purpose>
+    Revoke the current Targets verification key (all roles currently have one
+    verification key), and add a new key for it.  This is a high-level version
+    of the common function to update a role key. The director service instance
+    is also updated with the key changes.
+
+  <Arguments>
+    None.
+
+  <Exceptions>
+    None.
+
+  <Side Effecs>
+    None.
+
+  <Returns>
+    None.
+  """
+
+  global director_service_instance
+
+  # Generate a new key for the Targets role.  Make sure that the director
+  # service instance is updated to use the new key.  'director' argument to
+  # generate_key() actually references the targets role.
+  demo.generate_key('director')
+  new_targets_public_key = demo.import_public_key('director')
+  new_targets_private_key = demo.import_private_key('director')
+  old_targets_public_key = director_service_instance.key_dirtarg_pub
+  old_targets_private_key = director_service_instance.key_dirtarg_pri
+
+  # Set the new public and private Targets keys in the director service.
+  # These keys are shared between all vehicle repositories.
+  director_service_instance.key_dirtarg_pub = new_targets_public_key
+  director_service_instance.key_dirtarg_pri = new_targets_private_key
+
+  for vin, repository in director_service_instance.vehicle_repositories.iteritems():
+    repository.targets.remove_verification_key(old_targets_public_key)
+    repository.targets.add_verification_key(new_targets_public_key)
+
+    root_private_key = director_service_instance.key_dirroot_pri
+    snapshot_private_key = director_service_instance.key_dirsnap_pri
+    timestamp_private_key = director_service_instance.key_dirtime_pri
+
+    # We need to re-sign root because it revoked the Targets key.  Snapshot
+    # must be written to make a new release.
+    repository.root.load_signing_key(root_private_key)
+    repository.targets.load_signing_key(new_targets_private_key)
+    repository.snapshot.load_signing_key(snapshot_private_key)
+    repository.timestamp.load_signing_key(timestamp_private_key)
+
+    # Write all the metadata changes to disk.  Note: write() will be writeall()
+    # in the latest version of the TUF codebase.
+    repository.write()
+
+
 
 
 

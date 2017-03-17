@@ -234,7 +234,7 @@ To manually demonstrate the arbitrary package attack, issue the following comman
 As a result of the above, the Director will instruct ECU 11111 in vehicle 111 to install file5.txt. Since this file is not on (and validated by) the Image Repository, the Primary will refuse to download it (and a Full Verification Secondary would likewise refuse it even if a compromised Primary delivered it to the Secondary).
 
 
-#### *Running an Arbitrary Attack on the Image repository w/ no compromised keys
+#### *Running an Arbitrary Attack on the Image repository w/ no compromised keys*
 
 ```
 >>> do.arbitrary_package_attack(new_target_fname)

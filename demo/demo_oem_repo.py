@@ -212,7 +212,7 @@ def host():
   url = demo.MAIN_REPO_HOST + ':' + str(demo.MAIN_REPO_PORT) + '/'
   print('Main Repo URL is: ' + url)
 
-  # Kill server process after calling exit()
+  # Kill server process after calling exit().
   atexit.register(kill_server)
 
   # Wait / allow any exceptions to kill the server.

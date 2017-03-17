@@ -274,6 +274,56 @@ def listen():
 
 
 
+def revoke_and_add_new_key_and_write_to_live():
+  """
+  <Purpose>
+    Revoke the current Targets verification key (all roles currently have one
+    verification key), and add a new key for it.  This is a high-level version
+    of the common function to update a role key.
+
+  <Arguments>
+    None.
+
+  <Exceptions>
+    None.
+
+  <Side Effecs>
+    None.
+
+  <Returns>
+    None.
+  """
+
+  global repo
+
+  old_targets_public_key = demo.import_public_key('maintargets')
+  repo.targets.remove_verification_key(old_targets_public_key)
+
+  # Generate new public and private Targets keys.
+  demo.generate_key('maintargets')
+  new_targets_public_key = demo.import_public_key('maintargets')
+  repo.targets.add_verification_key(new_targets_public_key)
+
+  root_private_key = demo.import_private_key('mainroot')
+  new_targets_private_key = demo.import_private_key('maintargets')
+  snapshot_private_key = demo.import_private_key('mainsnapshot')
+  timestamp_private_key = demo.import_private_key('maintimestamp')
+
+  # We need to re-sign root because it revoked the Targets key.  Snapshot
+  # must be written to make a new release.
+  repo.root.load_signing_key(root_private_key)
+  repo.targets.load_signing_key(new_targets_private_key)
+  repo.snapshot.load_signing_key(snapshot_private_key)
+  repo.timestamp.load_signing_key(timestamp_private_key)
+
+  # Write all the metadata changes to disk.  Note: write() will be writeall()
+  # in the latest version of the TUF codebase.
+  repo.write()
+
+
+
+
+
 def kill_server():
   global server_process
   if server_process is None:

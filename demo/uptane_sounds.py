@@ -55,6 +55,7 @@ def play(sound_path, blocking=False):
     at passed path.
 
     Tries to use one of the following players:
+      - mplayer (Linux)
       - omxplayer (Raspbian)
       - afplay (OS X)
 
@@ -78,14 +79,19 @@ def play(sound_path, blocking=False):
     print("Sound '{}' not found.".format(sound_path))
     return
 
-  if _on_path("omxplayer"):
+  if _on_path("mplayer"):
+    player = "mplayer"
+
+  elif _on_path("omxplayer"):
     player = "omxplayer"
 
   elif _on_path("afplay"):
     player = "afplay"
 
   else:
-    print("No player found on this platform.")
+    print("WARNING: No audio player found. To play demo sounds you need to"
+        " install one of 'omxplayer', 'mplayer' or 'afplay' command line"
+        " utilities.")
     return
 
   cmd = [player, sound_path]

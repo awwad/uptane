@@ -16,6 +16,6 @@
 from unittest import defaultTestLoader, TextTestRunner
 import sys
 
-suite = defaultTestLoader.discover(start_dir=".")
+suite = defaultTestLoader.discover(start_dir="tests")
 result = TextTestRunner(verbosity=2).run(suite)
 sys.exit(0 if result.wasSuccessful() else 1)

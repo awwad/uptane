@@ -201,8 +201,9 @@ Uptane is designed to secure the software updates delivered between repositories
 the Arbitrary Package attack.
 
 
-#### *Running an Arbitrary Package Attack w/ no Compromised Keys*
-This is a simple attack simulating a Man in the Middle attack that provides a malicious image file. In this attack, the attacker does not have the keys to correctly sign any metadata (and so it is an exceptionally basic attack).
+#### *Running an Arbitrary Package Attack on the Director repository w/ no Compromised Keys*
+This is a simple attack simulating a Man in the Middle that provides a malicious image file. In this attack, the
+attacker does not have the keys to correctly sign new metadata (and so it is an exceptionally basic attack).
 
 In the Director's window, run this:
 ```python
@@ -214,9 +215,11 @@ Now, in the Primary's window, run this:
 >>> dp.update_cycle()
 ```
 
-Now, when the Primary runs dp.update_cycle(), it'll play the Defended banner and sound, as it's able to discard the manipulated file without even sending it to the Secondary.
+Now, when the Primary runs dp.update_cycle(), it'll play the Defended banner and sound clip, as it's able to
+discard the manipulated file without even sending it to the Secondary.
 
-If you want to resume toying with the repositories, you can then run the script to put the repository back in a normal state (undoing what the attack did) by running this in the Director window:
+If you want to resume toying with the repositories, you can run a script to put the repository back in a
+normal state (undoing what the attack did) by running the following in the Director window:
 ```python
 >>> dd.recover_mitm(vin, new_target_fname)
 ```
@@ -231,10 +234,13 @@ To manually demonstrate the arbitrary package attack, issue the following comman
 >>> dd.add_target_to_director(new_target_fname, filepath_in_repo, vin, ecu_serial)
 >>> dd.write_to_live()
 ```
-As a result of the above, the Director will instruct ECU 11111 in vehicle 111 to install file5.txt. Since this file is not on (and validated by) the Image Repository, the Primary will refuse to download it (and a Full Verification Secondary would likewise refuse it even if a compromised Primary delivered it to the Secondary).
+As a result of the above attack, the Director will instruct ECU 11111 in vehicle 111 to install file5.txt
+Since this file is not on (and validated by) the Image Repository, the Primary will refuse to download it
+(and a Full Verification Secondary would likewise refuse it even if a compromised Primary delivered it
+to the Secondary).
 
 
-#### *Running an Arbitrary Attack on the Image repository w/ no compromised keys*
+#### *Running an Arbitrary Package Attack on the Image repository w/ no compromised keys*
 
 ```
 >>> do.arbitrary_package_attack(new_target_fname)

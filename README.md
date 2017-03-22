@@ -205,7 +205,7 @@ Uptane is designed to secure the software updates delivered between repositories
 of the Arbitrary Package Attack.
 
 
-#### *Running an Arbitrary Package Attack on the Director repository w/ no Compromised Keys*
+#### *Running an Arbitrary Package Attack on the Director repository without Compromised Keys*
 This is a simple attack simulating a Man in the Middle that provides a malicious image file. In this attack, the
 attacker does not have the keys to correctly sign new metadata (and so it is an exceptionally basic attack).
 
@@ -228,6 +228,9 @@ normal state (undoing what the attack did) by running the following in the Direc
 >>> dd.recover_mitm(vin, new_target_fname)
 ```
 
+If the primary client runs an update_cycle() after the restoration of the Director repository, file5.txt
+should update successfully.
+
 To manually demonstrate the arbitrary package attack, issue the following commands in the Director console:
 ```python
 >>> new_target_fname = 'file5.txt' # filename of file to create
@@ -244,18 +247,17 @@ Since this file is not on (and validated by) the Image Repository, the Primary w
 to the Secondary).
 
 
-#### *Running an Arbitrary Package Attack on the Image repository w/ no Compromised Keys*
+#### *Running an Arbitrary Package Attack on the Image repository without Compromised Keys*
 
 ```
 >>> do.arbitrary_package_attack(new_target_fname)
 
 >>> dp.update_cycle()
-
->>> do.undo_arbitrary_package_attack(new_target_fname)
 ```
 
+
 The primary client is expected to discard the malicious `file5.txt` downloaded from the Image repository,
-and fetch the valid version of the file from the Director repository.
+and only download the valid version of the file from the Director repository.
 
 ```Python
 Update failed from http://localhost:30301/targets/file5.txt.
@@ -265,53 +267,58 @@ Downloading: u'http://localhost:30401/111/targets/file5.txt'
 Downloaded 17 bytes out of the expected 17 bytes.
 ```
 
-#### *Running a Rollback Attack w/ no compromised Director key*
+Undo the the arbitrary package attack so that subsequent sections can be reproduced as expected.
 
-We next demonstrate a rollback attack against the client, where an attacker tries
-to give the client an older version of metadata previously trusted by the client.
+```
+>>> do.undo_arbitrary_package_attack(new_target_fname)
+```
+
+#### *Running a Rollback Attack without a compromised Director key*
+
+We next demonstrate a rollback attack, where the client is given an older (and previously trusted)
+version of metadata.
 
 First, switch to the Director window and copy `timestamp.der` to `backup_timestamp.der`
-A function is available to perform this action.
+A function is available to perform this action:
 ```
->>> dd.backup_timestamp('111')                                                        
+>>> dd.backup_timestamp(vin='111')                                                        
 ```                                                                               
 
-A new `timestamp.der` and `snapshot.der` can then be written to the live
-Director repository.                                 
+A new `timestamp.der` and `snapshot.der` can be written to the live Director repository.                                 
 ```
 >>> dd.write_to_live()                                                           
 ```
 
-Primary client successfully performs update...                                                                                
+The primary client now performs an update...                                                                                
 ```
 >>> dp.update_cycle()                                                            
 ```                                                                             
 
 Next, move `backup_timestamp` to `timestamp.der` (`timestamp.der` is saved to               
-`current_timestamp.der`), effectively rolling back the timestamp file to a previous
-version.
+`current_timestamp.der` so that it can later be restored), effectively rolling
+back the timestamp file to a previous version.
 ```
->>> dd.rollback_timestamp()                                                      
+>>> dd.rollback_timestamp(vin='111')                                                      
 ```
 
 The primary client may now perform an update cycle, which should detect the rollback attack.         
 ```
->>> dp.update_cycle()                                                            
+>>> dp.update_cycle()
+...
+Update failed from http://localhost:30401/111/metadata/timestamp.der.
+ReplayedMetadataError
+Failed to update timestamp.der from all mirrors:
+{u'http://localhost:30401/111/metadata/timestamp.der': ReplayedMetadataError()}
 ```
 
 Finally, restore `timestamp.der`.  The valid, latest version of timestamp is moved back into place.  
 ```
->>> dd.restore_timestamp()
+>>> dd.restore_timestamp(vin='111')
 ``` 
  
- 
-#### *Revoke compromised Director key*
-```
-dd.revoke_and_add_new_key_and_write_to_live()
-```
 
 
-#### *Running an Arbitrary Package Attack w/ a compromised Director key*
+#### *Running an Arbitrary Package Attack with a Compromised Director Key*
 
 To start, add a new file to the image and director repositories.
 ```
@@ -323,12 +330,16 @@ The new file is also added to the director repository...
 >>> dd.add_target_and_write_to_live(filename='evil', file_content='original content', vin='111', ecu_serial='1111')
 ```
 
-To simulate a compromised directory key, we simply signn for a new "evil" version of the original file.
+TODO: Should we call dp.update_cycle() here?  After testing, the primary rejects the "evil" file with the
+following log statement: "Received a target from the Director with instruction to provide it to a Secondary
+ECU that is not known to this Primary! Disregarding / not downloading target or saving fileinfo!"
+
+To simulate a compromised directory key, we simply sign for a new "evil" version of the original file.
 ```
 >>> dd.add_target_and_write_to_live(filename='evil', file_content='evil content', vin='111', ecu_serial='1111')
 ```
 
-The primary ECU now attempts to download the malicious file.
+The primary client now attempts to download the malicious file.
 ```
 >>> dp.update_cycle()
 ```
@@ -346,6 +357,15 @@ installed.
 ```
 >>> dp.update_cycle()
 ```
+
+
+
+#### *Revoke compromised Director key*
+```
+dd.revoke_and_add_new_key_and_write_to_live()
+```
+
+
 
 #### *Revoke compromised Image repository key*
 ```

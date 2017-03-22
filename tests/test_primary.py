@@ -519,7 +519,7 @@ class TestPrimary(unittest.TestCase):
 
     try:
       primary_instance.refresh_toplevel_metadata_from_repositories()
-    except URLError as e:
+    except (URLError, tuf.NoWorkingMirrorError) as e:
       print('Unable to open connection to repositories. (This test requires '
           'that the demo Director and demo Image Repository be running.) '
           'Skipping test.')

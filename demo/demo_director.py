@@ -59,7 +59,7 @@ from uptane import GREEN, RED, YELLOW, ENDCOLORS
 
 from six.moves import xmlrpc_server # for the director services interface
 
-import atexit # for the killing server process after exit()
+import atexit # to kill server process on exit()
 
 KNOWN_VINS = ['111', '112', '113']
 

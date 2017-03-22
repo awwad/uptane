@@ -42,7 +42,7 @@ from uptane import GREEN, RED, YELLOW, ENDCOLORS
 
 from six.moves import xmlrpc_server # for the director services interface
 
-import atexit # for the killing server process after exit()
+import atexit # to kill server process on exit()
 
 repo = None
 server_process = None

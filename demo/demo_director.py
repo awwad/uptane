@@ -439,81 +439,85 @@ def listen():
 
 
 def attack_mitm(vin, target_filepath):
-  # Arbitrary package attack, no compromised keys.
-  # Move evil target file into place on Director without updating metadata
-  # (simulate bad mirror).
-  full_fname = os.path.join(
-      demo.DIRECTOR_REPO_DIR, vin, 'targets', target_filepath)
+  # Simulate an arbitrary package attack, without compromising any keys.  Move
+  # an evil target file into place on the Director repository without updating
+  # metadata.
+  full_target_filepath = os.path.join(demo.DIRECTOR_REPO_DIR, vin,
+      'targets', target_filepath)
+
   # TODO: NOTE THAT THIS ATTACK SCRIPT BREAKS IF THE TARGET FILE IS IN A
   # SUBDIRECTORY IN THE REPOSITORY.
-  backup_fname = os.path.join(
-      demo.DIRECTOR_REPO_DIR, vin, 'targets', '_backup__' + target_filepath)
+  backup_target_filepath = os.path.join(demo.DIRECTOR_REPO_DIR, vin,
+      'targets', 'backup_' + target_filepath)
 
-  full_mr_fname = os.path.join(
-      demo.MAIN_REPO_TARGETS_DIR, target_filepath)
-  backup_mr_fname = os.path.join(
-      demo.MAIN_REPO_TARGETS_DIR, '_backup__' + target_filepath)
+  image_repo_full_target_filepath = os.path.join(demo.MAIN_REPO_TARGETS_DIR,
+      target_filepath)
+  image_repo_backup_full_target_filepath = os.path.join(demo.MAIN_REPO_TARGETS_DIR,
+      'backup_' + target_filepath)
 
 
-  if not os.path.exists(full_fname) and not os.path.exists(full_mr_fname):
+  if not os.path.exists(full_target_filepath) and not os.path.exists(image_repo_full_target_filepath):
     raise Exception('The provided target file is not already in either the '
         'Director or Image repositories. This attack is intended to be run on '
         'an existing target that is already set to be delivered to a client.')
-  elif os.path.exists(backup_fname):
+
+  elif os.path.exists(backup_target_filepath):
     raise Exception('The attack is already in progress, or was never recovered '
         'from. Not running twice. Please check state and if everything is '
-        'otherwise okay, delete ' + repr(backup_fname))
+        'otherwise okay, delete ' + repr(backup_target_filepath))
 
-  # If the image file exists already on the Director (not necessary), then
-  # back it up.
-  if os.path.exists(full_fname):
-    shutil.copy(full_fname, backup_fname)
+  # If the image file already exists on the Director repository (not
+  # necessary), then back it up.
+  if os.path.exists(full_target_filepath):
+    shutil.copy(full_target_filepath, backup_target_filepath)
 
-  # Hide file on Main Repo so that client doesn't just grab an intact file from
-  # there, making the attack moot.
-  if os.path.exists(full_mr_fname):
-    os.rename(full_mr_fname, backup_mr_fname)
+  # Hide the image file on the image repository so that the client doesn't just
+  # grab an intact file from there, making the attack moot.
+  if os.path.exists(image_repo_full_target_filepath):
+    os.rename(image_repo_full_target_filepath,
+        image_repo_backup_full_target_filepath)
 
-  fobj = open(full_fname, 'w')
-  fobj.write('EVIL UPDATE: ARBITRARY PACKAGE ATTACK TO BE DELIVERED FROM '
-      'MITM / bad mirror (no keys compromised).')
-  fobj.close()
-  shutil.copy(full_fname, full_mr_fname)
+  with open(full_target_filepath, 'w') as file_object:
+    file_object.write('EVIL UPDATE: ARBITRARY PACKAGE ATTACK TO BE'
+        ' DELIVERED FROM MITM / bad mirror (no keys compromised).')
+
+
 
 
 
 def recover_mitm(vin, target_filepath):
-  # Arbitrary package attack recovery.
+  # Recover from the arbitrary package attack launched by attack_mitm().
   # Move evil target file out and normal target file back in.
-  full_fname = os.path.join(
-      demo.DIRECTOR_REPO_DIR, vin, 'targets', target_filepath)
+  full_target_filepath = os.path.join(demo.DIRECTOR_REPO_DIR, vin,
+      'targets', target_filepath)
+
   # TODO: NOTE THAT THIS ATTACK SCRIPT BREAKS IF THE TARGET FILE IS IN A
   # SUBDIRECTORY IN THE REPOSITORY.
-  backup_fname = os.path.join(
-      demo.DIRECTOR_REPO_DIR, vin, 'targets', '_backup__' + target_filepath)
+  backup_full_target_filepath = os.path.join(demo.DIRECTOR_REPO_DIR, vin,
+      'targets', 'backup_' + target_filepath)
 
-  full_mr_fname = os.path.join(
-      demo.MAIN_REPO_TARGETS_DIR, target_filepath)
-  backup_mr_fname = os.path.join(
-      demo.MAIN_REPO_TARGETS_DIR, '_backup__' + target_filepath)
+  image_repo_full_target_filepath = os.path.join(demo.MAIN_REPO_TARGETS_DIR, target_filepath)
+  image_repo_backup_full_target_filepath = os.path.join(demo.MAIN_REPO_TARGETS_DIR,
+      'backup_' + target_filepath)
 
-  if not os.path.exists(backup_fname) or not os.path.exists(full_fname):
+  if not os.path.exists(backup_full_target_filepath) or not os.path.exists(full_target_filepath):
     raise Exception('The expected backup or attacked files do not exist. No '
         'attack is in progress to recover from, or manual manipulation has '
         'broken the expected state.')
 
-  # In the case of the Director repo, we expect there to be a file replaced,
-  # so we restore the backup over it.
-  os.rename(backup_fname, full_fname)
+  # In the case of the Director repository, we expect there to be a malicious
+  # image file, so we restore the backup over it.
+  os.rename(backup_full_target_filepath, full_target_filepath)
 
-  # If the file existed on the Main Repo, was backed up and hidden by the
-  # attack, and hasn't since been replaced (by some other attack or manual
+  # If the file existed on the image repository, was backed up and hidden by
+  # the attack, and hasn't since been replaced (by some other attack or manual
   # manipulation), restore that file to its place. Either way, delete the
   # backup so that it's not there the next time to potentially confuse this.
-  if os.path.exists(backup_mr_fname) and not os.path.exists(full_mr_fname):
-    os.rename(full_mr_fname, backup_mr_fname)
-  elif os.path.exists(backup_mr_fname):
-    os.remove(backup_mr_fname)
+  if os.path.exists(image_repo_backup_full_target_filepath) and not os.path.exists(image_repo_full_target_filepath):
+    os.rename(image_repo_backup_full_target_filepath, image_repo_full_target_filepath)
+
+  elif os.path.exists(image_repo_backup_full_target_filepath):
+    os.remove(image_repo_backup_full_target_filepath)
 
 
 

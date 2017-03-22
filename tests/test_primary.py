@@ -41,6 +41,7 @@ TEST_DIRECTOR_ROOT_FNAME = os.path.join(
 TEST_OEM_ROOT_FNAME = os.path.join(
     TEST_OEM_METADATA_DIR, 'root.' + tuf.conf.METADATA_FORMAT)
 TEST_PINNING_FNAME = os.path.join(TEST_DATA_DIR, 'pinned.json')
+TEMP_CLIENT_DIR = os.path.join(TEST_DATA_DIR, 'temp_test_primary')
 
 # I'll initialize this in one of the early tests, and use this for the simple
 # non-damaging tests so as to avoid creating objects all over again.
@@ -51,10 +52,6 @@ primary_instance = None
 nonce = 5
 vin = '000'
 primary_ecu_serial = '00000'
-
-# Load what's necessary for the instantiation of a Primary ECU, using
-# valid things to start with.
-client_directory_name = 'temp_test_primary'
 
 # Initialize these in setUpModule below.
 primary_ecu_key = None
@@ -69,8 +66,8 @@ process_oemrepo = None
 
 def destroy_temp_dir():
   # Clean up anything that may currently exist in the temp test directory.
-  if os.path.exists(os.path.join(TEST_DATA_DIR, client_directory_name)):
-    shutil.rmtree(os.path.join(TEST_DATA_DIR, client_directory_name))
+  if os.path.exists(TEMP_CLIENT_DIR):
+    shutil.rmtree(TEMP_CLIENT_DIR)
 
 
 
@@ -148,7 +145,7 @@ class TestPrimary(unittest.TestCase):
 
     # Set up a client directory first.
     uptane.common.create_directory_structure_for_client(
-        client_directory_name,
+        TEMP_CLIENT_DIR,
         TEST_PINNING_FNAME,
         {'mainrepo': TEST_OEM_ROOT_FNAME,
         'director': TEST_DIRECTOR_ROOT_FNAME})
@@ -164,7 +161,7 @@ class TestPrimary(unittest.TestCase):
     # pinning file in its expected location.
     # with self.assertRaises(tuf.FormatError):
     #   p = primary.Primary(
-    #       full_client_dir=os.path.join(TEST_DATA_DIR, client_directory_name),
+    #       full_client_dir=TEMP_CLIENT_DIR,
     #       pinning_filename=TEST_OEM_ROOT_FNAME, # INVALID: WRONG TYPE OF FILE
     #       director_repo_name=demo.DIRECTOR_REPO_NAME,
     #       vin=vin,
@@ -180,7 +177,7 @@ class TestPrimary(unittest.TestCase):
     # this test to work.
     # with self.assertRaises(uptane.Error):
     #   p = primary.Primary(
-    #       full_client_dir=os.path.join(TEST_DATA_DIR, client_directory_name),
+    #       full_client_dir=TEMP_CLIENT_DIR,
     #       pinning_filename=TEST_PINNING_FNAME,
     #       director_repo_name='this_is_not_the_name_of_any_repository', # TODO: Should probably be a new exception class, uptane.UnknownRepository or something
     #       vin=vin,
@@ -196,7 +193,7 @@ class TestPrimary(unittest.TestCase):
     # Invalid VIN:
     with self.assertRaises(tuf.FormatError):
       p = primary.Primary(
-          full_client_dir=os.path.join(TEST_DATA_DIR, client_directory_name),
+          full_client_dir=TEMP_CLIENT_DIR,
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=5,  # INVALID
           ecu_serial=primary_ecu_serial,
@@ -208,7 +205,7 @@ class TestPrimary(unittest.TestCase):
     # Invalid ECU Serial
     with self.assertRaises(tuf.FormatError):
       p = primary.Primary(
-          full_client_dir=os.path.join(TEST_DATA_DIR, client_directory_name),
+          full_client_dir=TEMP_CLIENT_DIR,
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vin,
           ecu_serial=500, # INVALID
@@ -220,7 +217,7 @@ class TestPrimary(unittest.TestCase):
     # Invalid ECU Key
     with self.assertRaises(tuf.FormatError):
       p = primary.Primary(
-          full_client_dir=os.path.join(TEST_DATA_DIR, client_directory_name),
+          full_client_dir=TEMP_CLIENT_DIR,
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vin,
           ecu_serial=primary_ecu_serial,
@@ -232,7 +229,7 @@ class TestPrimary(unittest.TestCase):
     # Invalid time:
     with self.assertRaises(tuf.FormatError):
       p = primary.Primary(
-          full_client_dir=os.path.join(TEST_DATA_DIR, client_directory_name),
+          full_client_dir=TEMP_CLIENT_DIR,
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vin,
           ecu_serial=primary_ecu_serial,
@@ -244,7 +241,7 @@ class TestPrimary(unittest.TestCase):
     # Invalid timeserver key
     with self.assertRaises(tuf.FormatError):
       p = primary.Primary(
-          full_client_dir=os.path.join(TEST_DATA_DIR, client_directory_name),
+          full_client_dir=TEMP_CLIENT_DIR,
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vin,
           ecu_serial=primary_ecu_serial,
@@ -253,7 +250,7 @@ class TestPrimary(unittest.TestCase):
           my_secondaries=[])
 
 
-    print(os.path.join(TEST_DATA_DIR, client_directory_name))
+    print(TEMP_CLIENT_DIR)
 
     # Try creating a Primary, expecting it to work.
     # Initializes a Primary ECU, making a client directory and copying the root
@@ -262,7 +259,7 @@ class TestPrimary(unittest.TestCase):
     # TODO: Stick TEST_PINNING_FNAME in the right place.
     # Stick TEST_OEM_ROOT_FNAME and TEST_DIRECTOR_ROOT_FNAME in the right place.
     primary_instance = primary.Primary(
-        full_client_dir=os.path.join(TEST_DATA_DIR, client_directory_name),
+        full_client_dir=TEMP_CLIENT_DIR,
         director_repo_name=demo.DIRECTOR_REPO_NAME,
         vin=vin,
         ecu_serial=primary_ecu_serial,
@@ -280,7 +277,7 @@ class TestPrimary(unittest.TestCase):
     self.assertEqual(primary_ecu_key, primary_instance.primary_key)
     self.assertEqual(dict(), primary_instance.ecu_manifests)
     self.assertEqual(
-        primary_instance.full_client_dir, os.path.join(TEST_DATA_DIR, client_directory_name))
+        primary_instance.full_client_dir, TEMP_CLIENT_DIR)
     self.assertIsInstance(primary_instance.updater, tuf.client.updater.Updater)
     tuf.formats.ANYKEY_SCHEMA.check_match(primary_instance.timeserver_public_key)
     self.assertEqual([], primary_instance.my_secondaries)

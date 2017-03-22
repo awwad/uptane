@@ -42,6 +42,7 @@ from uptane import GREEN, RED, YELLOW, ENDCOLORS
 
 from six.moves import xmlrpc_server # for the director services interface
 
+import atexit # to kill server process on exit()
 
 repo = None
 server_process = None
@@ -210,6 +211,9 @@ def host():
   print('Main Repo serving on port: ' + str(demo.MAIN_REPO_PORT))
   url = demo.MAIN_REPO_HOST + ':' + str(demo.MAIN_REPO_PORT) + '/'
   print('Main Repo URL is: ' + url)
+
+  # Kill server process after calling exit().
+  atexit.register(kill_server)
 
   # Wait / allow any exceptions to kill the server.
   #try:

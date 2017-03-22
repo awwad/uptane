@@ -54,10 +54,6 @@ for software, hosting images and the metadata Uptane requires.
 import demo.demo_oem_repo as do
 do.clean_slate()
 ```
-After the demo, to end hosting:
-```python
-do.kill_server()
-```
 
 
 ### WINDOW 2: the Director
@@ -90,11 +86,6 @@ dd.write_to_live()
 ```
 As a result of the above, the Director will instruct ECU 11111 in vehicle 111 to install file5.txt. Since this file is not on (and validated by) the Image Repository, the Primary will refuse to download it (and a Full Verification Secondary would likewise refuse it even if a compromised Primary delivered it to the Secondary).
 
-After the demo, to end HTTP hosting (but not XMLRPC serving, which requires
-exiting the shell), do this (or else you'll have a zombie Python process to kill)
-```python
-dd.kill_server()
-```
 
 
 ### WINDOW 3: the Timeserver:

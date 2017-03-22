@@ -327,16 +327,17 @@ To start, add a new file to the image and director repositories.
 
 The new file is also added to the director repository...
 ```
->>> dd.add_target_and_write_to_live(filename='evil', file_content='original content', vin='111', ecu_serial='1111')
+>>> dd.add_target_and_write_to_live(filename='evil', file_content='original content', vin='111', ecu_serial='22222')
 ```
 
 TODO: Should we call dp.update_cycle() here?  After testing, the primary rejects the "evil" file with the
 following log statement: "Received a target from the Director with instruction to provide it to a Secondary
 ECU that is not known to this Primary! Disregarding / not downloading target or saving fileinfo!"
+Update on TODO:  ecu_serial was previously set to '11111'.  It should be '22222'
 
 To simulate a compromised directory key, we simply sign for a new "evil" version of the original file.
 ```
->>> dd.add_target_and_write_to_live(filename='evil', file_content='evil content', vin='111', ecu_serial='1111')
+>>> dd.add_target_and_write_to_live(filename='evil', file_content='evil content', vin='111', ecu_serial='22222')
 ```
 
 The primary client now attempts to download the malicious file.
@@ -344,19 +345,28 @@ The primary client now attempts to download the malicious file.
 >>> dp.update_cycle()
 ```
 
+The primary client should print a "Defended" banner.
+
+
+
 #### *Compromise the Image repository to also serve arbitrary package*
 ```
 >>> do.add_target_and_write_to_live(filename='evil', file_content='evil content')
 ```
 
-The seconday (or primary) should detect that a malicious file was installed.  Since
+Finally, the primary is updated.  Note, both image and director repositories have been
+compromised.  Is the primary able to defend against this attack?
+
+```
+>>> 
+```
+
+The primary should detect that a malicious file was installed.  Since
 both director and image repositories were compromised, the client would normally
 be unable to detect this attack.  For demonstration purposes, the secondary ECU
 in the demo code prints a banner indicating that the "evil" file was malicously 
 installed.
-```
->>> dp.update_cycle()
-```
+
 
 
 

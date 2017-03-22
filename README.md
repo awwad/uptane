@@ -162,9 +162,13 @@ The Secondary's update_cycle() call:
 
 
 ### *Delivering an Update*
-To deliver an Update via Uptane, you'll need to add the image file to the Image Repository, then assign it to a vehicle and ECU in the Director Repository. Then, the Primary will obtain the new files, and the Secondary will update from the Primary.
+To deliver an Update via Uptane, you'll need to add the image file to the Image Repository, then assign it to a vehicle
+and ECU in the Director Repository. Then, the Primary will obtain the new files, and the Secondary will update from the
+Primary.
 
-Perform this *in the Image Repo's window* to create a new file, add it to the repository, and host newly-written metadata:
+Perform the following in the **Image repository's** window to create a new file, add it to the repository, and host
+newly-written metadata:
+
 ```python
 >>> new_target_fname = filepath_in_repo = 'file5.txt'
 >>> open(new_target_fname, 'w').write('Fresh target file')
@@ -172,7 +176,7 @@ Perform this *in the Image Repo's window* to create a new file, add it to the re
 >>> do.write_to_live()
 ```
 
-Perform this *in the Director Repository's window* to assign that Image file to vehicle 111, ECU 22222:
+Perform the following in the **Director repository's** window to assign that Image file to vehicle 111, ECU 22222:
 ```python
 >>> new_target_fname = filepath_in_repo = 'file5.txt'
 >>> ecu_serial = '22222'
@@ -197,29 +201,29 @@ You should see an Updated banner on the Secondary, indicating a successful, vali
 
 ### *Blocking Attacks*
 Uptane is designed to secure the software updates delivered between repositories and vehicles.  Section
-7.3 of the [Uptane Design Overview](https://docs.google.com/document/d/1pBK--40BCg_ofww4GES0weYFB6tZRedAjUy6PJ4Rgzk/edit?usp=sharing) covers all of the known attacks in more detail.  We begin this section with a demonstration of
-the Arbitrary Package attack.
+7.3 of the [Uptane Design Overview](https://docs.google.com/document/d/1pBK--40BCg_ofww4GES0weYFB6tZRedAjUy6PJ4Rgzk/edit?usp=sharing) covers all of the known attacks in more detail.  We begin this section with a demonstration
+of the Arbitrary Package Attack.
 
 
 #### *Running an Arbitrary Package Attack on the Director repository w/ no Compromised Keys*
 This is a simple attack simulating a Man in the Middle that provides a malicious image file. In this attack, the
 attacker does not have the keys to correctly sign new metadata (and so it is an exceptionally basic attack).
 
-In the Director's window, run this:
+In the **Director's** window, run:
 ```python
 >>> dd.attack_mitm(vin, new_target_fname)
 ```
 
-Now, in the Primary's window, run this:
+Now, in the **Primary's** window, run:
 ```python
 >>> dp.update_cycle()
 ```
 
-Now, when the Primary runs dp.update_cycle(), it'll play the Defended banner and sound clip, as it's able to
-discard the manipulated file without even sending it to the Secondary.
+Now, when the Primary runs dp.update_cycle(), it'll display the Defended banner and play a sound clip, as it's
+able to discard the manipulated file without even sending it to the Secondary.
 
 If you want to resume toying with the repositories, you can run a script to put the repository back in a
-normal state (undoing what the attack did) by running the following in the Director window:
+normal state (undoing what the attack did) by running the following in the Director's window:
 ```python
 >>> dd.recover_mitm(vin, new_target_fname)
 ```
@@ -234,13 +238,13 @@ To manually demonstrate the arbitrary package attack, issue the following comman
 >>> dd.add_target_to_director(new_target_fname, filepath_in_repo, vin, ecu_serial)
 >>> dd.write_to_live()
 ```
-As a result of the above attack, the Director will instruct ECU 11111 in vehicle 111 to install file5.txt
+As a result of the attack above, the Director will instruct ECU 11111 in vehicle 111 to install file5.txt
 Since this file is not on (and validated by) the Image Repository, the Primary will refuse to download it
 (and a Full Verification Secondary would likewise refuse it even if a compromised Primary delivered it
 to the Secondary).
 
 
-#### *Running an Arbitrary Package Attack on the Image repository w/ no compromised keys*
+#### *Running an Arbitrary Package Attack on the Image repository w/ no Compromised Keys*
 
 ```
 >>> do.arbitrary_package_attack(new_target_fname)
@@ -250,14 +254,26 @@ to the Secondary).
 >>> do.undo_arbitrary_package_attack(new_target_fname)
 ```
 
-#### *Running a Rollback Attack w/ a compromised Director*
-Continuing from the previous section...                                      
+The primary client is expected to discard the malicious `file5.txt` downloaded from the Image repository,
+and fetch the valid version of the file from the Director repository.
 
-First, switch to the director window and copy `timestamp.der` to
-`backup_timestamp.der`  Functions are available to perform this step,
-and the ones that follow.
+```Python
+Update failed from http://localhost:30301/targets/file5.txt.
+BadHashError
+Failed to update /file5.txt from all mirrors: {u'http://localhost:30301/targets/file5.txt': BadHashError()}
+Downloading: u'http://localhost:30401/111/targets/file5.txt'
+Downloaded 17 bytes out of the expected 17 bytes.
 ```
->>> dd.backup_timestamp()                                                        
+
+#### *Running a Rollback Attack w/ no compromised Director key*
+
+We next demonstrate a rollback attack against the client, where an attacker tries
+to give the client an older version of metadata previously trusted by the client.
+
+First, switch to the Director window and copy `timestamp.der` to `backup_timestamp.der`
+A function is available to perform this action.
+```
+>>> dd.backup_timestamp('111')                                                        
 ```                                                                               
 
 A new `timestamp.der` and `snapshot.der` can then be written to the live
@@ -266,24 +282,24 @@ Director repository.
 >>> dd.write_to_live()                                                           
 ```
 
-Primary ECU successfully performs update...                                                                                
+Primary client successfully performs update...                                                                                
 ```
 >>> dp.update_cycle()                                                            
 ```                                                                             
 
 Next, move `backup_timestamp` to `timestamp.der` (`timestamp.der` is saved to               
-`current_timestamp.der`), effectively rolling back timestamp to a previous
+`current_timestamp.der`), effectively rolling back the timestamp file to a previous
 version.
 ```
 >>> dd.rollback_timestamp()                                                      
 ```
 
-Primary ECU many now perform an update cycle, which should detect the rollback attack.         
+The primary client may now perform an update cycle, which should detect the rollback attack.         
 ```
 >>> dp.update_cycle()                                                            
 ```
 
-Finally, restore `timestamp.der`.  The valid, current timestamp is moved back into place.  
+Finally, restore `timestamp.der`.  The valid, latest version of timestamp is moved back into place.  
 ```
 >>> dd.restore_timestamp()
 ``` 

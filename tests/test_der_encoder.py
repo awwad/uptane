@@ -6,6 +6,7 @@
   Unit testing for DER Encoding, uptane/encoding/asn1_codec.py
 
 """
+from __future__ import print_function
 from __future__ import unicode_literals
 
 import tuf.formats
@@ -255,7 +256,7 @@ class TestASN1(unittest.TestCase):
     Similar to test 04 above, but performs much of the work manually.
     Useful separately only for debugging.
 
-    Instead of employing asn1_codec, uses lower level code from pyasn1.der,
+    Instead of just employing asn1_codec, uses lower level code from pyasn1.der,
     asn1_spec, and timeserver_asn1_coder.
     """
     signable_attestation = {
@@ -275,7 +276,7 @@ class TestASN1(unittest.TestCase):
     asn_signatures_list = asn1_spec.Signatures().subtype(
         implicitTag=tag.Tag(tag.tagClassContext,
         tag.tagFormatSimple, 2))
-    i = 0 # Index for iterating through asn
+    i = 0 # Index for iterating through asn signatures
     for pydict_sig in signable_attestation['signatures']:
       asn_sig = asn1_spec.Signature()
       asn_sig['keyid'] = asn1_spec.Keyid().subtype(

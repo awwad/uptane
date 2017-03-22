@@ -6,6 +6,7 @@
   Define (and allow validation of) types used by uptane code.
   Follows conventions from tuf. See tuf.formats.
 """
+from __future__ import print_function
 from __future__ import unicode_literals
 
 # We will have a superset of formats in TUF

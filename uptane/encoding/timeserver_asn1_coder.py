@@ -13,6 +13,8 @@
   get_json_signed(asn_signed)    # TODO: Rename to get_pydict_signed in all mods
 
 """
+from __future__ import print_function
+from __future__ import unicode_literals
 
 from pyasn1.type import tag
 

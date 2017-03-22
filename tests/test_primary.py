@@ -16,6 +16,8 @@ import uptane
 import uptane.formats
 import uptane.clients.primary as primary
 import uptane.common
+import uptane.encoding.asn1_codec as asn1_codec
+
 import tuf
 import tuf.formats
 import tuf.client.updater # to test one of the fields in the Primary object
@@ -30,11 +32,14 @@ import shutil
 # For temporary convenience:
 import demo # for generate_key, import_public_key, import_private_key
 
+
 TEST_DATA_DIR = os.path.join(uptane.WORKING_DIR, 'tests', 'test_data')
 TEST_DIRECTOR_METADATA_DIR = os.path.join(TEST_DATA_DIR, 'director_metadata')
 TEST_OEM_METADATA_DIR = os.path.join(TEST_DATA_DIR, 'oem_metadata')
-TEST_DIRECTOR_ROOT_FNAME = os.path.join(TEST_DIRECTOR_METADATA_DIR, 'root.json')
-TEST_OEM_ROOT_FNAME = os.path.join(TEST_OEM_METADATA_DIR, 'root.json')
+TEST_DIRECTOR_ROOT_FNAME = os.path.join(
+    TEST_DIRECTOR_METADATA_DIR, 'root.' + tuf.conf.METADATA_FORMAT)
+TEST_OEM_ROOT_FNAME = os.path.join(
+    TEST_OEM_METADATA_DIR, 'root.' + tuf.conf.METADATA_FORMAT)
 TEST_PINNING_FNAME = os.path.join(TEST_DATA_DIR, 'pinned.json')
 
 # I'll initialize this in one of the early tests, and use this for the simple
@@ -54,6 +59,7 @@ client_directory_name = 'temp_test_primary'
 # Initialize these in setUpModule below.
 primary_ecu_key = None
 key_timeserver_pub = None
+key_timeserver_pri = None
 clock = None
 process_timeserver = None
 process_director = None
@@ -80,6 +86,7 @@ def setUpModule():
   """
   global primary_ecu_key
   global key_timeserver_pub
+  global key_timeserver_pri
   global clock
 
   destroy_temp_dir()
@@ -92,6 +99,7 @@ def setUpModule():
 
   # Load the public timeserver key.
   key_timeserver_pub = demo.import_public_key('timeserver')
+  key_timeserver_pri = demo.import_private_key('timeserver')
 
   # Generate a trusted initial time for the Primary.
   clock = tuf.formats.unix_timestamp_to_datetime(int(time.time()))
@@ -245,6 +253,7 @@ class TestPrimary(unittest.TestCase):
           my_secondaries=[])
 
 
+    print(os.path.join(TEST_DATA_DIR, client_directory_name))
 
     # Try creating a Primary, expecting it to work.
     # Initializes a Primary ECU, making a client directory and copying the root
@@ -398,20 +407,40 @@ class TestPrimary(unittest.TestCase):
 
     # Try a valid time attestation first, signed by an expected timeserver key,
     # with an expected nonce (previously "received" from a Secondary)
-    time_attestation = {
+    original_time_attestation = time_attestation = {
         'signed': {'nonces': [nonce], 'time': '2016-11-02T21:06:05Z'},
         'signatures': [{
           'method': 'ed25519',
           'sig': 'aabffcebaa57f1d6397bdc5647764261fd23516d2996446c3c40b3f30efb2a4a8d80cd2c21a453e78bf99dafb9d0f5e56c4e072db365499fa5f2f304afec100e',
           'keyid': '79c796d7e87389d1ebad04edce49faef611d139ee41ea9fb1931732afbfaac2e'}]}
 
+    if tuf.conf.METADATA_FORMAT == 'der':
+      # Convert this time attestation to the expected ASN.1/DER format.
+      time_attestation = asn1_codec.convert_signed_metadata_to_der(
+          original_time_attestation, private_key=key_timeserver_pri, resign=True)
+
     primary_instance.validate_time_attestation(time_attestation)
 
-    # Try again with part of the signature replaced.
-    time_attestation__badsig = copy.deepcopy(time_attestation)
-    time_attestation__badsig['signatures'][0]['sig'] = '987654321' + \
-        time_attestation__badsig['signatures'][0]['sig'][9:]
 
+    # Prepare to try again with a bad signature.
+    # This test we will conduct differently depending on TUF's current format:
+    if tuf.conf.METADATA_FORMAT == 'der':
+      # Fail to re-sign the DER, so that the signature is over JSON instead,
+      # which results in a bad signature.
+      time_attestation__badsig = asn1_codec.convert_signed_metadata_to_der(
+          original_time_attestation, resign=False)
+
+    else: # 'json' format
+      # Rewrite the first 9 digits of the signature ('sig') to something
+      # invalid.
+      time_attestation__badsig = {
+          'signed': {'nonces': [nonce], 'time': '2016-11-02T21:06:05Z'},
+          'signatures': [{
+            'method': 'ed25519',
+            'sig': '987654321a57f1d6397bdc5647764261fd23516d2996446c3c40b3f30efb2a4a8d80cd2c21a453e78bf99dafb9d0f5e56c4e072db365499fa5f2f304afec100e',
+            'keyid': '79c796d7e87389d1ebad04edce49faef611d139ee41ea9fb1931732afbfaac2e'}]}
+
+    # Now actually perform the bad signature test.
     with self.assertRaises(tuf.BadSignatureError):
       primary_instance.validate_time_attestation(time_attestation__badsig)
 
@@ -427,6 +456,13 @@ class TestPrimary(unittest.TestCase):
             'sig': '4d01df35ca829fd7ead1408c250950c444db8ac51fa929a7f0288578fbf81016f0e81ed35789689481aee6b7af28ab311306397ef38572732854fb6cf2072604',
             'keyid': '79c796d7e87389d1ebad04edce49faef611d139ee41ea9fb1931732afbfaac2e'}]}
 
+    if tuf.conf.METADATA_FORMAT == 'der':
+      # Convert this time attestation to the expected ASN.1/DER format.
+      time_attestation__wrongnonce = asn1_codec.convert_signed_metadata_to_der(
+          time_attestation__wrongnonce,
+          private_key=key_timeserver_pri, resign=True)
+
+      import ipdb; ipdb.set_trace()
       primary_instance.validate_time_attestation(time_attestation__wrongnonce)
 
 

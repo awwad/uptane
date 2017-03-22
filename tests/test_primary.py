@@ -496,8 +496,9 @@ class TestPrimary(unittest.TestCase):
     # Check the signature on the vehicle manifest.
     self.assertTrue(tuf.keys.verify_signature(
         primary_ecu_key,
-        vehicle_manifest['signatures'][0], # TODO: Fix assumptions.
-        vehicle_manifest['signed']))
+        vehicle_manifest['signatures'][0], # TODO: Deal with 1-sig assumption?
+        vehicle_manifest['signed'],
+        force_treat_as_pydict=True)) # Tell keys this isn't DER despite config
 
 
 

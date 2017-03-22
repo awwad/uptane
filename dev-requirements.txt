@@ -4,6 +4,6 @@ cryptography==1.7.2
 pynacl==1.0.1
 pyasn1==0.2.2
 pycrypto==2.6.1
---editable git://github.com/awwad/tuf.git@pinning_w_ber#egg=tuf
+--editable git://github.com/awwad/tuf.git#egg=tuf
 --editable .
 tox==2.6.0

@@ -445,16 +445,15 @@ class TestPrimary(unittest.TestCase):
       primary_instance.validate_time_attestation(time_attestation__badsig)
 
 
-    with self.assertRaises(uptane.BadTimeAttestation):
-      self.assertNotEqual(500, nonce, msg='Programming error: bad and good '
-          'test nonces are equal.')
+    self.assertNotEqual(500, nonce, msg='Programming error: bad and good '
+        'test nonces are equal.')
 
-      time_attestation__wrongnonce = {
-          'signed': {'nonces': [500], 'time': '2016-11-02T21:15:00Z'},
-          'signatures': [{
-            'method': 'ed25519',
-            'sig': '4d01df35ca829fd7ead1408c250950c444db8ac51fa929a7f0288578fbf81016f0e81ed35789689481aee6b7af28ab311306397ef38572732854fb6cf2072604',
-            'keyid': '79c796d7e87389d1ebad04edce49faef611d139ee41ea9fb1931732afbfaac2e'}]}
+    time_attestation__wrongnonce = {
+        'signed': {'nonces': [500], 'time': '2016-11-02T21:15:00Z'},
+        'signatures': [{
+          'method': 'ed25519',
+          'sig': '4d01df35ca829fd7ead1408c250950c444db8ac51fa929a7f0288578fbf81016f0e81ed35789689481aee6b7af28ab311306397ef38572732854fb6cf2072604',
+          'keyid': '79c796d7e87389d1ebad04edce49faef611d139ee41ea9fb1931732afbfaac2e'}]}
 
     if tuf.conf.METADATA_FORMAT == 'der':
       # Convert this time attestation to the expected ASN.1/DER format.
@@ -462,7 +461,7 @@ class TestPrimary(unittest.TestCase):
           time_attestation__wrongnonce,
           private_key=key_timeserver_pri, resign=True)
 
-      import ipdb; ipdb.set_trace()
+    with self.assertRaises(uptane.BadTimeAttestation):
       primary_instance.validate_time_attestation(time_attestation__wrongnonce)
 
 

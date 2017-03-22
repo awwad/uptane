@@ -18,6 +18,8 @@ import uptane.clients.primary as primary
 import uptane.common
 import uptane.encoding.asn1_codec as asn1_codec
 
+from six.moves.urllib.error import URLError
+
 import tuf
 import tuf.formats
 import tuf.client.updater # to test one of the fields in the Primary object
@@ -508,14 +510,32 @@ class TestPrimary(unittest.TestCase):
 
     # Check that in the fresh temp directory for this test Primary client,
     # there aren't any metadata files except root.json yet.
-    self.assertEqual(['root.json'], os.listdir(TEST_DIRECTOR_METADATA_DIR))
-    self.assertEqual(['root.json'], os.listdir(TEST_OEM_METADATA_DIR))
+    self.assertEqual(
+        ['root.der', 'root.json'],
+        sorted(os.listdir(TEST_DIRECTOR_METADATA_DIR)))
+    self.assertEqual(
+        ['root.der', 'root.json'],
+        sorted(os.listdir(TEST_OEM_METADATA_DIR)))
 
-    primary_instance.refresh_toplevel_metadata_from_repositories()
+    try:
+      primary_instance.refresh_toplevel_metadata_from_repositories()
+    except URLError as e:
+      print('Unable to open connection to repositories. (This test requires '
+          'that the demo Director and demo Image Repository be running.) '
+          'Skipping test.')
+    else:
+      # Check the resulting top-level metadata files in the client directory.
+      # Expect root, snapshot, targets, and timestamp for both director and
+      # image repo.
+      for repo in ['director', 'mainrepo']:
+        self.assertEqual(
+            ['root.' + tuf.conf.METADATA_FORMAT,
+            'snapshot.' + tuf.conf.METADATA_FORMAT,
+            'targets.' + tuf.conf.METADATA_FORMAT,
+            'timestamp.' + tuf.conf.METADATA_FORMAT],
+            sorted(os.listdir(os.path.join(TEMP_CLIENT_DIR, 'metadata', repo,
+            'current'))))
 
-    # TODO: Check the resulting top-level metadata files in the client
-    # directory.
-    #self.assert()
 
 
 

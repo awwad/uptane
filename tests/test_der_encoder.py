@@ -98,7 +98,7 @@ class TestASN1(unittest.TestCase):
     # decoding.
     (decoded, remainder) = p_der_decoder.decode(
         t_der, asn1_spec.Token())
-    self.assertFalse(remainder) # '' != b''; thus for Python3, don't test it
+    self.assertFalse(remainder)
     self.assertEqual(t, decoded)
 
 
@@ -336,7 +336,7 @@ class TestASN1(unittest.TestCase):
     # the result of encoding, resigning, and decoding.
     der_signed = asn1_codec.convert_signed_metadata_to_der(
         signable_attestation, only_signed=True)
-    der_signed_hash = hashlib.sha256(der_signed).hexdigest()
+    der_signed_hash = hashlib.sha256(der_signed).digest()
 
 
     # Now perform the actual conversion to ASN.1/DER of the full
@@ -356,8 +356,11 @@ class TestASN1(unittest.TestCase):
 
     # Check the extracted signature against the hash we produced earlier.
     self.assertTrue(tuf.keys.verify_signature(
-        timeserver_key_pub, pydict_again['signatures'][0],
-        der_signed_hash))
+        timeserver_key_pub,
+        pydict_again['signatures'][0],
+        der_signed_hash,
+        force_non_json=True,
+        is_binary_data=True))
 
 
 

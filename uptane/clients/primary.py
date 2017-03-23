@@ -962,18 +962,18 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     # made over a DER encoding of ASN.1 or directly over Uptane's standard
     # Python dictionary.
     if tuf.conf.METADATA_FORMAT != 'der':
-      data_to_validate = timeserver_attestation['signed']
-
+      valid = tuf.keys.verify_signature(
+          self.timeserver_public_key,
+          timeserver_attestation['signatures'][0],
+          timeserver_attestation['signed'])
     else:
       der_signed = asn1_codec.convert_signed_metadata_to_der(
         timeserver_attestation, only_signed=True)
-      data_to_validate = hashlib.sha256(der_signed).hexdigest()
-
-
-    valid = tuf.keys.verify_signature(
-        self.timeserver_public_key,
-        timeserver_attestation['signatures'][0],
-        data_to_validate)
+      valid = tuf.keys.verify_signature(
+          self.timeserver_public_key,
+          timeserver_attestation['signatures'][0],
+          hashlib.sha256(der_signed).digest(),
+          is_binary_data=True)
 
     if not valid:
       raise tuf.BadSignatureError('Timeserver returned an invalid signature. '

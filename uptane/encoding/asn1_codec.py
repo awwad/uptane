@@ -319,12 +319,16 @@ def convert_signed_metadata_to_der(
     # For the time being, I do this so that it always uses a hash even for ed25519
     # and also so that the canonicalization that is currently called by
     # create_signature() doesn't choke on the DER I want to sign.
-    hash_of_der = hashlib.sha256(der_signed).hexdigest()
+    hash_of_der = hashlib.sha256(der_signed).digest()
 
     # Now sign the metadata. (This signs a cryptographic hash of the metadata.)
     # The returned value is a basic Python dict writable into JSON.
     # This is a signature over the hash of the DER encoding.
-    pydict_signatures = [tuf.keys.create_signature(private_key, hash_of_der)]
+    # Tell keys.create_signature that the data we're providing is not JSON so
+    # that it doesn't try to canonicalize it (and wrap the hash in double
+    # quotes).
+    pydict_signatures = [tuf.keys.create_signature(
+        private_key, hash_of_der, force_non_json=True, is_binary_data=True)]
 
   else:
     pydict_signatures = signed_metadata['signatures']

@@ -151,11 +151,13 @@ def test_demo_timeserver():
       asn1_codec.convert_signed_der_to_dersigned_json(xb_der_signed_time.data)]:
     der_signed = asn1_codec.convert_signed_metadata_to_der(
           pydict_again, only_signed=True)
-    der_signed_hash = hashlib.sha256(der_signed).hexdigest()
+    der_signed_hash = hashlib.sha256(der_signed).digest()
     assert tuf.keys.verify_signature(
         timeserver_key_pub,
         pydict_again['signatures'][0],
-        der_signed_hash
+        der_signed_hash,
+        is_binary_data=True,
+        force_non_json=True
         ), 'Demo Timeserver self-test fail: unable to verify signature over DER'
 
 

@@ -154,17 +154,7 @@ class TestASN1(unittest.TestCase):
 
     der_attestation = p_der_encoder.encode(asn1_attestation)
 
-    # der_attestation will be a byte string.
-    # In Python3, the type is 'bytes'
-    # In Python2, the type will be 'str'
-    if sys.version_info.major < 3:
-      self.assertIsInstance(der_attestation, str)
-      # While in Python2 type() won't distinguish that it's a byte string here,
-      # we'll see that the characters are represented as e.g. \x0F
-      self.assertTrue(repr(der_attestation).startswith("'\\x"))
-    else:
-      # In Python3, this suffices.
-      self.assertIsInstance(der_attestation, bytes)
+    self.assertTrue(is_valid_nonempty_der(der_attestation))
 
     # Decoding requires that we provide an object with typing that precisely
     # matches what we expect to decode. This is such an object.
@@ -229,18 +219,7 @@ class TestASN1(unittest.TestCase):
     der_attestation = asn1_codec.convert_signed_metadata_to_der(
         signable_attestation)
 
-    # der_attestation will be a byte string.
-    # In Python3, the type is 'bytes'
-    # In Python2, the type will be 'str'
-    if sys.version_info.major < 3:
-      self.assertIsInstance(der_attestation, str)
-      # # While in Python2 type() won't distinguish that it's a byte string here,
-      # # we'll see that the characters are represented as e.g. \x0F
-      # self.assertTrue(repr(der_attestation).startswith("'\\x")) # This breaks....
-    else:
-      # In Python3, this suffices.
-      self.assertIsInstance(der_attestation, bytes)
-
+    self.assertTrue(is_valid_nonempty_der(der_attestation))
 
     attestation_again = asn1_codec.convert_signed_der_to_dersigned_json(
         der_attestation)
@@ -305,17 +284,7 @@ class TestASN1(unittest.TestCase):
 
     der_attestation = p_der_encoder.encode(asn_signable)
 
-    # der_attestation will be a byte string.
-    # In Python3, the type is 'bytes'
-    # In Python2, the type will be 'str'
-    if sys.version_info.major < 3:
-      self.assertIsInstance(der_attestation, str)
-      # While in Python2 type() won't distinguish that it's a byte string here,
-      # we'll see that the characters are represented as e.g. \x0F
-      #self.assertTrue(repr(der_attestation).startswith("'\\x"))
-    else:
-      # In Python3, this suffices.
-      self.assertIsInstance(der_attestation, bytes)
+    self.assertTrue(is_valid_nonempty_der(der_attestation))
 
     # Decoding requires that we provide an object with typing that precisely
     # matches what we expect to decode. This is such an object.
@@ -389,6 +358,32 @@ class TestASN1(unittest.TestCase):
     self.assertTrue(tuf.keys.verify_signature(
         timeserver_key_pub, pydict_again['signatures'][0],
         der_signed_hash))
+
+
+
+
+
+def is_valid_nonempty_der(der_string):
+  """
+  Currently a hacky test to see if the result is a non-empty byte string.
+
+  This CAN raise false failures, stochastically, in Python2. In Python2,
+  where bytes and str are the same type, we check to see if, anywhere in the
+  string, there is a character requiring a \\x escape, as would almost
+  certainly happen in an adequately long DER string of bytes. As a result,
+  short or very regular strings may raise false failures in Python2.
+
+  The best way to really do this test is to decode the DER and see if
+  believable ASN.1 has come out of it.
+  """
+  if not der_string:
+    return False
+  elif sys.version_info.major < 3:
+    if '\\x' not in repr(der_string): # TODO: <~> TEMPORARY FOR DEBUG. DELETE
+      print(repr(der_string)) # TODO: <~> TEMPORARY FOR DEBUG. DELETE
+    return '\\x' in repr(der_string)
+  else:
+    return isinstance(der_string, bytes)
 
 
 

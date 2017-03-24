@@ -9,7 +9,7 @@ Please note that extensive documentation on design can be found in the following
 
 # Instructions on use of the Uptane demonstration code
 ## Installation
-(As usual, virtual environments are recommended for development and testing, but not necessary. If you use a virtual environment, use python2: virtualenv -p python2 <name>)
+Uptane fully supports Python2 and Python3. As usual for Python, [virtual environments](https://python-docs.readthedocs.io/en/latest/dev/virtualenvs.html) are recommended for development and testing, but not necessary.
 
 Some development libraries are necessary to install some of Uptane's dependencies. If your system uses apt, the command to install them will be:
 ```shell

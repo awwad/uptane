@@ -20,16 +20,20 @@ from pyasn1.type import univ, tag
 
 from uptane.encoding.asn1_definitions import *
 
+import calendar
+from datetime import datetime
+
+
 def get_asn_signed(json_signed):
   signed = ECUVersionManifestSigned()\
            .subtype(implicitTag=tag.Tag(tag.tagClassContext,
                                         tag.tagFormatConstructed, 0))
 
   signed['ecuIdentifier'] = json_signed['ecu_serial']
-  signed['previousTime'] = \
-            metadata.iso8601_to_epoch(json_signed['previous_timeserver_time'])
-  signed['currentTime'] = \
-                    metadata.iso8601_to_epoch(json_signed['timeserver_time'])
+  signed['previousTime'] = calendar.timegm(datetime.strptime(
+      json_signed['previous_timeserver_time'], "%Y-%m-%dT%H:%M:%SZ").timetuple())
+  signed['currentTime'] = calendar.timegm(datetime.strptime(
+      json_signed['timeserver_time'], "%Y-%m-%dT%H:%M:%SZ").timetuple())
 
   # Optional bit.
   if 'attacks_detected' in json_signed:
@@ -73,9 +77,10 @@ def get_asn_signed(json_signed):
 def get_json_signed(asn_metadata):
   asn_signed = asn_metadata['signed']
 
-  timeserver_time = metadata.epoch_to_iso8601(asn_signed['currentTime'])
-  previous_timeserver_time = \
-          metadata.epoch_to_iso8601(asn_signed['previousTime'])
+  timeserver_time = datetime.utcfromtimestamp(
+      asn_signed['currentTime']).isoformat() + 'Z'
+  previous_timeserver_time = datetime.utcfromtimestamp(
+      asn_signed['previousTime']).isoformat() + 'Z'
   ecu_serial = str(asn_signed['ecuIdentifier'])
 
   target = asn_signed['installedImage']

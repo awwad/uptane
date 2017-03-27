@@ -55,7 +55,7 @@ def get_asn_signed(json_signed):
 
   for hash_function, hash_value in filemeta['hashes'].items():
     hash = Hash()
-    hash['function'] = int(HashFunction(hash_function.encode('ascii')))
+    hash['function'] = int(HashFunction(hash_function))
     digest = BinaryData()\
              .subtype(explicitTag=tag.Tag(tag.tagClassContext,
                                           tag.tagFormatConstructed, 1))

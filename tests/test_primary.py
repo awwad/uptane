@@ -338,7 +338,8 @@ class TestPrimary(unittest.TestCase):
       primary_instance.register_ecu_manifest(
           vin='13105941', # unexpected VIN
           ecu_serial='ecu11111', nonce=nonce,
-          signed_ecu_manifest=sample_ecu_manifest)
+          signed_ecu_manifest=sample_ecu_manifest,
+          force_pydict=True)
 
     # Try changing the Secondary's ECU Serial so that the ECU Serial argument
     # doesn't match the ECU Serial in the manifest.
@@ -347,7 +348,8 @@ class TestPrimary(unittest.TestCase):
           vin=vin, # unexpected VIN
           ecu_serial='e689681291f', # unexpected ECU Serial
           nonce=nonce,
-          signed_ecu_manifest=sample_ecu_manifest)
+          signed_ecu_manifest=sample_ecu_manifest,
+          force_pydict=True)
 
     # Try using an unknown ECU Serial.
     with self.assertRaises(uptane.UnknownECU):
@@ -357,7 +359,8 @@ class TestPrimary(unittest.TestCase):
           vin=vin, # unexpected VIN
           ecu_serial='12345678', # unexpected ECU Serial
           nonce=nonce,
-          signed_ecu_manifest=sample_ecu_manifest2)
+          signed_ecu_manifest=sample_ecu_manifest2,
+          force_pydict=True)
 
 
     # TODO: Other possible tests here.
@@ -365,7 +368,8 @@ class TestPrimary(unittest.TestCase):
     # Do it correctly and expect it to work.
     primary_instance.register_ecu_manifest(
         vin=vin, ecu_serial='ecu11111', nonce=nonce,
-        signed_ecu_manifest=sample_ecu_manifest)
+        signed_ecu_manifest=sample_ecu_manifest,
+        force_pydict=True)
 
     # Make sure the provided manifest is now in the Primary's ecu manifests
     # dictionary.

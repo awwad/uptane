@@ -848,7 +848,8 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
 
 
-  def register_ecu_manifest(self, vin, ecu_serial, nonce, signed_ecu_manifest):
+  def register_ecu_manifest(
+      self, vin, ecu_serial, nonce, signed_ecu_manifest, force_pydict=False):
     """
     Called by Secondaries (in the demo, this is via an XMLRPC interface, or
     through another interface and passed through the XMLRPC interface).
@@ -865,12 +866,13 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     """
     # check arg format and that serial is registered
     self._check_ecu_serial(ecu_serial)
+    tuf.formats.BOOLEAN_SCHEMA.check_match(force_pydict)
 
     if vin != self.vin:
       raise uptane.Error('Received an ECU Manifest supposedly hailing from a '
           'different vehicle....')
 
-    if tuf.conf.METADATA_FORMAT == 'der':
+    if tuf.conf.METADATA_FORMAT == 'der' and not force_pydict:
       # If we're working with DER, convert it into something comprehensible.
       signed_ecu_manifest_pydict = signed_ecu_manifest
       signed_ecu_manifest_pydict = \

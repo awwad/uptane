@@ -11,11 +11,13 @@ from __future__ import unicode_literals
 
 import tuf.formats
 import tuf.keys
+import tuf.repository_tool as repo_tool
 import uptane
 import uptane.formats
 
 import uptane.encoding.asn1_codec as asn1_codec
 import uptane.encoding.timeserver_asn1_coder as timeserver_asn1_coder
+import uptane.encoding.ecu_manifest_asn1_coder as ecu_manifest_asn1_coder
 import uptane.encoding.asn1_definitions as asn1_spec
 import pyasn1.codec.der.encoder as p_der_encoder
 import pyasn1.codec.der.decoder as p_der_decoder
@@ -24,7 +26,7 @@ from pyasn1.type import tag, univ
 import sys # to test Python version 2 vs 3, for byte string behavior
 import hashlib
 import unittest
-import os.path
+import os
 import time
 import copy
 import shutil
@@ -34,7 +36,7 @@ import demo # for generate_key, import_public_key, import_private_key
 
 TEST_DATA_DIR = os.path.join(uptane.WORKING_DIR, 'tests', 'test_data')
 TEMP_TEST_DIR = os.path.join(TEST_DATA_DIR, 'temp_test_encoding')
-
+test_signing_key = None
 
 
 def destroy_temp_dir():
@@ -58,6 +60,12 @@ def setUpModule():
 
   destroy_temp_dir()
 
+  private_key_fname = os.path.join(
+      os.getcwd(), 'demo', 'keys', 'director')
+
+  global test_signing_key
+  test_signing_key = repo_tool.import_ed25519_privatekey_from_file(
+      private_key_fname, 'pw')
 
 
 
@@ -366,6 +374,120 @@ class TestASN1(unittest.TestCase):
 
 
 
+  def test_07_encode_and_validate_resigned_time_attestation_again(self):
+    """
+    This is a redundant test, repeating much of test 06 above with a slightly
+    different method.
+    """
+    signable_attestation = {
+        str('signatures'): [
+        {str('keyid'):
+        str('79c796d7e87389d1ebad04edce49faef611d139ee41ea9fb1931732afbfaac2e'),
+        str('sig'):
+        str('a5ea6a3b685ad64f96c8c12145beda4efafddfac60bcdb45def35fe43c7d1150a182a1b50a1463bfffb0ef8d30b6203aa8b5365b0b7176312e1e9d7e355e550e'),
+        str('method'): str('ed25519')}],
+        str('signed'): {str('nonces'): [1],
+        str('time'): str('2017-03-08T17:09:56Z')}}
+    partial_der_conversion_tester(
+        signable_attestation, 'time_attestation', self)
+
+
+
+
+
+
+
+  def test_10_ecu_manifest_asn1_conversion(self):
+
+    # First try the low-level asn1 conversion.
+    asn_signed = ecu_manifest_asn1_coder.get_asn_signed(
+        SAMPLE_ECU_MANIFEST_SIGNABLE['signed'])#ecu_manifest_signed_component)
+
+    # Convert back to a basic Python dictionary.
+    json_signed = ecu_manifest_asn1_coder.get_json_signed({'signed': asn_signed})
+
+    # Make sure that the result of conversion to ASN.1 and back is the same
+    # as the original.
+    self.assertEqual(json_signed, SAMPLE_ECU_MANIFEST_SIGNABLE['signed'])
+
+
+
+
+
+  def test_11_ecu_manifest_der_conversion(self):
+
+    partial_der_conversion_tester(
+        SAMPLE_ECU_MANIFEST_SIGNABLE, 'ecu_manifest', self)
+
+
+    # Redundant tests. The above call should cover all of the following tests.
+    der_ecu_manifest = asn1_codec.convert_signed_metadata_to_der(
+        SAMPLE_ECU_MANIFEST_SIGNABLE, only_signed=True, datatype='ecu_manifest')
+
+    der_ecu_manifest = asn1_codec.convert_signed_metadata_to_der(
+        SAMPLE_ECU_MANIFEST_SIGNABLE, datatype='ecu_manifest')
+
+    pydict_ecu_manifest = asn1_codec.convert_signed_der_to_dersigned_json(
+        der_ecu_manifest, datatype='ecu_manifest')
+
+    self.assertEqual(
+        pydict_ecu_manifest, SAMPLE_ECU_MANIFEST_SIGNABLE)
+
+
+
+
+
+def partial_der_conversion_tester(data_signable_pydict, datatype, cls): # Clunky.
+  """
+  Tests each of the different kinds of conversions into ASN.1/DER, and tests
+  converting back. In one type of conversion, compares to make sure the data
+  has not changed.
+
+  This function takes as a third parameter the unittest.TestCase object whose
+  functions (assertTrue etc) it can use. This is awkward and inappropriate. :P
+  Find a different means of providing modularity instead of this one.
+  (Can't just have this method in the class above because it would be run as
+  a test. Could have default parameters and do that, but that's clunky, too.)
+  Does unittest allow/test private functions in UnitTest classes?
+  """
+
+  # Test type 1: only-signed
+  # Convert and return only the 'signed' portion, the metadata payload itself,
+  # without including any signatures.
+  cls.assertTrue(is_valid_nonempty_der(
+      asn1_codec.convert_signed_metadata_to_der(
+      data_signable_pydict, only_signed=True, datatype=datatype)))
+
+
+  # Test type 2: full conversion
+  # Convert the full signable ('signed' and 'signatures'), maintaining the
+  # existing signature in a new format and encoding.
+  data_signable_der = asn1_codec.convert_signed_metadata_to_der(
+      data_signable_pydict, datatype=datatype)
+  cls.assertTrue(is_valid_nonempty_der(data_signable_der))
+
+
+  # Test type 3: full conversion with re-signing
+  # Convert the full signable ('signed' and 'signatures'), but discarding the
+  # original signatures and re-signing over, instead, the hash of the converted,
+  # ASN.1/DER 'signed' element.
+  cls.assertTrue(is_valid_nonempty_der(
+      asn1_codec.convert_signed_metadata_to_der(
+      data_signable_pydict, resign=True,
+      private_key=test_signing_key, datatype=datatype)))
+
+  data_signable_reverted = asn1_codec.convert_signed_der_to_dersigned_json(
+      data_signable_der, datatype=datatype)
+
+  cls.assertEqual(data_signable_pydict, data_signable_reverted)
+
+
+  # TODO: <~> Add signature verification to this test.
+
+
+
+
+
 def is_valid_nonempty_der(der_string):
   """
   Currently a hacky test to see if the result is a non-empty byte string.
@@ -390,6 +512,25 @@ def is_valid_nonempty_der(der_string):
 
 
 
+
+
+SAMPLE_ECU_MANIFEST_SIGNABLE = {
+  'signed': {
+    'timeserver_time': '2017-03-27T16:19:17Z',
+    'previous_timeserver_time': '2017-03-27T16:19:17Z',
+    'ecu_serial': '22222',
+    'attacks_detected': '',
+    'installed_image': {
+      'filepath': '/secondary_firmware.txt',
+      'fileinfo': {
+        'length': 37,
+        'hashes': {
+          'sha256': '6b9f987226610bfed08b824c93bf8b2f59521fce9a2adef80c495f363c1c9c44',
+          'sha512': '706c283972c5ae69864b199e1cdd9b4b8babc14f5a454d0fd4d3b35396a04ca0b40af731671b74020a738b5108a78deb032332c36d6ae9f31fae2f8a70f7e1ce'}}}},
+  'signatures': [{
+    'sig': '42e6f4b398dbad0404cca847786a926972b54ca2ae71c7334f3d87fc62a10d08e01f7b5aa481cd3add61ef36f2037a9f68beca9f6ea26d2f9edc6f4ba0ba2a06',
+    'method': 'ed25519',
+    'keyid': '49309f114b857e4b29bfbff1c1c75df59f154fbc45539b2eb30c8a867843b2cb'}]}
 
 
 # Run unit tests.

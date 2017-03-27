@@ -36,7 +36,7 @@ def get_asn_signed(json_signed):
       json_signed['timeserver_time'], "%Y-%m-%dT%H:%M:%SZ").timetuple())
 
   # Optional bit.
-  if 'attacks_detected' in json_signed:
+  if 'attacks_detected' in json_signed and json_signed['attacks_detected']:
     attacks_detected = json_signed['attacks_detected']
     assert len(attacks_detected) > 0,\
            'attacks_detected cannot be an empty string!'
@@ -113,12 +113,12 @@ def get_json_signed(asn_metadata):
     'ecu_serial': ecu_serial,
     'installed_image': installed_image,
     'previous_timeserver_time': previous_timeserver_time,
-    'timeserver_time': timeserver_time
+    'timeserver_time': timeserver_time,
+    'attacks_detected': ''
   }
 
   # Optional bit.
-  attacks_detected = asn_signed['securityAttack']
-  if attacks_detected:
-    json_signed['attacks_detected'] = str(attacks_detected)
+  if asn_signed['securityAttack']:
+    json_signed['attacks_detected'] = str(asn_signed['securityAttack'])
 
   return json_signed

@@ -870,12 +870,23 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
       raise uptane.Error('Received an ECU Manifest supposedly hailing from a '
           'different vehicle....')
 
-    if ecu_serial != signed_ecu_manifest['signed']['ecu_serial']:
+    if tuf.conf.METADATA_FORMAT == 'der':
+      # If we're working with DER, convert it into something comprehensible.
+      signed_ecu_manifest_pydict = signed_ecu_manifest
+      signed_ecu_manifest_pydict = \
+          asn1_codec.convert_signed_der_to_dersigned_json(
+          signed_ecu_manifest, datatype='ecu_manifest')
+    else:
+      # If we're working with standard Python dictionaries, no conversion is
+      # necessary.
+      signed_ecu_manifest_pydict = signed_ecu_manifest
+
+    if ecu_serial != signed_ecu_manifest_pydict['signed']['ecu_serial']:
       # TODO: Choose an exception class.
       raise uptane.Spoofing('Received a spoofed or mistaken manifest: supposed '
           'origin ECU (' + repr(ecu_serial) + ') is not the same as what is '
           'signed in the manifest itself (' +
-          repr(signed_ecu_manifest['signed']['ecu_serial']) + ').')
+          repr(signed_ecu_manifest_pydict['signed']['ecu_serial']) + ').')
 
     # If we haven't errored out above, then the format is correct, so save
     # the manifest to the Primary's dictionary of manifests.
@@ -894,10 +905,10 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
         repr(ecu_serial) + ', along with nonce ' + repr(nonce) + ENDCOLORS)
 
     # Alert if there's been a detected attack.
-    if signed_ecu_manifest['signed']['attacks_detected']:
+    if signed_ecu_manifest_pydict['signed']['attacks_detected']:
       log.warning(YELLOW + ' Attacks have been reported by the Secondary! \n '
           'Attacks listed by ECU ' + repr(ecu_serial) + ':\n ' +
-          signed_ecu_manifest['signed']['attacks_detected'] + ENDCOLORS)
+          signed_ecu_manifest_pydict['signed']['attacks_detected'] + ENDCOLORS)
 
 
 

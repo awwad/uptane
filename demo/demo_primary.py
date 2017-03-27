@@ -763,6 +763,22 @@ class RequestHandler(xmlrpc_server.SimpleXMLRPCRequestHandler):
 
 
 
+def register_ecu_manifest_wrapper(vin, ecu_serial, nonce, signed_ecu_manifest):
+  """
+  This function is a wrapper for primary.Primary::register_ecu_manifest().
+
+  This wrapper is now necessary because of ASN.1/DER combined with XMLRPC:
+  XMLRPC has to wrap binary data in a Binary() object, and the raw data has to
+  be extracted before it is passed to the underlying primary.py (in the
+  reference implementation), which doesn't know anything about XMLRPC.
+  """
+  primary_ecu.register_ecu_manifest(
+      vin, ecu_serial, nonce, signed_ecu_manifest.data)
+
+
+
+
+
 def listen():
   """
   Listens on an available port from list PRIMARY_SERVER_AVAILABLE_PORTS, for
@@ -808,7 +824,14 @@ def listen():
   # demonstration.
 
   server.register_function(
-      primary_ecu.register_ecu_manifest, 'submit_ecu_manifest')
+      # This wrapper is now necessary because of ASN.1/DER combined with XMLRPC:
+      # XMLRPC has to wrap binary data in a Binary() object, and the raw data
+      # has to be extracted before it is passed to the underlying primary.py
+      # (in the reference implementation), which doesn't know anything about
+      # XMLRPC.
+      register_ecu_manifest_wrapper, 'submit_ecu_manifest')
+      # The previous line used to be this:
+      #primary_ecu.register_ecu_manifest, 'submit_ecu_manifest')
 
   # Please note that registrations here are NOT secure, and intended for
   # convenience of the demonstration. An OEM will have their own mechanisms for

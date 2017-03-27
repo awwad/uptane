@@ -229,6 +229,15 @@ class Secondary(object):
     uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
         signable_ecu_manifest)
 
+    if tuf.conf.METADATA_FORMAT == 'der':
+      der_signed_ecu_manifest = asn1_codec.convert_signed_metadata_to_der(
+          signable_ecu_manifest, resign=True,
+          private_key=self.ecu_key, datatype='ecu_manifest')
+      # TODO: Consider verification of output here.
+      return der_signed_ecu_manifest
+
+    # Else use standard Python dictionary format specified in uptane.formats.
+
     # Now sign with that key.
     signed_ecu_manifest = uptane.common.sign_signable(
         signable_ecu_manifest, [self.ecu_key])

@@ -212,10 +212,18 @@ def submit_ecu_manifest_to_primary(signed_ecu_manifest=None):
     signed_ecu_manifest = most_recent_signed_ecu_manifest
 
 
-  uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
-      signed_ecu_manifest)
-  # TODO: <~> Be sure to update the previous line to indicate an ASN.1
-  # version of the ecu_manifest after encoders have been implemented.
+  if tuf.conf.METADATA_FORMAT == 'der':
+    # TODO: Consider validation of DER manifests as well here. (Harder)
+
+    # If we're using ASN.1/DER data, then we have to transmit this slightly
+    # differently via XMLRPC, wrapped in a Binary object.
+    signed_ecu_manifest = xmlrpc_client.Binary(signed_ecu_manifest)
+
+  else:
+    # Otherwise, we're working with standard Python dictionary data as
+    # specified in uptane.formats. Validate and keep as-is.
+    uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
+        signed_ecu_manifest)
 
 
   server = xmlrpc_client.ServerProxy(

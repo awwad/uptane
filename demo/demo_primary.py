@@ -374,11 +374,16 @@ def submit_vehicle_manifest_to_director(signed_vehicle_manifest=None):
   if signed_vehicle_manifest is None:
     signed_vehicle_manifest = most_recent_signed_vehicle_manifest
 
+  if tuf.conf.METADATA_FORMAT == 'der':
+    # If we're working with DER ECU Manifests, check that the manifest to send
+    # is a byte array, and encapsulate it in a Binary() object for XMLRPC
+    # transmission.
+    uptane.formats.DER_DATA_SCHEMA.check_match(signed_vehicle_manifest)
+    signed_vehicle_manifest = xmlrpc_client.Binary(signed_vehicle_manifest)
 
-  uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
-      signed_vehicle_manifest)
-  # TODO: <~> Be sure to update the previous line to indicate an ASN.1
-  # version of the ecu_manifest after encoders have been implemented.
+  else:
+    uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
+        signed_vehicle_manifest)
 
 
   server = xmlrpc_client.ServerProxy(

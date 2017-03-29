@@ -34,6 +34,7 @@ import uptane
 import uptane.formats
 import uptane.common
 import uptane.services.inventorydb as inventory
+import uptane.encoding.asn1_codec as asn1_codec
 import tuf
 import tuf.formats
 import tuf.repository_tool as rt
@@ -41,6 +42,7 @@ import tuf.repository_tool as rt
 from uptane import GREEN, RED, YELLOW, ENDCOLORS
 
 import os
+import hashlib
 
 log = uptane.logging.getLogger('director')
 log.addHandler(uptane.file_handler)
@@ -225,7 +227,12 @@ class Director:
                           uptane.formats.ECU_SERIAL_SCHEMA
       manifest: the vehicle manifest, as specified in the implementation
                 specification and compliant with
-                uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA
+                uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA
+                If, the metadata format is set to ASN.1/DER, then this will
+                instead be compliant with uptane.formats.DER_DATA_SCHEMA,
+                and will be decoded and converted back to be compliant with
+                uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA
+
 
     Exceptions:
 
@@ -253,6 +260,13 @@ class Director:
     """
     uptane.formats.VIN_SCHEMA.check_match(vin)
     uptane.formats.ECU_SERIAL_SCHEMA.check_match(primary_ecu_serial)
+
+    if tuf.conf.METADATA_FORMAT == 'der':
+      # Check format and convert back to expected vehicle manifest format.
+      uptane.formats.DER_DATA_SCHEMA.check_match(signed_vehicle_manifest)
+      signed_vehicle_manifest = asn1_codec.convert_signed_der_to_dersigned_json(
+          signed_vehicle_manifest, datatype='vehicle_manifest')
+
     uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
         signed_vehicle_manifest)
 
@@ -345,11 +359,27 @@ class Director:
 
     ecu_public_key = inventory.ecu_public_keys[primary_ecu_serial]
 
+    if tuf.conf.METADATA_FORMAT == 'der':
+      # To check the signature, we have to make sure to encode the data as it
+      # was when the signature was made. If we're using ASN.1/DER as the
+      # data format/encoding, then we convert the 'signed' portion of the data
+      # back to ASN.1/DER to check it.
+      # Further, since for ASN.1/DER, a SHA256 hash is taken of the data and
+      # *that* is what is signed, we perform that hashing as well and retrieve
+      # the raw binary digest.
+      data_to_check = asn1_codec.convert_signed_metadata_to_der(
+          vehicle_manifest, only_signed=True, datatype='vehicle_manifest')
+      data_to_check = hashlib.sha256(data_to_check).digest()
+
+    else:
+      data_to_check = vehicle_manifest['signed']
+
+
     valid = tuf.keys.verify_signature(
         ecu_public_key,
         vehicle_manifest['signatures'][0], # TODO: Fix assumptions.
-        vehicle_manifest['signed'],
-        force_treat_as_pydict=True) # Tell tuf this is "JSON" and not BER.
+        data_to_check,
+        is_binary_data=True)
 
     if not valid:
       log.debug(

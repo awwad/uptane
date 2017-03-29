@@ -47,7 +47,7 @@ import uptane.services.director as director
 import uptane.services.inventorydb as inventory
 import tuf.formats
 
-import tuf.asn1_codec as asn1_codec
+import uptane.encoding.asn1_codec as asn1_codec
 
 import threading # for the director services interface
 import os # For paths and symlink
@@ -314,6 +314,26 @@ class RequestHandler(xmlrpc_server.SimpleXMLRPCRequestHandler):
   rpc_paths = ('/RPC2',)
 
 
+
+
+
+def register_vehicle_manifest_wrapper(
+    vin, primary_ecu_serial, signed_vehicle_manifest):
+  """
+  This function is a wrapper for director.Director::register_vehicle_manifest().
+
+  This wrapper is now necessary because of ASN.1/DER combined with XMLRPC:
+  XMLRPC has to wrap binary data in a Binary() object, and the raw data has to
+  be extracted before it is passed to the underlying director.py (in the
+  reference implementation), which doesn't know anything about XMLRPC.
+  """
+  director_service_instance.register_vehicle_manifest(
+      vin, primary_ecu_serial, signed_vehicle_manifest.data)
+
+
+
+
+
 def listen():
   """
   Listens on DIRECTOR_SERVER_PORT for xml-rpc calls to functions:
@@ -339,7 +359,8 @@ def listen():
   # Register function that can be called via XML-RPC, allowing a Primary to
   # submit a vehicle version manifest.
   server.register_function(
-      director_service_instance.register_vehicle_manifest,
+      #director_service_instance.register_vehicle_manifest,
+      register_vehicle_manifest_wrapper, # due to XMLRPC.Binary() for DER
       'submit_vehicle_manifest')
 
   server.register_function(

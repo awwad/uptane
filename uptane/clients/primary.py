@@ -777,18 +777,32 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
         signable_vehicle_manifest)
 
-    # Now sign with that key.
-    signed_vehicle_manifest = sign_signable(
-        signable_vehicle_manifest, [self.primary_key])
-    uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
-        signed_vehicle_manifest)
+    # We could replace the if/else below by calling
+    # uptane.common.sign_signable() and adding the DER/non-DER logic there
+    # instead.
+    if tuf.conf.METADATA_FORMAT == 'der':
+      # Convert to DER and sign, replacing the Python dictionary.
+      signable_vehicle_manifest = asn1_codec.convert_signed_metadata_to_der(
+          signable_vehicle_manifest, private_key=self.primary_key,
+          resign=True, datatype='vehicle_manifest')
+
+    else:
+      # If we're not using ASN.1, sign the Python dictionary in a JSON encoding.
+      signable_vehicle_manifest['signatures'].append(tuf.keys.create_signature(
+          self.primary_key,
+          signable_vehicle_manifest['signed'],
+          force_treat_as_pydict=True))
+
+      uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
+          signable_vehicle_manifest)
+
 
     # Now that the ECU manifests have been incorporated into a vehicle manifest,
     # discard the ECU manifests.
 
     self.ecu_manifests = dict()
 
-    return signed_vehicle_manifest
+    return signable_vehicle_manifest
 
     # if use_json:
     #   return signed_vehicle_manifest
@@ -873,22 +887,20 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
           'different vehicle....')
 
     if tuf.conf.METADATA_FORMAT == 'der' and not force_pydict:
-      # If we're working with DER, convert it into something comprehensible.
-      signed_ecu_manifest_pydict = signed_ecu_manifest
-      signed_ecu_manifest_pydict = \
-          asn1_codec.convert_signed_der_to_dersigned_json(
+      # If we're working with ASN.1/DER, convert it into the format specified in
+      # uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.
+      signed_ecu_manifest = asn1_codec.convert_signed_der_to_dersigned_json(
           signed_ecu_manifest, datatype='ecu_manifest')
-    else:
-      # If we're working with standard Python dictionaries, no conversion is
-      # necessary.
-      signed_ecu_manifest_pydict = signed_ecu_manifest
 
-    if ecu_serial != signed_ecu_manifest_pydict['signed']['ecu_serial']:
+    # Else, we're working with standard Python dictionaries and no conversion
+    # is necessary.
+
+    if ecu_serial != signed_ecu_manifest['signed']['ecu_serial']:
       # TODO: Choose an exception class.
       raise uptane.Spoofing('Received a spoofed or mistaken manifest: supposed '
           'origin ECU (' + repr(ecu_serial) + ') is not the same as what is '
           'signed in the manifest itself (' +
-          repr(signed_ecu_manifest_pydict['signed']['ecu_serial']) + ').')
+          repr(signed_ecu_manifest['signed']['ecu_serial']) + ').')
 
     # If we haven't errored out above, then the format is correct, so save
     # the manifest to the Primary's dictionary of manifests.
@@ -907,10 +919,10 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
         repr(ecu_serial) + ', along with nonce ' + repr(nonce) + ENDCOLORS)
 
     # Alert if there's been a detected attack.
-    if signed_ecu_manifest_pydict['signed']['attacks_detected']:
+    if signed_ecu_manifest['signed']['attacks_detected']:
       log.warning(YELLOW + ' Attacks have been reported by the Secondary! \n '
           'Attacks listed by ECU ' + repr(ecu_serial) + ':\n ' +
-          signed_ecu_manifest_pydict['signed']['attacks_detected'] + ENDCOLORS)
+          signed_ecu_manifest['signed']['attacks_detected'] + ENDCOLORS)
 
 
 

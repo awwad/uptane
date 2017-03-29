@@ -20,7 +20,7 @@ from pyasn1.type import univ, tag
 
 from uptane.encoding.asn1_definitions import *
 
-import ecu_manifest_asn1_coder
+import uptane.encoding.ecu_manifest_asn1_coder as ecu_manifest_asn1_coder
 
 
 def get_asn_signed(json_signed):
@@ -36,15 +36,21 @@ def get_asn_signed(json_signed):
                                                      tag.tagFormatSimple, 3))
   numberOfECUVersionManifests = 0
 
-  for manifest in json_signed['ecu_version_manifests']:
-    json_signed, json_signatures = manifest['signed'], manifest['signatures']
-    asn_signed, der_signed = metadata.get_asn_and_der_signed(
-        ecu_manifest_asn1_coder.get_asn_signed, json_signed)
-    ecuVersionManifest = \
-        metadata.json_to_asn_metadata(asn_signed, der_signed, json_signatures,
-                                      ECUVersionManifest)
-    ecuVersionManifests[numberOfECUVersionManifests] = ecuVersionManifest
-    numberOfECUVersionManifests += 1
+  for ecu_serial in json_signed['ecu_version_manifests']:
+    for manifest in json_signed['ecu_version_manifests'][ecu_serial]:
+      json_signed = manifest['signed']
+      json_signatures = manifest['signatures']
+      asn_signed = ecu_manifest_asn1_coder.get_asn_signed(manifest)
+      ecuVersionManifest = asn_signed
+      # TODO: For now, the ASN.1 data keeps all the ECU Manifests in a list
+      # rather than having a dictionary with index ECU Serial and value list of
+      # ECU Manifests for that ECU Serial. This should probably be changed,
+      # or the security implications of losing the association between the
+      # exterior labeling of ECU Serial and the contents of the ECU Manifest
+      # (which could hypothetically incorrectly contain the wrong ECU Serial?
+      # That is checked by the Primary, but... this still bears thought.)
+      ecuVersionManifests[numberOfECUVersionManifests] = ecuVersionManifest
+      numberOfECUVersionManifests += 1
 
   signed['numberOfECUVersionManifests'] = numberOfECUVersionManifests
   signed['ecuVersionManifests'] = ecuVersionManifests
@@ -60,12 +66,12 @@ def get_json_signed(asn_metadata):
       'primary_ecu_serial': str(asn_signed['primaryIdentifier'])
   }
 
-  json_manifests = []
+  json_manifests = {}
   numberOfECUVersionManifests = int(asn_signed['numberOfECUVersionManifests'])
   ecuVersionManifests = asn_signed['ecuVersionManifests']
   for i in range(numberOfECUVersionManifests):
     manifest = ecuVersionManifests[i]
-    json_manifest = metadata.asn_to_json_metadata(
+    json_manifest = ecu_manifest_asn1_coder.asn_to_json_metadata(
         ecu_manifest_asn1_coder.get_json_signed, manifest)
     json_manifests.append(json_manifest)
   json_signed['ecu_version_manifests'] = json_manifests

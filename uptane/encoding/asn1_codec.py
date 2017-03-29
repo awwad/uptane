@@ -36,6 +36,7 @@ try:
   # ASN.1 data specification modules that convert ASN.1 to JSON and back.
   import uptane.encoding.timeserver_asn1_coder as timeserver_asn1_coder
   import uptane.encoding.ecu_manifest_asn1_coder as ecu_manifest_asn1_coder
+  import uptane.encoding.vehicle_manifest_asn1_coder as vehicle_manifest_asn1_coder
   import uptane.encoding.asn1_definitions as asn1_spec
 
   # This maps metadata type to the module that lays out the
@@ -43,7 +44,7 @@ try:
   SUPPORTED_ASN1_METADATA_MODULES = {
       'time_attestation': timeserver_asn1_coder,
       'ecu_manifest': ecu_manifest_asn1_coder,
-      'vehicle_manifest': None} # Not yet supported ASN.1/DER
+      'vehicle_manifest': vehicle_manifest_asn1_coder}
 
 
 except ImportError:

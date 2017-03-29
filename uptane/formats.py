@@ -51,10 +51,10 @@ SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA = SCHEMA.Object(
     signed = ECU_VERSION_MANIFEST_SCHEMA,
     signatures = SCHEMA.ListOf(SIGNATURE_SCHEMA))
 
-# When DER encoding is employed, an individual ECU Version Manifests will
-# instead be an array of bytes.
-DER_SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA = SCHEMA.AnyBytes()
-
+# Anything encoded as DER is not readily inspected. Its encoding can be checked
+# this way, and conversion back from ASN.1/DER to a Python dictionary should be
+# performed before a thorough check of the contents.
+DER_DATA_SCHEMA = SCHEMA.AnyBytes()
 
 # Manifest detailing the targets installed on all ECUs in a vehicle for which
 # Uptane is responsible.
@@ -65,9 +65,7 @@ VEHICLE_VERSION_MANIFEST_SCHEMA = SCHEMA.Object(
     primary_ecu_serial = ECU_SERIAL_SCHEMA, # Spec: primaryIdentifier
     ecu_version_manifests = SCHEMA.DictOf(
         key_schema = ECU_SERIAL_SCHEMA,
-        value_schema = SCHEMA.ListOf(SCHEMA.OneOf([
-            SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA,
-            DER_SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA])))) # awkward
+        value_schema = SCHEMA.ListOf(SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA)))
 
 # This object corresponds to "VehicleVersionManifest" in ASN.1 in the Uptane
 # Implementation Specification.

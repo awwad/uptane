@@ -424,7 +424,12 @@ def convert_signed_metadata_to_der(
 
   # Now construct an ASN.1 representation of the signed/signatures-encapsulated
   # metadata, populating it.
-  metadata = asn1_spec.TokensAndTimestampSignable()
+  if datatype == 'time_attestation':
+    metadata = asn1_spec.TokensAndTimestampSignable()
+  elif datatype == 'ecu_manifest':
+    metadata = asn1_spec.ECUVersionManifest()
+  elif datatype == 'vehicle_manifest':
+    metadata = asn1_spec.VehicleVersionManifest()
   metadata['signed'] = asn_signed #considering using der_signed instead - requires changes
   metadata['signatures'] = asn_signatures_list # TODO: Support multiple sigs, or integrate with TUF.
   metadata['numberOfSignatures'] = len(asn_signatures_list)

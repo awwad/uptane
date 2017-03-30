@@ -64,7 +64,7 @@ di.clean_slate()
 ### WINDOW 2: the Director
 The following starts a Director server, which generates metadata for specific
 vehicles indicating which ECUs should install what firmware (validated against
-and obtained from the OEM's main repository). It also receives and validates
+and obtained from the Image Repository). It also receives and validates
 Vehicle Manifests from Primaries, and the ECU Manifests from Secondaries
 within the Vehicle Manifests, which capture trustworthy information about what
 software is running on the ECUs, along with signed reports of any attacks
@@ -79,7 +79,7 @@ After that, proceed to the following Windows to prepare clients.
 Once those are ready, you can perform a variety of modifications / attacks.
 
 For example, to try to have the director list a new file not validated by the
-oem:
+Image Repository:
 ```python
 new_target_fname = 'file5.txt' # filename of file to create
 open(new_target_fname, 'w').write('Director-created target') # you could use an existing file, of course
@@ -108,7 +108,7 @@ python demo/demo_timeserver.py
 (Image Repo, Director, and Timeserver must already have finished starting up.)
 The Primary client started below is likely to run on a more capable and
 connected ECU in the vehicle - potentially the head unit / infotainment. It will
-obtain metadata and images from the OEM Repository as instructed by the Director
+obtain metadata and images from the Image Repository as instructed by the Director
 and distribute them appropriately to other, Secondary ECUs in the vehicle,
 and it will receive ECU Manifests indicating the software on each Secondary ECU,
 and bundle these into a Vehicle Manifest which it will send to the Director.

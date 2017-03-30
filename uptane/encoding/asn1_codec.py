@@ -186,18 +186,7 @@ def convert_signed_der_to_dersigned_json(der_data, datatype='time_attestation'):
 
   # Extract the signatures from the ASN.1 representation.
   asn_signatures = asn_metadata[2]
-  json_signatures = []
-
-  for asn_signature in asn_signatures:
-    json_signatures.append({
-        # Next lines are not ideal: prettyPrint and having to manually skip the
-        # first two characters (which we expect to be '0x' indicating a hex
-        # string). See if there's a better method of converting from the
-        # octetString to what TUF expects.
-        'keyid': asn_signature['keyid']['octetString'].prettyPrint()[2:],
-        # TODO: See if it's possible to tweak the definition of 'method' so that str(method) returns what we want rather here than the enum, so that we don't have to do make this weird enum translation call?
-        'method': asn_signature['method'].namedValues[asn_signature['method']._value][0], #str(asn_signature['method']),
-        'sig': asn_signature['value']['octetString'].prettyPrint()[2:]})
+  json_signatures = convert_signatures_to_json(asn_signatures)
 
   return {'signatures': json_signatures, 'signed': json_signed}
 
@@ -364,6 +353,73 @@ def convert_signed_metadata_to_der(
   else:
     pydict_signatures = signed_metadata['signatures']
 
+  asn_signatures_list = convert_signatures_to_asn(pydict_signatures)
+
+
+  # Now construct an ASN.1 representation of the signed/signatures-encapsulated
+  # metadata, populating it.
+  if datatype == 'time_attestation':
+    metadata = asn1_spec.TokensAndTimestampSignable()
+  elif datatype == 'ecu_manifest':
+    metadata = asn1_spec.ECUVersionManifest()
+  elif datatype == 'vehicle_manifest':
+    metadata = asn1_spec.VehicleVersionManifest()
+  metadata['signed'] = asn_signed #considering using der_signed instead - requires changes
+  metadata['signatures'] = asn_signatures_list # TODO: Support multiple sigs, or integrate with TUF.
+  metadata['numberOfSignatures'] = len(asn_signatures_list)
+
+  # Encode our new (py)ASN.1 object as DER (Distinguished Encoding Rules).
+  return p_der_encoder.encode(metadata)
+
+
+
+
+
+def convert_signatures_to_json(asn_signatures):
+  """
+  Given an object compliant with uptane.encoding.asn1_definitions.Signatures()
+  representing a list of signatures in ASN.1 (pyasn1), convert it to the
+  more familiar TUF and Uptane compliant tuf.formats.SIGNATURES_SCHEMA.
+
+  The data contained (the signature values, keyids, and method) are not changed.
+
+  This is the exact reverse of convert_signatures_to_asn(); providing the
+  output of this function as input to that function should reproduce the initial
+  input to this function. Also vice versa.
+  """
+  json_signatures = []
+
+  for asn_signature in asn_signatures:
+    json_signatures.append({
+        # Next lines are not ideal: prettyPrint and having to manually skip the
+        # first two characters (which we expect to be '0x' indicating a hex
+        # string). See if there's a better method of converting from the
+        # octetString to what TUF expects.
+        'keyid': asn_signature['keyid']['octetString'].prettyPrint()[2:],
+        # TODO: See if it's possible to tweak the definition of 'method' so that str(method) returns what we want rather here than the enum, so that we don't have to do make this weird enum translation call?
+        'method': asn_signature['method'].namedValues[asn_signature['method']._value][0], #str(asn_signature['method']),
+        'sig': asn_signature['value']['octetString'].prettyPrint()[2:]})
+
+
+  return json_signatures
+
+
+
+
+
+def convert_signatures_to_asn(pydict_signatures):
+  """
+  Given a Python dictionary compliant with tuf.formats.SIGNATURES_SCHEMA,
+  containing signatures, convert it to an ASN.1 (pyasn1) representation
+  that conforms to the uptane.encoding.asn1_definitions.Signatures() class.
+
+  The data contained (the signature values, keyids, and method) are not changed.
+
+  This is the exact reverse of convert_signatures_to_json(); providing the
+  output of this function as input to that function should reproduce the initial
+  input to this function. Also vice versa.
+  """
+
   # Create a pyASN.1 object of custom class Signatures, containing some
   # unknown pyasn1 sorcery to specify types.
   # Because this Signatures() object is going to be a member of the Metadata()
@@ -422,17 +478,4 @@ def convert_signed_metadata_to_der(
     asn_signatures_list[i] = asn_sig # has no append method
     i += 1
 
-  # Now construct an ASN.1 representation of the signed/signatures-encapsulated
-  # metadata, populating it.
-  if datatype == 'time_attestation':
-    metadata = asn1_spec.TokensAndTimestampSignable()
-  elif datatype == 'ecu_manifest':
-    metadata = asn1_spec.ECUVersionManifest()
-  elif datatype == 'vehicle_manifest':
-    metadata = asn1_spec.VehicleVersionManifest()
-  metadata['signed'] = asn_signed #considering using der_signed instead - requires changes
-  metadata['signatures'] = asn_signatures_list # TODO: Support multiple sigs, or integrate with TUF.
-  metadata['numberOfSignatures'] = len(asn_signatures_list)
-
-  # Encode our new (py)ASN.1 object as DER (Distinguished Encoding Rules).
-  return p_der_encoder.encode(metadata)
+  return asn_signatures_list

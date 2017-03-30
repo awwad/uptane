@@ -194,7 +194,7 @@ class Director:
 
     if not valid:
       log.info(
-          'Validation failed on an ECU Manifest: signature is not valid. It'
+          'Validation failed on an ECU Manifest: signature is not valid. '
           'It must be correctly signed by the expected key for that ECU.')
       # Raise a fault for the offending ECU's XMLRPC request.
       raise tuf.BadSignatureError('Sender supplied an invalid signature. '

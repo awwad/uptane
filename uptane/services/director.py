@@ -186,11 +186,32 @@ class Director:
 
     ecu_public_key = inventory.ecu_public_keys[ecu_serial]
 
+
+
+
+    # TODO: Generalize the following code slightly and stick it somewhere in
+    # perhaps common or asn1_codec. Call it here and in the verify_... function
+    # below as well. Check for other places it should be called (probably many).
+    if tuf.conf.METADATA_FORMAT == 'der':
+      # To check the signature, we have to make sure to encode the data as it
+      # was when the signature was made. If we're using ASN.1/DER as the
+      # data format/encoding, then we convert the 'signed' portion of the data
+      # back to ASN.1/DER to check it.
+      # Further, since for ASN.1/DER, a SHA256 hash is taken of the data and
+      # *that* is what is signed, we perform that hashing as well and retrieve
+      # the raw binary digest.
+      data_to_check = asn1_codec.convert_signed_metadata_to_der(
+          signed_ecu_manifest, only_signed=True, datatype='ecu_manifest')
+      data_to_check = hashlib.sha256(data_to_check).digest()
+
+    else:
+      data_to_check = signed_ecu_manifest['signed']
+
     valid = tuf.keys.verify_signature(
         ecu_public_key,
         signed_ecu_manifest['signatures'][0], # TODO: Fix assumptions.
-        signed_ecu_manifest['signed'],
-        force_treat_as_pydict=True) # Tell tuf this is "JSON" and not BER.
+        data_to_check,
+        is_binary_data=True)
 
     if not valid:
       log.info(

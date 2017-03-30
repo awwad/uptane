@@ -56,8 +56,8 @@ These instructions start a demonstration version of an OEM's or Supplier's main 
 for software, hosting images and the metadata Uptane requires.
 
 ```python
-import demo.demo_oem_repo as do
-do.clean_slate()
+import demo.demo_image_repo as di
+di.clean_slate()
 ```
 
 
@@ -169,8 +169,8 @@ Perform this *in the Image Repo's window* to create a new file, add it to the re
 ```python
 new_target_fname = filepath_in_repo = 'file5.txt'
 open(new_target_fname, 'w').write('Fresh target file')
-do.add_target_to_oemrepo(new_target_fname, filepath_in_repo)
-do.write_to_live()
+di.add_target_to_imagerepo(new_target_fname, filepath_in_repo)
+di.write_to_live()
 ```
 
 Perform this *in the Director Repository's window* to assign that Image file to vehicle 111, ECU 22222:

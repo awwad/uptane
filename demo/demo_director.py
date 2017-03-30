@@ -54,7 +54,7 @@ import os # For paths and symlink
 import shutil # For copying directory trees
 import sys, subprocess, time # For hosting
 import tuf.repository_tool as rt
-import demo.demo_oem_repo as demo_oem_repo # for the main repo directory /:
+import demo.demo_image_repo as demo_image_repo # for the main repo directory /:
 from uptane import GREEN, RED, YELLOW, ENDCOLORS
 
 from six.moves import xmlrpc_server # for the director services interface

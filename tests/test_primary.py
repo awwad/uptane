@@ -30,6 +30,7 @@ import os.path
 import time
 import copy
 import shutil
+import hashlib
 
 # For temporary convenience:
 import demo # for generate_key, import_public_key, import_private_key
@@ -480,9 +481,22 @@ class TestPrimary(unittest.TestCase):
 
     vehicle_manifest = primary_instance.generate_signed_vehicle_manifest()
 
-    # Test format of vehicle manifest
-    uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
-        vehicle_manifest)
+    # Test format of vehicle manifest. If using DER, convert back to Python
+    # dictionary.
+    if tuf.conf.METADATA_FORMAT == 'der':
+      uptane.formats.DER_DATA_SCHEMA.check_match(vehicle_manifest)
+      vehicle_manifest = asn1_codec.convert_signed_der_to_dersigned_json(
+          vehicle_manifest, datatype='vehicle_manifest')
+      data_to_verify = hashlib.sha256(asn1_codec.convert_signed_metadata_to_der(
+          vehicle_manifest, only_signed=True, datatype='vehicle_manifest')
+          ).digest()
+      is_binary_data = True   # for keys.verify_signature
+
+    else:
+      uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
+          vehicle_manifest)
+      data_to_verify = vehicle_manifest['signed']
+      is_binary_data = False  # for keys.verify_signature
 
     # Test contents of vehicle manifest.
     # Make sure there is exactly one signature.
@@ -496,12 +510,13 @@ class TestPrimary(unittest.TestCase):
 
 
     # Check the signature on the vehicle manifest.
+    # tuf.keys needs to know not to try encoding the data as UTF-8 if we're
+    # working with DER and data_to_verify is already bytes.
     self.assertTrue(tuf.keys.verify_signature(
         primary_ecu_key,
         vehicle_manifest['signatures'][0], # TODO: Deal with 1-sig assumption?
-        vehicle_manifest['signed'],
-        force_treat_as_pydict=True)) # Tell keys this isn't DER despite config
-
+        data_to_verify,
+        is_binary_data=is_binary_data))
 
 
 

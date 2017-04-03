@@ -325,8 +325,10 @@ To start, add a new file to the image and director repositories.
 >>> do.add_target_and_write_to_live(filename='evil', file_content='original content')
 ```
 
-The new file is also added to the director repository...
+The new file is also added to the director repository.  We clear the previously
+added target file so that the secondary correctly installs a single target/firmware file.
 ```
+>>> dd.add.clear_vehicle_targets(vin='111')
 >>> dd.add_target_and_write_to_live(filename='evil', file_content='original content',
     vin='111', ecu_serial='22222')
 ```
@@ -352,9 +354,8 @@ us to download a file that does  does not exactly match the Image Repository met
 >>> do.add_target_and_write_to_live(filename='evil', file_content='evil content')
 ```
 
-Finally, the primary is updated.  Note, both image and director repositories have been
-compromised.  Is the primary able to defend against this attack?  In this case, the primary
-installs the "evil" file, howerver, the secondary should not.
+Finally, the primary and secondary are updated.  Note, both the image and director repositories have been
+compromised.  The primary installs the "evil" file, however, the secondary does not.
 
 ```
 >>> dp.update_cycle()

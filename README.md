@@ -353,18 +353,20 @@ us to download a file that does  does not exactly match the Image Repository met
 ```
 
 Finally, the primary is updated.  Note, both image and director repositories have been
-compromised.  Is the primary able to defend against this attack?
+compromised.  Is the primary able to defend against this attack?  In this case, the primary
+installs the "evil" file, howerver, the secondary should not.
 
 ```
->>> 
+>>> dp.update_cycle()
+>>> ds.update_cycle()
 ```
 
-The primary should detect that a malicious file was installed.  Since
+The secondary should detect that a malicious file was installed.  Since
 both director and image repositories were compromised, the client would normally
 be unable to detect this attack.  For demonstration purposes, the secondary ECU
 in the demo code prints a banner indicating that the "evil" file was malicously 
-installed.
-
+installed: A malicious update has been installed! Arbitrary package attack successful:
+this Secondary has been compromised! Image: 'evil'
 
 
 

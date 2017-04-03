@@ -327,17 +327,14 @@ To start, add a new file to the image and director repositories.
 
 The new file is also added to the director repository...
 ```
->>> dd.add_target_and_write_to_live(filename='evil', file_content='original content', vin='111', ecu_serial='22222')
+>>> dd.add_target_and_write_to_live(filename='evil', file_content='original content',
+    vin='111', ecu_serial='22222')
 ```
-
-TODO: Should we call dp.update_cycle() here?  After testing, the primary rejects the "evil" file with the
-following log statement: "Received a target from the Director with instruction to provide it to a Secondary
-ECU that is not known to this Primary! Disregarding / not downloading target or saving fileinfo!"
-Update on TODO:  ecu_serial was previously set to '11111'.  It should be '22222'
 
 To simulate a compromised directory key, we simply sign for a new "evil" version of the original file.
 ```
->>> dd.add_target_and_write_to_live(filename='evil', file_content='evil content', vin='111', ecu_serial='22222')
+>>> dd.add_target_and_write_to_live(filename='evil', file_content='evil content',
+    vin='111', ecu_serial='22222')
 ```
 
 The primary client now attempts to download the malicious file.
@@ -345,7 +342,8 @@ The primary client now attempts to download the malicious file.
 >>> dp.update_cycle()
 ```
 
-The primary client should print a "Defended" banner.
+The primary client should print a "Defended" banner and provide the following error message: The Director has instructed
+us to download a file that does  does not exactly match the Image Repository metadata. File: '/evil'
 
 
 

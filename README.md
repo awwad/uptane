@@ -375,7 +375,7 @@ this Secondary has been compromised! Image: 'evil'
 
 We first clear the malicious "evil" file from the Director repository.
 ```
->>> dd.clear_vehicle_targets(vin='111')554324455555
+>>> dd.clear_vehicle_targets(vin='111')
 >>> dd.revoke_and_add_new_key_and_write_to_live()
 >>> do.revoke_and_add_new_key_and_write_to_live()
 ```

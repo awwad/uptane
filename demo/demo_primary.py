@@ -25,6 +25,7 @@ import demo
 import uptane
 import uptane.common # for canonical key construction and signing
 import uptane.clients.primary as primary
+import uptane.encoding.asn1_codec as asn1_codec
 from uptane import GREEN, RED, YELLOW, ENDCOLORS
 from demo.uptane_banners import *
 import tuf.keys
@@ -133,7 +134,7 @@ def clean_slate(
         {demo.MAIN_REPO_NAME: demo.MAIN_REPO_ROOT_FNAME,
         demo.DIRECTOR_REPO_NAME: os.path.join(demo.DIRECTOR_REPO_DIR, vin,
         'metadata', 'root' + demo.METADATA_EXTENSION)})
-  except FileNotFoundError:
+  except IOError:
     raise Exception(RED + 'Unable to create Primary client directory '
         'structure. Does the Director Repo for the vehicle exist yet?' +
         ENDCOLORS)
@@ -289,7 +290,15 @@ def update_cycle():
 
   print('Submitting a request for a signed time to the Timeserver.')
 
-  time_attestation = tserver.get_signed_time(nonces_to_send)
+
+  if tuf.conf.METADATA_FORMAT == 'der': # TODO: Should check setting in Uptane.
+    time_attestation = tserver.get_signed_time_der(nonces_to_send).data
+
+  else:
+    time_attestation = tserver.get_signed_time(nonces_to_send)
+
+  # At this point, time_attestation might be a simple Python dictionary or
+  # a DER-encoded ASN.1 representation of one.
 
   # This validates the attestation and also saves the time therein (if the
   # attestation was valid). Secondaries can request this from the Primary at

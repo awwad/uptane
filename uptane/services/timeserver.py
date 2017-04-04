@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 import uptane
 import uptane.formats
 import uptane.common  # for sign_signable and canonical_key_from_pub_and_pri
+import uptane.encoding.asn1_codec as asn1_codec
 import tuf
 PYASN1_EXISTS = False
 try:
@@ -32,6 +33,8 @@ timeserver_key = None
 
 
 
+
+
 def set_timeserver_key(private_key):
 
   global timeserver_key
@@ -41,6 +44,7 @@ def set_timeserver_key(private_key):
   # TODO: Add check to make sure it's a private key, not a public key.
 
   timeserver_key = private_key
+
 
 
 
@@ -70,32 +74,25 @@ def get_signed_time(nonces):
 
 
 
-def get_signed_time_ber(nonces):
+
+
+def get_signed_time_der(nonces):
   """
-  Same as get_signed_time, but re-encodes the resulting JSON into a BER
-  file.
-  In progress.
+  Same as get_signed_time, but converts the resulting Python dictionary into
+  an ASN.1 representation, encodes it as DER (Distinguished Encoding Rules),
+  replaces the signature with a signature over the hash of the DER encoding of
+  the 'signed' portion of the data (the time and nonces).
   """
   if not PYASN1_EXISTS:
-    raise uptane.Error('This Timeserver does not support BER; pyasn1 is not '
+    raise uptane.Error('This Timeserver does not support DER: pyasn1 is not '
         'installed.')
-  signable_time_attestation_as_dict = get_signed_time(nonces)
+  signable_time_attestation = get_signed_time(nonces)
+
+  # Convert it, re-signing over the hash of the DER encoding of the attestation.
+  der_attestation = asn1_codec.convert_signed_metadata_to_der(
+      signable_time_attestation,
+      private_key=timeserver_key,
+      resign=True)
 
 
-  #from json2ber2json import *
-  import timeservermetadata
-  import timeserver
-
-  signed_dict = signable_time_attestation_as_dict['signed']
-  dict_signatures = signable_time_attestation_as_dict['signatures']
-  #asn_signed, ber_signed = timeserver.get_asn_and_ber_signed(timeservermetadata.get_asn_signed, signed_dict)
-  #ber_metadata = timeserver.json_to_ber_metadata(asn_signed, ber_signed, dict_signatures)
-  # To decode on other side:
-  # dict_again = timeserver.ber_to_json_metadata(timeservermetadata.get_json_signed, ber_metadata)
-
-  #signable_time_attestation_in_ber = \
-  #    time_to_ber.get_asn_signed(signable_time_attestation_as_dict)
-
-#  return ber_metadata
-
-  raise NotImplementedError('Current code must be reconciled with new encodings for Timeserver.')
+  return der_attestation

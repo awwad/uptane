@@ -9,12 +9,17 @@
   Repo be running.
 
 """
+from __future__ import print_function
 from __future__ import unicode_literals
 
 import uptane
 import uptane.formats
 import uptane.clients.primary as primary
 import uptane.common
+import uptane.encoding.asn1_codec as asn1_codec
+
+from six.moves.urllib.error import URLError
+
 import tuf
 import tuf.formats
 import tuf.client.updater # to test one of the fields in the Primary object
@@ -29,12 +34,16 @@ import shutil
 # For temporary convenience:
 import demo # for generate_key, import_public_key, import_private_key
 
+
 TEST_DATA_DIR = os.path.join(uptane.WORKING_DIR, 'tests', 'test_data')
 TEST_DIRECTOR_METADATA_DIR = os.path.join(TEST_DATA_DIR, 'director_metadata')
 TEST_OEM_METADATA_DIR = os.path.join(TEST_DATA_DIR, 'oem_metadata')
-TEST_DIRECTOR_ROOT_FNAME = os.path.join(TEST_DIRECTOR_METADATA_DIR, 'root.json')
-TEST_OEM_ROOT_FNAME = os.path.join(TEST_OEM_METADATA_DIR, 'root.json')
+TEST_DIRECTOR_ROOT_FNAME = os.path.join(
+    TEST_DIRECTOR_METADATA_DIR, 'root.' + tuf.conf.METADATA_FORMAT)
+TEST_OEM_ROOT_FNAME = os.path.join(
+    TEST_OEM_METADATA_DIR, 'root.' + tuf.conf.METADATA_FORMAT)
 TEST_PINNING_FNAME = os.path.join(TEST_DATA_DIR, 'pinned.json')
+TEMP_CLIENT_DIR = os.path.join(TEST_DATA_DIR, 'temp_test_primary')
 
 # I'll initialize this in one of the early tests, and use this for the simple
 # non-damaging tests so as to avoid creating objects all over again.
@@ -46,13 +55,10 @@ nonce = 5
 vin = '000'
 primary_ecu_serial = '00000'
 
-# Load what's necessary for the instantiation of a Primary ECU, using
-# valid things to start with.
-client_directory_name = 'temp_test_primary'
-
 # Initialize these in setUpModule below.
 primary_ecu_key = None
 key_timeserver_pub = None
+key_timeserver_pri = None
 clock = None
 process_timeserver = None
 process_director = None
@@ -62,8 +68,8 @@ process_oemrepo = None
 
 def destroy_temp_dir():
   # Clean up anything that may currently exist in the temp test directory.
-  if os.path.exists(os.path.join(TEST_DATA_DIR, client_directory_name)):
-    shutil.rmtree(os.path.join(TEST_DATA_DIR, client_directory_name))
+  if os.path.exists(TEMP_CLIENT_DIR):
+    shutil.rmtree(TEMP_CLIENT_DIR)
 
 
 
@@ -79,6 +85,7 @@ def setUpModule():
   """
   global primary_ecu_key
   global key_timeserver_pub
+  global key_timeserver_pri
   global clock
 
   destroy_temp_dir()
@@ -91,6 +98,7 @@ def setUpModule():
 
   # Load the public timeserver key.
   key_timeserver_pub = demo.import_public_key('timeserver')
+  key_timeserver_pri = demo.import_private_key('timeserver')
 
   # Generate a trusted initial time for the Primary.
   clock = tuf.formats.unix_timestamp_to_datetime(int(time.time()))
@@ -139,7 +147,7 @@ class TestPrimary(unittest.TestCase):
 
     # Set up a client directory first.
     uptane.common.create_directory_structure_for_client(
-        client_directory_name,
+        TEMP_CLIENT_DIR,
         TEST_PINNING_FNAME,
         {'mainrepo': TEST_OEM_ROOT_FNAME,
         'director': TEST_DIRECTOR_ROOT_FNAME})
@@ -155,7 +163,7 @@ class TestPrimary(unittest.TestCase):
     # pinning file in its expected location.
     # with self.assertRaises(tuf.FormatError):
     #   p = primary.Primary(
-    #       full_client_dir=os.path.join(TEST_DATA_DIR, client_directory_name),
+    #       full_client_dir=TEMP_CLIENT_DIR,
     #       pinning_filename=TEST_OEM_ROOT_FNAME, # INVALID: WRONG TYPE OF FILE
     #       director_repo_name=demo.DIRECTOR_REPO_NAME,
     #       vin=vin,
@@ -171,7 +179,7 @@ class TestPrimary(unittest.TestCase):
     # this test to work.
     # with self.assertRaises(uptane.Error):
     #   p = primary.Primary(
-    #       full_client_dir=os.path.join(TEST_DATA_DIR, client_directory_name),
+    #       full_client_dir=TEMP_CLIENT_DIR,
     #       pinning_filename=TEST_PINNING_FNAME,
     #       director_repo_name='this_is_not_the_name_of_any_repository', # TODO: Should probably be a new exception class, uptane.UnknownRepository or something
     #       vin=vin,
@@ -187,7 +195,7 @@ class TestPrimary(unittest.TestCase):
     # Invalid VIN:
     with self.assertRaises(tuf.FormatError):
       p = primary.Primary(
-          full_client_dir=os.path.join(TEST_DATA_DIR, client_directory_name),
+          full_client_dir=TEMP_CLIENT_DIR,
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=5,  # INVALID
           ecu_serial=primary_ecu_serial,
@@ -199,7 +207,7 @@ class TestPrimary(unittest.TestCase):
     # Invalid ECU Serial
     with self.assertRaises(tuf.FormatError):
       p = primary.Primary(
-          full_client_dir=os.path.join(TEST_DATA_DIR, client_directory_name),
+          full_client_dir=TEMP_CLIENT_DIR,
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vin,
           ecu_serial=500, # INVALID
@@ -211,7 +219,7 @@ class TestPrimary(unittest.TestCase):
     # Invalid ECU Key
     with self.assertRaises(tuf.FormatError):
       p = primary.Primary(
-          full_client_dir=os.path.join(TEST_DATA_DIR, client_directory_name),
+          full_client_dir=TEMP_CLIENT_DIR,
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vin,
           ecu_serial=primary_ecu_serial,
@@ -223,7 +231,7 @@ class TestPrimary(unittest.TestCase):
     # Invalid time:
     with self.assertRaises(tuf.FormatError):
       p = primary.Primary(
-          full_client_dir=os.path.join(TEST_DATA_DIR, client_directory_name),
+          full_client_dir=TEMP_CLIENT_DIR,
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vin,
           ecu_serial=primary_ecu_serial,
@@ -235,7 +243,7 @@ class TestPrimary(unittest.TestCase):
     # Invalid timeserver key
     with self.assertRaises(tuf.FormatError):
       p = primary.Primary(
-          full_client_dir=os.path.join(TEST_DATA_DIR, client_directory_name),
+          full_client_dir=TEMP_CLIENT_DIR,
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vin,
           ecu_serial=primary_ecu_serial,
@@ -244,6 +252,7 @@ class TestPrimary(unittest.TestCase):
           my_secondaries=[])
 
 
+    print(TEMP_CLIENT_DIR)
 
     # Try creating a Primary, expecting it to work.
     # Initializes a Primary ECU, making a client directory and copying the root
@@ -252,7 +261,7 @@ class TestPrimary(unittest.TestCase):
     # TODO: Stick TEST_PINNING_FNAME in the right place.
     # Stick TEST_OEM_ROOT_FNAME and TEST_DIRECTOR_ROOT_FNAME in the right place.
     primary_instance = primary.Primary(
-        full_client_dir=os.path.join(TEST_DATA_DIR, client_directory_name),
+        full_client_dir=TEMP_CLIENT_DIR,
         director_repo_name=demo.DIRECTOR_REPO_NAME,
         vin=vin,
         ecu_serial=primary_ecu_serial,
@@ -270,7 +279,7 @@ class TestPrimary(unittest.TestCase):
     self.assertEqual(primary_ecu_key, primary_instance.primary_key)
     self.assertEqual(dict(), primary_instance.ecu_manifests)
     self.assertEqual(
-        primary_instance.full_client_dir, os.path.join(TEST_DATA_DIR, client_directory_name))
+        primary_instance.full_client_dir, TEMP_CLIENT_DIR)
     self.assertIsInstance(primary_instance.updater, tuf.client.updater.Updater)
     tuf.formats.ANYKEY_SCHEMA.check_match(primary_instance.timeserver_public_key)
     self.assertEqual([], primary_instance.my_secondaries)
@@ -397,35 +406,61 @@ class TestPrimary(unittest.TestCase):
 
     # Try a valid time attestation first, signed by an expected timeserver key,
     # with an expected nonce (previously "received" from a Secondary)
-    time_attestation = {
+    original_time_attestation = time_attestation = {
         'signed': {'nonces': [nonce], 'time': '2016-11-02T21:06:05Z'},
         'signatures': [{
           'method': 'ed25519',
           'sig': 'aabffcebaa57f1d6397bdc5647764261fd23516d2996446c3c40b3f30efb2a4a8d80cd2c21a453e78bf99dafb9d0f5e56c4e072db365499fa5f2f304afec100e',
           'keyid': '79c796d7e87389d1ebad04edce49faef611d139ee41ea9fb1931732afbfaac2e'}]}
 
+    if tuf.conf.METADATA_FORMAT == 'der':
+      # Convert this time attestation to the expected ASN.1/DER format.
+      time_attestation = asn1_codec.convert_signed_metadata_to_der(
+          original_time_attestation, private_key=key_timeserver_pri, resign=True)
+
     primary_instance.validate_time_attestation(time_attestation)
 
-    # Try again with part of the signature replaced.
-    time_attestation__badsig = copy.deepcopy(time_attestation)
-    time_attestation__badsig['signatures'][0]['sig'] = '987654321' + \
-        time_attestation__badsig['signatures'][0]['sig'][9:]
 
+    # Prepare to try again with a bad signature.
+    # This test we will conduct differently depending on TUF's current format:
+    if tuf.conf.METADATA_FORMAT == 'der':
+      # Fail to re-sign the DER, so that the signature is over JSON instead,
+      # which results in a bad signature.
+      time_attestation__badsig = asn1_codec.convert_signed_metadata_to_der(
+          original_time_attestation, resign=False)
+
+    else: # 'json' format
+      # Rewrite the first 9 digits of the signature ('sig') to something
+      # invalid.
+      time_attestation__badsig = {
+          'signed': {'nonces': [nonce], 'time': '2016-11-02T21:06:05Z'},
+          'signatures': [{
+            'method': 'ed25519',
+            'sig': '987654321a57f1d6397bdc5647764261fd23516d2996446c3c40b3f30efb2a4a8d80cd2c21a453e78bf99dafb9d0f5e56c4e072db365499fa5f2f304afec100e',
+            'keyid': '79c796d7e87389d1ebad04edce49faef611d139ee41ea9fb1931732afbfaac2e'}]}
+
+    # Now actually perform the bad signature test.
     with self.assertRaises(tuf.BadSignatureError):
       primary_instance.validate_time_attestation(time_attestation__badsig)
 
 
+    self.assertNotEqual(500, nonce, msg='Programming error: bad and good '
+        'test nonces are equal.')
+
+    time_attestation__wrongnonce = {
+        'signed': {'nonces': [500], 'time': '2016-11-02T21:15:00Z'},
+        'signatures': [{
+          'method': 'ed25519',
+          'sig': '4d01df35ca829fd7ead1408c250950c444db8ac51fa929a7f0288578fbf81016f0e81ed35789689481aee6b7af28ab311306397ef38572732854fb6cf2072604',
+          'keyid': '79c796d7e87389d1ebad04edce49faef611d139ee41ea9fb1931732afbfaac2e'}]}
+
+    if tuf.conf.METADATA_FORMAT == 'der':
+      # Convert this time attestation to the expected ASN.1/DER format.
+      time_attestation__wrongnonce = asn1_codec.convert_signed_metadata_to_der(
+          time_attestation__wrongnonce,
+          private_key=key_timeserver_pri, resign=True)
+
     with self.assertRaises(uptane.BadTimeAttestation):
-      self.assertNotEqual(500, nonce, msg='Programming error: bad and good '
-          'test nonces are equal.')
-
-      time_attestation__wrongnonce = {
-          'signed': {'nonces': [500], 'time': '2016-11-02T21:15:00Z'},
-          'signatures': [{
-            'method': 'ed25519',
-            'sig': '4d01df35ca829fd7ead1408c250950c444db8ac51fa929a7f0288578fbf81016f0e81ed35789689481aee6b7af28ab311306397ef38572732854fb6cf2072604',
-            'keyid': '79c796d7e87389d1ebad04edce49faef611d139ee41ea9fb1931732afbfaac2e'}]}
-
       primary_instance.validate_time_attestation(time_attestation__wrongnonce)
 
 
@@ -459,8 +494,9 @@ class TestPrimary(unittest.TestCase):
     # Check the signature on the vehicle manifest.
     self.assertTrue(tuf.keys.verify_signature(
         primary_ecu_key,
-        vehicle_manifest['signatures'][0], # TODO: Fix assumptions.
-        vehicle_manifest['signed']))
+        vehicle_manifest['signatures'][0], # TODO: Deal with 1-sig assumption?
+        vehicle_manifest['signed'],
+        force_treat_as_pydict=True)) # Tell keys this isn't DER despite config
 
 
 
@@ -474,14 +510,32 @@ class TestPrimary(unittest.TestCase):
 
     # Check that in the fresh temp directory for this test Primary client,
     # there aren't any metadata files except root.json yet.
-    self.assertEqual(['root.json'], os.listdir(TEST_DIRECTOR_METADATA_DIR))
-    self.assertEqual(['root.json'], os.listdir(TEST_OEM_METADATA_DIR))
+    self.assertEqual(
+        ['root.der', 'root.json'],
+        sorted(os.listdir(TEST_DIRECTOR_METADATA_DIR)))
+    self.assertEqual(
+        ['root.der', 'root.json'],
+        sorted(os.listdir(TEST_OEM_METADATA_DIR)))
 
-    primary_instance.refresh_toplevel_metadata_from_repositories()
+    try:
+      primary_instance.refresh_toplevel_metadata_from_repositories()
+    except (URLError, tuf.NoWorkingMirrorError) as e:
+      print('Unable to open connection to repositories. (This test requires '
+          'that the demo Director and demo Image Repository be running.) '
+          'Skipping test.')
+    else:
+      # Check the resulting top-level metadata files in the client directory.
+      # Expect root, snapshot, targets, and timestamp for both director and
+      # image repo.
+      for repo in ['director', 'mainrepo']:
+        self.assertEqual(
+            ['root.' + tuf.conf.METADATA_FORMAT,
+            'snapshot.' + tuf.conf.METADATA_FORMAT,
+            'targets.' + tuf.conf.METADATA_FORMAT,
+            'timestamp.' + tuf.conf.METADATA_FORMAT],
+            sorted(os.listdir(os.path.join(TEMP_CLIENT_DIR, 'metadata', repo,
+            'current'))))
 
-    # TODO: Check the resulting top-level metadata files in the client
-    # directory.
-    #self.assert()
 
 
 

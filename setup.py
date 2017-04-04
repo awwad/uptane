@@ -51,11 +51,16 @@
 from __future__ import unicode_literals
 from io import open
 
+import os
 from setuptools import setup
 from setuptools import find_packages
 
-with open('README.md') as file_object:
-  long_description = file_object.read()
+if os.path.exists('README.md'):
+  with open('README.md') as file_object:
+    long_description = file_object.read()
+else:
+  long_description = "Check https://github.com/uptane/uptane/ for details"
+
 
 setup(
   name = 'uptane',
@@ -88,6 +93,7 @@ setup(
     'Topic :: Software Development'
   ],
   install_requires = ['iso8601', 'tuf', 'six', 'canonicaljson'],
+  test_suite="tests.runtests",
   packages = find_packages(exclude=['tests']),
   scripts = []
 )

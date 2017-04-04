@@ -1,5 +1,5 @@
 # Uptane
-Reference Implementation and demonstration code for UPTANE.
+Reference Implementation and demonstration code for [UPTANE](https://uptane.org).
 
 Please note that extensive documentation on design can be found in the following documents:
 
@@ -9,25 +9,38 @@ Please note that extensive documentation on design can be found in the following
 
 # Instructions on use of the Uptane demonstration code
 ## Installation
-(As usual, virtual environments are recommended for development and testing, but not necessary. If you use a virtual environment, use python2: virtualenv -p python2 <name>)
+Uptane fully supports Python2 and Python3. As usual for Python, [virtual environments](https://python-docs.readthedocs.io/en/latest/dev/virtualenvs.html) are recommended for development and testing, but not necessary.
 
 Some development libraries are necessary to install some of Uptane's dependencies. If your system uses apt, the command to install them will be:
 ```shell
-sudo apt-get install build-essential libssl-dev libffi-dev python-dev python3-dev
+$ sudo apt-get install build-essential libssl-dev libffi-dev python-dev python3-dev
 ```
 
+Fedora-based distributions can instead install these libraries with dnf.
+```shell
+$ dnf install redhat-rpm-config openssl-devel libffi-devel python-devel python3-devel
+```
+
+OS X users can instead install these header libraries with the `Homebrew <http://brew.sh/>`_ package manager.
+```shell
+$ brew install python
+$ brew install libffi
+```
 
 To download and install the Uptane code and its dependencies, run the following:
 ```shell
-git clone https://github.com/uptane/uptane
-cd uptane
-pip install cffi==1.7.0 pycrypto==2.6.1 pynacl==1.0.1 cryptography canonicaljson pyasn1==0.2.2
-pip install git+git://github.com/awwad/tuf.git@pinning_w_ber
-pip install -e .
+$ git clone https://github.com/uptane/uptane
+$ cd uptane
+$ pip install -r dev-requirements.txt
 ```
 
-Note that the demonstration now operates using ASN.1 / DER format and encoding for metadata files by default. The TUF branch in use has been switched accordingly (so please run the command above again if you have an existing installation). This can be switched back to JSON (which is human readable) by changing the tuf.conf.METADATA_FORMAT option in uptane/__init__.py.
+Note that the demonstration now operates using ASN.1 / DER format and encoding for metadata files by default. The TUF branch in use has been switched accordingly (so please run the command above again if you have an existing installation). This can be switched back to JSON (which is human readable) by changing the tuf.conf.METADATA_FORMAT option in `uptane/__init__.py`.
 
+### Install command-line audio player (optional)
+If you want the demo to play notification sounds you need one of the following audio player command line utilities on your path:
+- mplayer (available for all major operating systems)
+- omxplayer (built-in on Raspbian)
+- afplay (built-in on OS X)
 
 ## Running
 The code below is intended to be run in five or more consoles:
@@ -38,24 +51,20 @@ The code below is intended to be run in five or more consoles:
 - WINDOW 5: Python shell for a Secondary in the vehicle. This communicates directly only with the Primary via XMLRPC, and will perform full metadata verification. (More of these can be run, simulating more ECUs in one or more vehicles.)
 
 
-###*WINDOW 1: the Image Repository*
+### WINDOW 1: the Image Repository
 These instructions start a demonstration version of an OEM's or Supplier's main repository
 for software, hosting images and the metadata Uptane requires.
 
 ```python
-import demo.demo_oem_repo as do
-do.clean_slate()
-```
-After the demo, to end hosting:
-```python
-do.kill_server()
+import demo.demo_image_repo as di
+di.clean_slate()
 ```
 
 
-###*WINDOW 2: the Director*
+### WINDOW 2: the Director
 The following starts a Director server, which generates metadata for specific
 vehicles indicating which ECUs should install what firmware (validated against
-and obtained from the OEM's main repository). It also receives and validates
+and obtained from the Image Repository). It also receives and validates
 Vehicle Manifests from Primaries, and the ECU Manifests from Secondaries
 within the Vehicle Manifests, which capture trustworthy information about what
 software is running on the ECUs, along with signed reports of any attacks
@@ -70,7 +79,7 @@ After that, proceed to the following Windows to prepare clients.
 Once those are ready, you can perform a variety of modifications / attacks.
 
 For example, to try to have the director list a new file not validated by the
-oem:
+Image Repository:
 ```python
 new_target_fname = 'file5.txt' # filename of file to create
 open(new_target_fname, 'w').write('Director-created target') # you could use an existing file, of course
@@ -82,14 +91,9 @@ dd.write_to_live()
 ```
 As a result of the above, the Director will instruct ECU 11111 in vehicle 111 to install file5.txt. Since this file is not on (and validated by) the Image Repository, the Primary will refuse to download it (and a Full Verification Secondary would likewise refuse it even if a compromised Primary delivered it to the Secondary).
 
-After the demo, to end HTTP hosting (but not XMLRPC serving, which requires
-exiting the shell), do this (or else you'll have a zombie Python process to kill)
-```python
-dd.kill_server()
-```
 
 
-###*WINDOW 3: the Timeserver:*
+### WINDOW 3: the Timeserver:
 The following starts a simple Timeserver, which receives requests for signed
 times, bundled by the Primary, and produces a signed attestation that includes
 the nonces each Secondary ECU sent the Primary to include along with the
@@ -100,11 +104,11 @@ into accepting a false time.
 python demo/demo_timeserver.py
 ```
 
-###*WINDOW 4(+): the Primary client(s):*
+### WINDOW 4(+): the Primary client(s):
 (Image Repo, Director, and Timeserver must already have finished starting up.)
 The Primary client started below is likely to run on a more capable and
 connected ECU in the vehicle - potentially the head unit / infotainment. It will
-obtain metadata and images from the OEM Repository as instructed by the Director
+obtain metadata and images from the Image Repository as instructed by the Director
 and distribute them appropriately to other, Secondary ECUs in the vehicle,
 and it will receive ECU Manifests indicating the software on each Secondary ECU,
 and bundle these into a Vehicle Manifest which it will send to the Director.
@@ -132,7 +136,7 @@ dp.update_cycle()
 
 
 
-###*WINDOW 5(+): the Secondary client(s):*
+### WINDOW 5(+): the Secondary client(s):
 (The following assumes that the Image Repository, Director, Timeserver, and Primary have finished starting up and are hosting/listening.)
 Here, we start a single Secondary ECU and generate a signed ECU Manifest
 with information about the "firmware" that it is running, which we send to the
@@ -158,15 +162,15 @@ The Secondary's update_cycle() call:
 
 
 
-###*Delivering an Update*
+### Delivering an Update
 To try delivering an Update via Uptane, you'll need to add the image file to the Image Repository, then assign it to a vehicle and ECU in the Director Repository. Then, the Primary will obtain the new files, and the Secondary will update from the Primary.
 
 Perform this *in the Image Repo's window* to create a new file, add it to the repository, and host newly-written metadata:
 ```python
 new_target_fname = filepath_in_repo = 'file5.txt'
 open(new_target_fname, 'w').write('Fresh target file')
-do.add_target_to_oemrepo(new_target_fname, filepath_in_repo)
-do.write_to_live()
+di.add_target_to_imagerepo(new_target_fname, filepath_in_repo)
+di.write_to_live()
 ```
 
 Perform this *in the Director Repository's window* to assign that Image file to vehicle 111, ECU 22222:
@@ -192,7 +196,7 @@ You should see an Updated banner on the Secondary, indicating a successful, vali
 
 
 
-###*Running an Arbitrary Package Attack w/ No Compromised Keys*
+### Running an Arbitrary Package Attack w/ No Compromised Keys
 This is a simple sample attack simulating a Man in the Middle attack that provides a malicious image file. In this attack, the attacker does not have the keys to correctly sign any metadata (and so it is an exceptionally basic attack).
 
 In the Director's window, run this:

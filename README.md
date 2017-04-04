@@ -281,8 +281,8 @@ version of metadata.
 First, switch to the Director window and copy `timestamp.der` to `backup_timestamp.der`
 A function is available to perform this action:
 ```
->>> dd.backup_timestamp(vin='111')                                                        
-```                                                                               
+>>> dd.backup_timestamp(vin='111')
+```                                                                     
 
 A new `timestamp.der` and `snapshot.der` can be written to the live Director repository.                                 
 ```
@@ -298,7 +298,7 @@ Next, move `backup_timestamp` to `timestamp.der` (`timestamp.der` is saved to
 `current_timestamp.der` so that it can later be restored), effectively rolling
 back the timestamp file to a previous version.
 ```
->>> dd.rollback_timestamp(vin='111')                                                      
+>>> dd.rollback_timestamp(vin='111')
 ```
 
 The primary client may now perform an update cycle, which should detect the rollback attack.         
@@ -326,9 +326,9 @@ To start, add a new file to the image and director repositories.
 ```
 
 The new file is also added to the director repository.  We clear the previously
-added target file so that the secondary correctly installs a single target/firmware file.
+added target file so that the secondary client correctly installs a single target/firmware file.
 ```
->>> dd.add.clear_vehicle_targets(vin='111')
+>>> dd.clear_vehicle_targets(vin='111')
 >>> dd.add_target_and_write_to_live(filename='evil', file_content='original content',
     vin='111', ecu_serial='22222')
 ```
@@ -349,7 +349,7 @@ us to download a file that does  does not exactly match the Image Repository met
 
 
 
-#### *Compromise the Image repository to also serve arbitrary package*
+#### *Compromise the Image repository to also serve the arbitrary package*
 ```
 >>> do.add_target_and_write_to_live(filename='evil', file_content='evil content')
 ```
@@ -376,9 +376,21 @@ this Secondary has been compromised! Image: 'evil'
 We first restore the compromised repositories by reverting them to a
 previously known, good state.  For the demo, this can be
 accomplished by restarting the affected repositories and beginning with
-a clean slate.  Thereupon, the compromised keys may then be revoked.
+a clean slate.  Thereupon, the compromised keys can then be revoked.
 
+In the image repository window:
 ```
+>>> do.kill_server()
+>>> exit()
+$ python
+>>> import demo.demo_oem_repo as do
+>>> do.clean_slate()
+>>> do.revoke_and_add_new_key_and_write_to_live()
+```
+
+And in the director repository window:
+```
+>>> dd.kill_server()
 >>> exit()
 $ python
 >>> import demo.demo_director as dd
@@ -386,20 +398,20 @@ $ python
 >>> dd.revoke_and_add_new_key_and_write_to_live()
 ```
 
-
 #### *Restore the Primary and Seconday ECUs*
 
 ```
 >>> dp.clean_slate()
-
 >>> ds.clean_slate()
 ```
 
 #### *Running another arbitrary package attack*
 ```
->>> do.arbitrary_package_attack(new_target_fname)
-
+>>> do.add_target_and_write_to_live(filename='file6.txt', file_content='new content')
+>>> dd.add_target_and_write_to_live(filename='file6.txt', file_content='new content', vin='111', ecu_serial='22222')
+>>> do.arbitrary_package_attack('file6.txt')
 >>> dp.update_cycle()
-
->>> do.undo_arbitrary_package_attack(new_target_fname)
+>>> do.undo_arbitrary_package_attack('file6.txt')
 ```
+
+The primary client should again discard the malicious "file6.txt" file provided by the image repository.

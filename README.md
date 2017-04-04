@@ -371,17 +371,23 @@ this Secondary has been compromised! Image: 'evil'
 
 
 
-#### *Revoke the compromised Director and Image keys*
+#### *Recover from the compromised Director or Image keys*
 
-We first clear the malicious "evil" file from the Director repository.
+We first restore the compromised repositories by reverting them to a
+previously known, good state.  For the demo, this can be
+accomplished by restarting the affected repositories and beginning with
+a clean slate.  Thereupon, the compromised keys may then be revoked.
+
 ```
->>> dd.clear_vehicle_targets(vin='111')
+>>> exit()
+$ python
+>>> import demo.demo_director as dd
+>>> dd.clean_slate()
 >>> dd.revoke_and_add_new_key_and_write_to_live()
->>> do.revoke_and_add_new_key_and_write_to_live()
 ```
 
 
-#### *Restore Primary and Seconday ECUs*
+#### *Restore the Primary and Seconday ECUs*
 
 ```
 >>> dp.clean_slate()

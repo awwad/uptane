@@ -378,7 +378,7 @@ previously known, good state.  For the demo, this can be
 accomplished by restarting the affected repositories and beginning with
 a clean slate.  Thereupon, the compromised keys can then be revoked.
 
-In the image repository window:
+In the **Image** repository window:
 ```
 >>> do.kill_server()
 >>> exit()
@@ -388,7 +388,7 @@ $ python
 >>> do.revoke_and_add_new_key_and_write_to_live()
 ```
 
-And in the director repository window:
+And in the **Director** repository window:
 ```
 >>> dd.kill_server()
 >>> exit()

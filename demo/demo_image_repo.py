@@ -338,7 +338,7 @@ def undo_arbitrary_package_attack(target_filepath):
 
 def add_target_and_write_to_live(filename, file_content):
   """
-  High-level version of add_target_to_oemrepo() that creates the target
+  High-level version of add_target_to_imagerepo() that creates the target
   file, and writes the changes to the live repository.
   """
 
@@ -350,7 +350,7 @@ def add_target_and_write_to_live(filename, file_content):
     file_object.write(file_content.decode('utf-8'))
 
   filepath_in_repo = filename
-  add_target_to_oemrepo(filename, filepath_in_repo)
+  add_target_to_imagerepo(filename, filepath_in_repo)
   write_to_live()
 
 

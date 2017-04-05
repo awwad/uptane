@@ -533,6 +533,38 @@ SAMPLE_ECU_MANIFEST_SIGNABLE = {
     'keyid': '49309f114b857e4b29bfbff1c1c75df59f154fbc45539b2eb30c8a867843b2cb'}]}
 
 
+
+SAMPLE_VEHICLE_MANIFEST_SIGNABLE = {
+  'signed': {
+    'primary_ecu_serial': '11111',
+    'vin': '111',
+    'ecu_version_manifests': {
+      '22222': [{
+          'signed': {
+            'previous_timeserver_time': '2017-03-31T15:48:31Z',
+            'timeserver_time': '2017-03-31T15:48:31Z',
+            'ecu_serial': '22222',
+            'attacks_detected': '',
+            'installed_image': {
+              'filepath': '/secondary_firmware.txt',
+              'fileinfo': {
+                'length': 37,
+                'hashes': {
+                  'sha256': '6b9f987226610bfed08b824c93bf8b2f59521fce9a2adef80c495f363c1c9c44',
+                  'sha512': '706c283972c5ae69864b199e1cdd9b4b8babc14f5a454d0fd4d3b35396a04ca0b40af731671b74020a738b5108a78deb032332c36d6ae9f31fae2f8a70f7e1ce'}}}},
+          'signatures': [{
+              'keyid': '49309f114b857e4b29bfbff1c1c75df59f154fbc45539b2eb30c8a867843b2cb',
+              'sig': '40069be1dd6f3fc091300307d61bc1646683a3ab8ebefac855bec0082c6fa067136800b744a2276564d9216cfcaafdea3976fc7f2128d2454d8d46bac79ebe05',
+              'method': 'ed25519'}]}]}},
+  'signatures': [{
+      'keyid': '9a406d99e362e7c93e7acfe1e4d6585221315be817f350c026bbee84ada260da',
+      'sig': '222e3fe0f3aa4fd14e163ec68f61954a9f4714d6d91d7114190e0a19a5ecc1cc43d9684e99dd8082c519815a01dd2e55a7a63d1467612cfb360937178586530c',
+      'method': 'ed25519'}]}
+
+
+
+
+
 # Run unit tests.
 if __name__ == '__main__':
   unittest.main()

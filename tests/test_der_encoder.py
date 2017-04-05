@@ -437,7 +437,18 @@ class TestASN1(unittest.TestCase):
 
 
 
-def partial_der_conversion_tester(data_signable_pydict, datatype, cls): # Clunky.
+  def test_20_vehicle_manifest_der_conversion(self):
+    uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
+        SAMPLE_VEHICLE_MANIFEST_SIGNABLE)
+    partial_der_conversion_tester(
+        SAMPLE_VEHICLE_MANIFEST_SIGNABLE, 'vehicle_manifest', self)
+
+
+
+
+
+
+def partial_der_conversion_tester(signable_pydict, datatype, cls): # Clunky.
   """
   Tests each of the different kinds of conversions into ASN.1/DER, and tests
   converting back. In one type of conversion, compares to make sure the data

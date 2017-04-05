@@ -9,34 +9,51 @@ Please note that extensive documentation on design can be found in the following
 
 # Instructions on use of the Uptane demonstration code
 ## Installation
-(As usual, virtual environments are recommended for development and testing, but not necessary. If you use a virtual environment, use python2: virtualenv -p python2 <name>)
+Uptane fully supports Python2 and Python3. As usual for Python, [virtual environments](https://python-docs.readthedocs.io/en/latest/dev/virtualenvs.html) are recommended for development and testing, but not necessary.
 
 Some development libraries are necessary to install some of Uptane's dependencies. If your system uses apt, the command to install them will be:
 ```shell
-sudo apt-get install build-essential libssl-dev libffi-dev python-dev python3-dev
+$ sudo apt-get install build-essential libssl-dev libffi-dev python-dev python3-dev
 ```
 
+Fedora-based distributions can instead install these libraries with dnf.
+```shell
+$ dnf install redhat-rpm-config openssl-devel libffi-devel python-devel python3-devel
+```
+
+OS X users can instead install these header libraries with the `Homebrew <http://brew.sh/>`_ package manager.
+```shell
+$ brew install python
+$ brew install libffi
+```
 
 To download and install the Uptane code and its dependencies, run the following:
 ```shell
-git clone https://github.com/uptane/uptane
-cd uptane
-pip install -r dev-requirements.txt
+$ git clone https://github.com/uptane/uptane
+$ cd uptane
+$ pip install -r dev-requirements.txt
 ```
 
 Note that the demonstration now operates using ASN.1 / DER format and encoding for metadata files by default. The TUF branch in use has been switched accordingly (so please run the command above again if you have an existing installation). This can be switched back to JSON (which is human readable) by changing the tuf.conf.METADATA_FORMAT option in uptane/\_\_init\_\_.py.
 
 
+### Install command-line audio player (optional)
+If you want the demo to play notification sounds you need one of the following audio player command line utilities on your path:
+- mplayer (available for all major operating systems)
+- omxplayer (built-in on Raspbian)
+- afplay (built-in on OS X)
+
 ## Running the demo
 The code below is intended to be run in five or more consoles:
 - WINDOW 1: Python shell for the Image Repository. This serves HTTP (repository files, including metadata).
-- WINDOW 2: Python shell for the Director (Repository and Service). This serves metadata and image files via HTTP,1
+- WINDOW 2: Python shell for the Director (Repository and Service). This serves metadata and image files via HTTP,111
  and receives manifests from the Primary via XMLRPC.
 - WINDOW 3: Bash shell for the Timeserver. This serves signed times in response to requests from the Primary via XMLRPC.
 - WINDOW 4: Python shell for a Primary client in the vehicle. This fetches images and metadata from the repositories via HTTP, and communicates with the Director service, Timeserver, and any Secondaries via XMLRPC. (More of these can be run, simulating more vehicles with one Primary each.)
 - WINDOW 5: Python shell for a Secondary in the vehicle. This communicates directly only with the Primary via XMLRPC, and will perform full metadata verification. (More of these can be run, simulating more ECUs in one or more vehicles.)
 
 
+  
 ### *WINDOW 1: the Image Repository*
 These instructions start a demonstration version of an OEM's or Supplier's main repository
 for software, hosting images and the metadata Uptane requires.
@@ -50,19 +67,15 @@ Type "help", "copyright", "credits" or "license" for more information.
 ```
 
 ```python
->>> import demo.demo_oem_repo as do
->>> do.clean_slate()
-```
-After the demo, to end hosting:
-```python
->>> do.kill_server()
+>>> import demo.demo_image_repo as di
+>>> di.clean_slate()
 ```
 
 
 ### *WINDOW 2: the Director*
 The following starts a Director server, which generates metadata for specific
 vehicles indicating which ECUs should install what firmware (validated against
-and obtained from the OEM's main repository). It also receives and validates
+and obtained from the Image Repository). It also receives and validates
 Vehicle Manifests from Primaries, and the ECU Manifests from Secondaries
 within the Vehicle Manifests, which capture trustworthy information about what
 software is running on the ECUs, along with signed reports of any attacks
@@ -79,15 +92,6 @@ Various manipulations can be made here to the Director's interface. Examples
 will be discussed below in the [Delivering an Update](#delivering-an-update)
 and [Blocking Attacks](#blocking-attacks) sections.
 
-To end HTTP hosting of the image and director repositories, kill_server()
-should be called, otherwise you'll have a zombie Python process.
-Killing the HTTP server does not terminate the XMLRPC server, which requires
-exiting the shell.
-
-```python
->>> dd.kill_server()
-```
-
 
 
 ### *WINDOW 3: the Timeserver:*
@@ -101,11 +105,13 @@ into accepting a false time.
 python demo/demo_timeserver.py
 ```
 
+
+
 ### *WINDOW 4(+): the Primary client(s):*
 (Image Repo, Director, and Timeserver must already have finished starting up.)
 The Primary client started below is likely to run on a more capable and
 connected ECU in the vehicle - potentially the head unit / infotainment. It will
-obtain metadata and images from the OEM Repository as instructed by the Director
+obtain metadata and images from the Image Repository as instructed by the Director
 and distribute them appropriately to other, Secondary ECUs in the vehicle,
 and it will receive ECU Manifests indicating the software on each Secondary ECU,
 and bundle these into a Vehicle Manifest which it will send to the Director.
@@ -160,7 +166,6 @@ The Secondary's update_cycle() call:
 
 
 
-
 ### *Delivering an Update*
 To deliver an Update via Uptane, you'll need to add the image file to the Image Repository, then assign it to a vehicle
 and ECU in the Director Repository. Then, the Primary will obtain the new files, and the Secondary will update from the
@@ -169,11 +174,12 @@ Primary.
 Perform the following in the **Image repository's** window to create a new file, add it to the repository, and host
 newly-written metadata:
 
+
 ```python
->>> new_target_fname = filepath_in_repo = 'file5.txt'
->>> open(new_target_fname, 'w').write('Fresh target file')
->>> do.add_target_to_oemrepo(new_target_fname, filepath_in_repo)
->>> do.write_to_live()
+new_target_fname = filepath_in_repo = 'file5.txt'
+open(new_target_fname, 'w').write('Fresh target file')
+di.add_target_to_imagerepo(new_target_fname, filepath_in_repo)
+di.write_to_live()
 ```
 
 Perform the following in the **Director repository's** window to assign that Image file to vehicle 111, ECU 22222:
@@ -203,6 +209,7 @@ You should see an Updated banner on the Secondary, indicating a successful, vali
 Uptane is designed to secure the software updates delivered between repositories and vehicles.  Section
 7.3 of the [Uptane Design Overview](https://docs.google.com/document/d/1pBK--40BCg_ofww4GES0weYFB6tZRedAjUy6PJ4Rgzk/edit?usp=sharing) covers all of the known attacks in more detail.  We begin this section with a demonstration
 of the Arbitrary Package Attack.
+
 
 
 #### *Running an Arbitrary Package Attack on the Director repository without Compromised Keys*

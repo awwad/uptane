@@ -6,6 +6,7 @@
   Define (and allow validation of) types used by uptane code.
   Follows conventions from tuf. See tuf.formats.
 """
+from __future__ import print_function
 from __future__ import unicode_literals
 
 # We will have a superset of formats in TUF
@@ -106,4 +107,10 @@ SIGNABLE_TIMESERVER_ATTESTATION_SCHEMA = SCHEMA.Object(
     object_name = 'SIGNABLE_TIMESERVER_ATTESTATION_SCHEMA',
     signed = TIMESERVER_ATTESTATION_SCHEMA,
     signatures = SCHEMA.ListOf(SIGNATURE_SCHEMA))
+
+
+ANY_SIGNABLE_UPTANE_METADATA_SCHEMA = SCHEMA.OneOf([
+    SIGNABLE_TIMESERVER_ATTESTATION_SCHEMA,
+    SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA,
+    SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA])
 

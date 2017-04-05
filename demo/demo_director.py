@@ -54,11 +54,12 @@ import os # For paths and symlink
 import shutil # For copying directory trees
 import sys, subprocess, time # For hosting
 import tuf.repository_tool as rt
-import demo.demo_oem_repo as demo_oem_repo # for the main repo directory /:
+import demo.demo_image_repo as demo_image_repo # for the main repo directory /:
 from uptane import GREEN, RED, YELLOW, ENDCOLORS
 
 from six.moves import xmlrpc_server # for the director services interface
 
+import atexit # to kill server process on exit()
 
 KNOWN_VINS = ['111', '112', '113']
 
@@ -291,6 +292,9 @@ def host():
   print('Director repo serving on port: ' + str(demo.DIRECTOR_REPO_PORT))
   url = demo.DIRECTOR_REPO_HOST + ':' + str(demo.DIRECTOR_REPO_PORT) + '/'
   print('Director repo URL is: ' + url)
+
+  # Kill server process after calling exit().
+  atexit.register(kill_server)
 
   # Wait / allow any exceptions to kill the server.
   # try:

@@ -266,11 +266,11 @@ def listen():
   # frontend.
   server.register_function(add_target_to_imagerepo, 'add_target_to_supplier_repo')
   server.register_function(write_to_live, 'write_supplier_repo')
-  server.register_function(arbitrary_package_attack, 'mitm_arbitrary_package_attack')
-  server.register_function(undo_arbitrary_package_attack,
-      'undo_arbitrary_package_attack')
+  server.register_function(mitm_arbitrary_package_attack, 'mitm_arbitrary_package_attack')
+  server.register_function(undo_mitm_arbitrary_package_attack,
+      'undo_mitm_arbitrary_package_attack')
 
-  print(' Starting Supplier Repo Services Thread: will now listen on port ' +
+  print('Starting Supplier Repo Services Thread: will now listen on port ' +
       str(demo.MAIN_REPO_SERVICE_PORT))
   xmlrpc_service_thread = threading.Thread(target=server.serve_forever)
   xmlrpc_service_thread.setDaemon(True)
@@ -299,7 +299,7 @@ def mitm_arbitrary_package_attack(target_filepath):
   elif os.path.exists(backup_target_filepath):
     raise Exception('The attack is already in progress, or was never recovered '
         'from. Not running twice. Please check state and if everything is '
-        'otherwise okay, delete ' + repr(backup_fname))
+        'otherwise okay, delete ' + repr(backup_target_filepath))
 
   # If the image file exists already on the image repository (not necessary),
   # then back it up.
@@ -310,7 +310,17 @@ def mitm_arbitrary_package_attack(target_filepath):
     fobj.write('EVIL UPDATE: ARBITRARY PACKAGE ATTACK TO BE DELIVERED FROM '
         'MITM / bad mirror (no keys compromised).')
 
+  # Delete the arbitrary image file from any of the Director repositories, if
+  # it exists.  If the evil file is found in the Director repo by the
+  # secondary, a banner is not printed because the evil file provided by the
+  # image repository is rejected but not from the director repo.
+  for root_directory, subdirectories, files in os.walk(demo.DIRECTOR_REPO_DIR):
+    for subdirectory in subdirectories:
+      repo_directory = os.path.join(root_directory, subdirectory)
+      evil_file_in_director_repo = os.path.join(repo_directory, target_filepath)
 
+      if os.path.exists(evil_file_in_director_repo):
+        os.remove(evil_file_in_director_repo)
 
 
 

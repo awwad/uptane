@@ -53,7 +53,14 @@ def get_asn_signed(json_signed):
                                                 tag.tagFormatSimple, 3))
   numberOfHashes = 0
 
-  for hash_function, hash_value in filemeta['hashes'].items():
+  # We're going to generate a list of hashes from the dictionary of hashes.
+  # The DER will contain this list, and the order of items in this list will
+  # affect hashing of the DER, and therefore signature verification.
+  # We have to make the order deterministic.
+  sorted_hash_functions = sorted(filemeta['hashes'])
+
+  for hash_function in sorted_hash_functions:
+    hash_value = filemeta['hashes'][hash_function]
     hash = Hash()
     hash['function'] = int(HashFunction(hash_function))
     digest = BinaryData()\
@@ -75,6 +82,8 @@ def get_asn_signed(json_signed):
 
 
 def get_json_signed(asn_metadata):
+  # TODO: Fix obnoxious property: that this function takes asn_metadata instead
+  # of asn_metadata['signed'].
   asn_signed = asn_metadata['signed']
 
   timeserver_time = datetime.utcfromtimestamp(

@@ -430,10 +430,10 @@ def listen():
 
   server.register_function(clear_vehicle_targets, 'clear_vehicle_targets')
 
-  server.register_function(attack_mitm, 'mitm_arbitrary_package_attack')
-  server.register_function(recover_mitm, 'undo_mitm_arbitrary_package_attack')
+  server.register_function(mitm_arbitrary_package_attack, 'mitm_arbitrary_package_attack')
+  server.register_function(undo_mitm_arbitrary_package_attack, 'undo_mitm_arbitrary_package_attack')
 
-  print(' Starting Director Services Thread: will now listen on port ' +
+  print('Starting Director Services Thread: will now listen on port ' +
       str(demo.DIRECTOR_SERVER_PORT))
   director_service_thread = threading.Thread(target=server.serve_forever)
   director_service_thread.setDaemon(True)

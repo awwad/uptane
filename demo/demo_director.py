@@ -430,8 +430,8 @@ def listen():
 
   server.register_function(clear_vehicle_targets, 'clear_vehicle_targets')
 
-  server.register_function(attack_mitm, 'attack_mitm')
-  server.register_function(recover_mitm, 'recover_mitm')
+  server.register_function(attack_mitm, 'mitm_arbitrary_package_attack')
+  server.register_function(recover_mitm, 'undo_mitm_arbitrary_package_attack')
 
   print(' Starting Director Services Thread: will now listen on port ' +
       str(demo.DIRECTOR_SERVER_PORT))
@@ -442,10 +442,10 @@ def listen():
 
 
 
-def attack_mitm(vin, target_filepath):
-  # Simulate an arbitrary package attack, without compromising any keys.  Move
-  # an evil target file into place on the Director repository without updating
-  # metadata.
+def mitm_arbitrary_package_attack(vin, target_filepath):
+  # Simulate an arbitrary package attack by a Man in the Middle, without
+  # compromising any keys.  Move an evil target file into place on the Director
+  # repository without updating metadata.
   full_target_filepath = os.path.join(demo.DIRECTOR_REPO_DIR, vin,
       'targets', target_filepath)
 
@@ -483,15 +483,16 @@ def attack_mitm(vin, target_filepath):
 
   with open(full_target_filepath, 'w') as file_object:
     file_object.write('EVIL UPDATE: ARBITRARY PACKAGE ATTACK TO BE'
-        ' DELIVERED FROM MITM / bad mirror (no keys compromised).')
+        ' DELIVERED FROM MITM (no keys compromised).')
 
 
 
 
 
-def recover_mitm(vin, target_filepath):
-  # Recover from the arbitrary package attack launched by attack_mitm().
-  # Move evil target file out and normal target file back in.
+def undo_mitm_arbitrary_package_attack(vin, target_filepath):
+  # Undo the arbitrary package attack launched by
+  # mitm_arbitrary_package_attack().  Move evil target file out and normal
+  # target file back in.
   full_target_filepath = os.path.join(demo.DIRECTOR_REPO_DIR, vin,
       'targets', target_filepath)
 
@@ -506,7 +507,7 @@ def recover_mitm(vin, target_filepath):
 
   if not os.path.exists(backup_full_target_filepath) or not os.path.exists(full_target_filepath):
     raise Exception('The expected backup or attacked files do not exist. No '
-        'attack is in progress to recover from, or manual manipulation has '
+        'attack is in progress to undo, or manual manipulation has '
         'broken the expected state.')
 
   # In the case of the Director repository, we expect there to be a malicious

@@ -319,7 +319,6 @@ def update_cycle():
         text='No validated targets were found. Either the Director '
         'did not instruct this ECU to install anything, or the target info '
         'the Director provided could not be validated.')
-    time.sleep(2)
     # print(YELLOW + 'No validated targets were found. Either the Director '
     #     'did not instruct this ECU to install anything, or the target info '
     #     'the Director provided could not be validated.' + ENDCOLORS)
@@ -347,7 +346,6 @@ def update_cycle():
 
     print_banner(BANNER_NO_UPDATE, color=WHITE+BLACK_BG,
         text='Primary reports that there is no update for this ECU.')
-    time.sleep(2)
     # print(YELLOW + 'Primary reports that there is no update for this ECU.')
     (image_fname, image) = pserver.get_image(secondary_ecu.ecu_serial)
     generate_signed_ecu_manifest()
@@ -434,7 +432,6 @@ def update_cycle():
           'to install. Image: ' + repr(image_fname))
     generate_signed_ecu_manifest()
     submit_ecu_manifest_to_primary()
-    time.sleep(3)
     return
 
   elif 'evil' in expected_image_fname:
@@ -452,7 +449,6 @@ def update_cycle():
         repr(expected_image_fname), sound=WITCH)
     generate_signed_ecu_manifest()
     submit_ecu_manifest_to_primary()
-    time.sleep(5)
     return
 
   # Simulate installation. (If the demo eventually uses pictures to move into
@@ -475,7 +471,6 @@ def update_cycle():
       text='Installed firmware received from Primary that was fully '
       'validated by the Director and OEM Repo. Image: ' + repr(image_fname),
       sound=WON)
-  time.sleep(5)
   #print(GREEN + 'Installed firmware received from Primary that was fully '
   #    'validated by the Director and OEM Repo.' + ENDCOLORS)
 

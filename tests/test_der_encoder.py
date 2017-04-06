@@ -388,7 +388,7 @@ class TestASN1(unittest.TestCase):
         str('method'): str('ed25519')}],
         str('signed'): {str('nonces'): [1],
         str('time'): str('2017-03-08T17:09:56Z')}}
-    partial_der_conversion_tester(
+    conversion_tester(
         signable_attestation, 'time_attestation', self)
 
 
@@ -416,7 +416,7 @@ class TestASN1(unittest.TestCase):
 
   def test_11_ecu_manifest_der_conversion(self):
 
-    partial_der_conversion_tester(
+    conversion_tester(
         SAMPLE_ECU_MANIFEST_SIGNABLE, 'ecu_manifest', self)
 
 
@@ -440,7 +440,7 @@ class TestASN1(unittest.TestCase):
   def test_20_vehicle_manifest_der_conversion(self):
     uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
         SAMPLE_VEHICLE_MANIFEST_SIGNABLE)
-    partial_der_conversion_tester(
+    conversion_tester(
         SAMPLE_VEHICLE_MANIFEST_SIGNABLE, 'vehicle_manifest', self)
 
 
@@ -448,7 +448,7 @@ class TestASN1(unittest.TestCase):
 
 
 
-def partial_der_conversion_tester(signable_pydict, datatype, cls): # Clunky.
+def conversion_tester(signable_pydict, datatype, cls): # cls: clunky
   """
   Tests each of the different kinds of conversions into ASN.1/DER, and tests
   converting back. In one type of conversion, compares to make sure the data
@@ -462,38 +462,63 @@ def partial_der_conversion_tester(signable_pydict, datatype, cls): # Clunky.
   Does unittest allow/test private functions in UnitTest classes?
   """
 
+
   # Test type 1: only-signed
   # Convert and return only the 'signed' portion, the metadata payload itself,
   # without including any signatures.
-  cls.assertTrue(is_valid_nonempty_der(
-      asn1_codec.convert_signed_metadata_to_der(
-      data_signable_pydict, only_signed=True, datatype=datatype)))
+  signed_der = asn1_codec.convert_signed_metadata_to_der(
+      signable_pydict, only_signed=True, datatype=datatype)
+
+  cls.assertTrue(is_valid_nonempty_der(signed_der))
+
+  # TODO: Add function to asn1_codec that will convert signed-only DER back to
+  # Python dictionary. Might be useful, and is useful for testing only_signed
+  # in any case.
 
 
   # Test type 2: full conversion
   # Convert the full signable ('signed' and 'signatures'), maintaining the
   # existing signature in a new format and encoding.
-  data_signable_der = asn1_codec.convert_signed_metadata_to_der(
-      data_signable_pydict, datatype=datatype)
-  cls.assertTrue(is_valid_nonempty_der(data_signable_der))
+  signable_der = asn1_codec.convert_signed_metadata_to_der(
+      signable_pydict, datatype=datatype)
+  cls.assertTrue(is_valid_nonempty_der(signable_der))
+
+  # Convert it back.
+  signable_reverted = asn1_codec.convert_signed_der_to_dersigned_json(
+      signable_der, datatype=datatype)
+
+  # Ensure the original is equal to what is converted back.
+  cls.assertEqual(signable_pydict, signable_reverted)
+
 
 
   # Test type 3: full conversion with re-signing
   # Convert the full signable ('signed' and 'signatures'), but discarding the
   # original signatures and re-signing over, instead, the hash of the converted,
   # ASN.1/DER 'signed' element.
-  cls.assertTrue(is_valid_nonempty_der(
-      asn1_codec.convert_signed_metadata_to_der(
-      data_signable_pydict, resign=True,
-      private_key=test_signing_key, datatype=datatype)))
+  resigned_der = asn1_codec.convert_signed_metadata_to_der(
+      signable_pydict, resign=True, private_key=test_signing_key,
+      datatype=datatype)
+  cls.assertTrue(is_valid_nonempty_der(resigned_der))
 
-  data_signable_reverted = asn1_codec.convert_signed_der_to_dersigned_json(
-      data_signable_der, datatype=datatype)
+  # Convert the re-signed DER manifest back in order to split it up.
+  resigned_reverted = asn1_codec.convert_signed_der_to_dersigned_json(
+      resigned_der, datatype=datatype)
+  resigned_signature = resigned_reverted['signatures'][0]
+  # These names get pretty confusing. This next variable, resigned_signed_der,
+  # is the re-signed DER, but only the 'signed' element. Separating it required
+  # conversion back and forth.
+  resigned_signed_der = asn1_codec.convert_signed_metadata_to_der(
+      resigned_reverted, only_signed=True, datatype=datatype)
 
-  cls.assertEqual(data_signable_pydict, data_signable_reverted)
+  cls.assertTrue(tuf.keys.verify_signature(
+      test_signing_key, resigned_signature,
+      hashlib.sha256(resigned_signed_der).digest(), is_binary_data=True))
 
-
-  # TODO: <~> Add signature verification to this test.
+  # The signatures will not match, because a new signature was made, but the
+  # 'signed' elements should match when converted back.
+  cls.assertEqual(
+      signable_pydict['signed'], resigned_reverted['signed'])
 
 
 

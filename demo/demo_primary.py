@@ -309,19 +309,8 @@ def update_cycle():
 
 
 
-  # #
-  # # SECOND: VEHICLE VERSION MANIFEST
-  # #
-
-  # # Generate and send.
-  # vehicle_manifest = generate_signed_vehicle_manifest()
-  # submit_vehicle_manifest_to_director(vehicle_manifest)
-
-
-
-
   #
-  # THIRD: DOWNLOAD METADATA AND IMAGES
+  # SECOND: DOWNLOAD METADATA AND IMAGES
   #
 
   # Starting with just the root.json files for the director and mainrepo, and
@@ -389,8 +378,6 @@ def submit_vehicle_manifest_to_director(signed_vehicle_manifest=None):
   server = xmlrpc_client.ServerProxy(
       'http://' + str(demo.DIRECTOR_SERVER_HOST) + ':' +
       str(demo.DIRECTOR_SERVER_PORT))
-  #if not server.system.listMethods():
-  #  raise Exception('Unable to connect to server.')
 
   print("Submitting the Primary's manifest to the Director.")
 
@@ -583,10 +570,10 @@ def get_image_for_ecu(ecu_serial):
 
 
   else:
-    print('Treating requester as full-verification Secondary without a CAN '
-        'interface because the C CAN interface is off or the ECU Serial (' +
-        repr(ecu_serial) + ') does not appear in the mapping of ECU Serials '
-        'to CAN IDs.')
+    #print('Treating requester as full-verification Secondary without a CAN '
+    #    'interface because the C CAN interface is off or the ECU Serial (' +
+    #    repr(ecu_serial) + ') does not appear in the mapping of ECU Serials '
+    #    'to CAN IDs.')
 
     assert os.path.exists(image_fname), 'File ' + repr(image_fname) + \
         ' does not exist....'

@@ -601,20 +601,6 @@ class TestPrimary(unittest.TestCase):
 
 
 
-
-
-
-
-  # def test_normal_case(self):
-  #   import demo.demo_primary as dp
-  #   dp.clean_slate() # also listens, xmlrpc
-  #   dp.generate_signed_vehicle_manifest()
-  #   dp.submit_vehicle_manifest_to_director()
-
-
-
-
-
 # Run unit test.
 if __name__ == '__main__':
   unittest.main()

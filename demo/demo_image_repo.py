@@ -266,7 +266,7 @@ def listen():
   # frontend.
   server.register_function(add_target_to_imagerepo, 'add_target_to_supplier_repo')
   server.register_function(write_to_live, 'write_supplier_repo')
-  server.register_function(arbitrary_package_attack, 'arbitrary_package_attack')
+  server.register_function(arbitrary_package_attack, 'mitm_arbitrary_package_attack')
   server.register_function(undo_arbitrary_package_attack,
       'undo_arbitrary_package_attack')
 
@@ -279,9 +279,10 @@ def listen():
 
 
 
-def arbitrary_package_attack(target_filepath):
-  # Simulate an arbitrary package attack, without compromising keys.  Move evil
-  # target file into place on the image repository, without updating metadata.
+def mitm_arbitrary_package_attack(target_filepath):
+  # Simulate an arbitrary package attack by a Man in the Middle, without
+  # compromising keys.  Move evil target file into place on the image
+  # repository, without updating metadata.
   full_target_filepath = os.path.join(demo.MAIN_REPO_TARGETS_DIR, target_filepath)
 
   # TODO: NOTE THAT THIS ATTACK SCRIPT BREAKS IF THE TARGET FILE IS IN A
@@ -313,8 +314,8 @@ def arbitrary_package_attack(target_filepath):
 
 
 
-def undo_arbitrary_package_attack(target_filepath):
-  # Undo the arbitrary package attack simulated by arbitrary_package_attack().
+def undo_mitm_arbitrary_package_attack(target_filepath):
+  # Undo the arbitrary package attack simulated by mitm_arbitrary_package_attack().
   # Move the evil target file out and normal target file back in.
   full_target_filepath = os.path.join(demo.MAIN_REPO_TARGETS_DIR, target_filepath)
 
@@ -325,7 +326,7 @@ def undo_arbitrary_package_attack(target_filepath):
 
   if not os.path.exists(full_target_filepath) or not os.path.exists(backup_target_filepath):
     raise Exception('The expected backup or attacked files do not exist. No '
-        'attack is in progress to recover from, or manual manipulation has '
+        'attack is in progress to undo, or manual manipulation has '
         'broken the expected state.')
 
   # In the case of the Director repo, we expect there to be a file replaced,

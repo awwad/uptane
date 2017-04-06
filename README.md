@@ -166,7 +166,7 @@ The Secondary's update_cycle() call:
 
 
 
-### *Delivering an Update*
+### 1: *Delivering an Update*
 To deliver an Update via Uptane, you'll need to add the image file to the Image Repository, then assign it to a vehicle
 and ECU in the Director Repository. Then, the Primary will obtain the new files, and the Secondary will update from the
 Primary.
@@ -205,7 +205,7 @@ You should see an Updated banner on the Secondary, indicating a successful, vali
 
 
 
-### *Blocking Attacks*
+### 2: *Blocking Attacks*
 Uptane is designed to secure the software updates delivered between repositories and vehicles.  Section
 7.3 of the [Uptane Design Overview](https://docs.google.com/document/d/1pBK--40BCg_ofww4GES0weYFB6tZRedAjUy6PJ4Rgzk/edit?usp=sharing) covers all of the known attacks in more detail.  We begin this section with a demonstration
 of the Arbitrary Package Attack.
@@ -254,7 +254,7 @@ Since this file is not on (and validated by) the Image Repository, the Primary w
 to the Secondary).
 
 
-#### *Running an Arbitrary Package Attack on the Image repository without Compromised Keys*
+#### 2.1: *Running an Arbitrary Package Attack on the Image repository without Compromised Keys*
 
 ```
 >>> di.arbitrary_package_attack(firmware_fname)
@@ -280,7 +280,7 @@ Undo the the arbitrary package attack so that subsequent sections can be reprodu
 >>> di.undo_mitm_arbitrary_package_attack(firmware_fname)
 ```
 
-#### *Running a Rollback Attack without a compromised Director key*
+#### 2.2: *Running a Rollback Attack without a compromised Director key*
 
 We next demonstrate a rollback attack, where the client is given an older (and previously trusted)
 version of metadata.
@@ -325,7 +325,7 @@ Finally, restore `timestamp.der`.  The valid, latest version of timestamp is mov
  
 
 
-#### *Running an Arbitrary Package Attack with a Compromised Director Key*
+#### 2.3: *Running an Arbitrary Package Attack with a Compromised Director Key*
 
 To start, add a new file to the image and director repositories.
 ```
@@ -356,7 +356,7 @@ us to download a file that does  does not exactly match the Image Repository met
 
 
 
-#### *Compromise the Image repository to also serve the arbitrary package*
+#### 2.4: *Compromise the Image repository to also serve the arbitrary package*
 ```
 >>> di.add_target_and_write_to_live(filename='evil', file_content='evil content')
 ```
@@ -378,7 +378,7 @@ this Secondary has been compromised! Image: 'evil'
 
 
 
-#### *Recover from the compromised Director or Image keys*
+#### 2.5: *Recover from the compromised Director or Image keys*
 
 We first restore the compromised repositories by reverting them to a
 previously known, good state.  For the demo, this can be
@@ -405,14 +405,14 @@ $ python
 >>> dd.revoke_and_add_new_key_and_write_to_live()
 ```
 
-#### *Restore the Primary and Seconday ECUs*
+#### 2.6: *Restore the Primary and Seconday ECUs*
 
 ```
 >>> dp.clean_slate()
 >>> ds.clean_slate()
 ```
 
-#### *Running another arbitrary package attack*
+#### 2.7: *Running another arbitrary package attack*
 ```
 >>> di.add_target_and_write_to_live(filename='firmware.img', file_content='new firmware')
 >>> dd.add_target_and_write_to_live(filename='firmware.img', file_content='new firmware', vin='111', ecu_serial='22222')

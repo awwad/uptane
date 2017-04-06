@@ -274,7 +274,8 @@ Undo the the arbitrary package attack so that subsequent sections can be reprodu
 #### 2.2: *Running a Rollback Attack without a compromised Director key*
 
 We next demonstrate a rollback attack, where the client is given an older (and previously trusted)
-version of metadata.
+version of metadata.  This attack can cause secondary clients to use older firmware than they
+currently trust.  The [Deny Functionality](https://docs.google.com/document/d/1pBK--40BCg_ofww4GES0weYFB6tZRedAjUy6PJ4Rgzk/edit#heading=h.4mo91b3dvcqd) subsection of [Design Overview](https://docs.google.com/document/d/1pBK--40BCg_ofww4GES0weYFB6tZRedAjUy6PJ4Rgzk/edit?usp=sharing) covers the rollback attack in more detail.
 
 First, switch to the Director window and copy `timestamp.der` to `backup_timestamp.der`
 A function is available to perform this action:

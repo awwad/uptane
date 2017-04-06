@@ -1,5 +1,5 @@
 # Uptane
-Reference Implementation and demonstration code for [UPTANE](https://uptane.org).
+Reference Implementation and demonstration code for [Uptane](https://uptane.org).
 
 Please note that extensive documentation on design can be found in the following documents:
 

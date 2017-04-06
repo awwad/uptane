@@ -176,19 +176,19 @@ newly-written metadata:
 
 
 ```python
-new_target_fname = filepath_in_repo = 'file5.txt'
-open(new_target_fname, 'w').write('Fresh target file')
-di.add_target_to_imagerepo(new_target_fname, filepath_in_repo)
+firmware_fname = filepath_in_repo = 'firmware.img'
+open(firmware_fname, 'w').write('Fresh firmware image')
+di.add_target_to_imagerepo(firmware_fname, filepath_in_repo)
 di.write_to_live()
 ```
 
 Perform the following in the **Director repository's** window to assign that Image file to vehicle 111, ECU 22222:
 ```python
->>> new_target_fname = filepath_in_repo = 'file5.txt'
+>>> firmware_fname = filepath_in_repo = 'firmware.img'
 >>> ecu_serial = '22222'
 >>> vin = '111'
->>> dd.add_target_to_director(new_target_fname, filepath_in_repo, vin, ecu_serial)
->>> dd.write_to_live(vin_to_update='111')
+>>> dd.add_target_to_director(firmware_fname, filepath_in_repo, vin, ecu_serial)
+>>> dd.write_to_live(vin_to_update=vin)
 ```
 
 Next, you can update the Primary in the Primary's window:
@@ -218,7 +218,7 @@ attacker does not have the keys to correctly sign new metadata (and so it is an 
 
 In the **Director's** window, run:
 ```python
->>> dd.mitm_arbitrary_package_attack(vin, new_target_fname)
+>>> dd.mitm_arbitrary_package_attack(vin, firmware_fname)
 ```
 
 Now, in the **Primary's** window, run:
@@ -232,7 +232,7 @@ able to discard the manipulated file without even sending it to the Secondary.
 If you want to resume toying with the repositories, you can run a script to put the repository back in a
 normal state (undoing what the attack did) by running the following in the Director's window:
 ```python
->>> dd.recover_mitm_arbitrary_package_attack(vin, new_target_fname)
+>>> dd.recover_mitm_arbitrary_package_attack(vin, firmware_fname)
 ```
 
 If the primary client runs an update_cycle() after the restoration of the Director repository, file5.txt
@@ -240,12 +240,12 @@ should update successfully.
 
 To manually demonstrate the arbitrary package attack, issue the following commands in the Director console:
 ```python
->>> new_target_fname = 'file5.txt' # filename of file to create
->>> open(new_target_fname, 'w').write('Director-created target') # you could use an existing file, of course
->>> filepath_in_repo = 'file5.txt' # The path that will identify the file in the repository.
+>>> firmware_fname = 'firmware.img' # filename of image to create
+>>> open(firmware_fname, 'w').write('Director-created image') # you could use an existing file, of course
+>>> filepath_in_repo = 'firmware.img' # The path that will identify the file in the repository.
 >>> ecu_serial = '11111' # The ECU Serial Number of the ECU to which this image should be delivered.
 >>> vin = '111' # The VIN of the vehicle containing that ECU.
->>> dd.add_target_to_director(new_target_fname, filepath_in_repo, vin, ecu_serial)
+>>> dd.add_target_to_director(firmware_fname, filepath_in_repo, vin, ecu_serial)
 >>> dd.write_to_live()
 ```
 As a result of the attack above, the Director will instruct ECU 11111 in vehicle 111 to install file5.txt
@@ -257,27 +257,27 @@ to the Secondary).
 #### *Running an Arbitrary Package Attack on the Image repository without Compromised Keys*
 
 ```
->>> di.arbitrary_package_attack(new_target_fname)
+>>> di.arbitrary_package_attack(firmware_fname)
 
 >>> dp.update_cycle()
 ```
 
 
-The primary client is expected to discard the malicious `file5.txt` downloaded from the Image repository,
+The primary client is expected to discard the malicious `firmware.img` downloaded from the Image repository,
 and only download the valid version of the file from the Director repository.
 
 ```Python
-Update failed from http://localhost:30301/targets/file5.txt.
+Update failed from http://localhost:30301/targets/firmware.img.
 BadHashError
-Failed to update /file5.txt from all mirrors: {u'http://localhost:30301/targets/file5.txt': BadHashError()}
-Downloading: u'http://localhost:30401/111/targets/file5.txt'
+Failed to update /firmware.img from all mirrors: {u'http://localhost:30301/targets/firmware.img': BadHashError()}
+Downloading: u'http://localhost:30401/111/targets/firmware.img'
 Downloaded 17 bytes out of the expected 17 bytes.
 ```
 
 Undo the the arbitrary package attack so that subsequent sections can be reproduced as expected.
 
 ```
->>> di.undo_mitm_arbitrary_package_attack(new_target_fname)
+>>> di.undo_mitm_arbitrary_package_attack(firmware_fname)
 ```
 
 #### *Running a Rollback Attack without a compromised Director key*
@@ -414,11 +414,11 @@ $ python
 
 #### *Running another arbitrary package attack*
 ```
->>> di.add_target_and_write_to_live(filename='file6.txt', file_content='new content')
->>> dd.add_target_and_write_to_live(filename='file6.txt', file_content='new content', vin='111', ecu_serial='22222')
->>> di.mitm_arbitrary_package_attack('file6.txt')
+>>> di.add_target_and_write_to_live(filename='firmware.img', file_content='new firmware')
+>>> dd.add_target_and_write_to_live(filename='firmware.img', file_content='new firmware', vin='111', ecu_serial='22222')
+>>> di.mitm_arbitrary_package_attack('firmware.img')
 >>> dp.update_cycle()
->>> di.undo_arbitrary_package_attack('file6.txt')
+>>> di.undo_arbitrary_package_attack('firmware.img')
 ```
 
-The primary client should again discard the malicious "file6.txt" file provided by the image repository.
+The primary client should again discard the malicious "firmware.img" file provided by the image repository.

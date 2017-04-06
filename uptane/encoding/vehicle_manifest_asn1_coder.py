@@ -36,7 +36,13 @@ def get_asn_signed(json_signed):
                                                      tag.tagFormatSimple, 3))
   numberOfECUVersionManifests = 0
 
-  for ecu_serial in json_signed['ecu_version_manifests']:
+  # We're going to generate a list of ECU Manifests from the dictionary of lists
+  # of ECU Manifests.
+  # The DER will contain this list, and the order of items in this list will
+  # affect hashing of the DER, and therefore signature verification.
+  # We have to make the order deterministic.
+  sorted_ecu_serials = sorted(json_signed['ecu_version_manifests'])
+  for ecu_serial in sorted_ecu_serials:
     for manifest in json_signed['ecu_version_manifests'][ecu_serial]:
       temp_ecu_manifest = ECUVersionManifest()
       json_signed = manifest['signed']

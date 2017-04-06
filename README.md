@@ -221,6 +221,11 @@ In the **Director's** window, run:
 >>> dd.mitm_arbitrary_package_attack(vin, firmware_fname)
 ```
 
+As a result of the attack above, the Director will instruct the secondary client in vehicle 111 to install firmware.img
+Since this file is not on (and validated by) the Image Repository, the Primary will refuse to download it
+(and a Full Verification Secondary would likewise refuse it even if a compromised Primary delivered it
+to the Secondary).
+
 Now, in the **Primary's** window, run:
 ```python
 >>> dp.update_cycle()
@@ -235,23 +240,9 @@ normal state (undoing what the attack did) by running the following in the Direc
 >>> dd.recover_mitm_arbitrary_package_attack(vin, firmware_fname)
 ```
 
-If the primary client runs an update_cycle() after the restoration of the Director repository, file5.txt
+If the primary client runs an update_cycle() after the restoration of the Director repository, firmware.img
 should update successfully.
 
-To manually demonstrate the arbitrary package attack, issue the following commands in the Director console:
-```python
->>> firmware_fname = 'firmware.img' # filename of image to create
->>> open(firmware_fname, 'w').write('Director-created image') # you could use an existing file, of course
->>> filepath_in_repo = 'firmware.img' # The path that will identify the file in the repository.
->>> ecu_serial = '11111' # The ECU Serial Number of the ECU to which this image should be delivered.
->>> vin = '111' # The VIN of the vehicle containing that ECU.
->>> dd.add_target_to_director(firmware_fname, filepath_in_repo, vin, ecu_serial)
->>> dd.write_to_live()
-```
-As a result of the attack above, the Director will instruct ECU 11111 in vehicle 111 to install file5.txt
-Since this file is not on (and validated by) the Image Repository, the Primary will refuse to download it
-(and a Full Verification Secondary would likewise refuse it even if a compromised Primary delivered it
-to the Secondary).
 
 
 #### 2.1: *Running an Arbitrary Package Attack on the Image repository without Compromised Keys*

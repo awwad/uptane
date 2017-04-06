@@ -364,8 +364,13 @@ us to download a file that does  does not exactly match the Image Repository met
 Finally, the primary and secondary are updated.  Note, both the image and director repositories have been
 compromised.  The primary installs the "evil" file, however, the secondary does not.
 
+On the **primary** client:
 ```
 >>> dp.update_cycle()
+```
+
+On the **secondary** cilent:
+```
 >>> ds.update_cycle()
 ```
 
@@ -397,7 +402,6 @@ $ python
 
 And in the **Director** repository window:
 ```
->>> dd.kill_server()
 >>> exit()
 $ python
 >>> import demo.demo_director as dd
@@ -405,14 +409,19 @@ $ python
 >>> dd.revoke_and_add_new_key_and_write_to_live()
 ```
 
-#### 2.6: *Restore the Primary and Seconday ECUs*
+#### 2.6: *Restore the Primary and Seconday clients*
 
+On the **primary** client:
 ```
 >>> dp.clean_slate()
+```
+
+On the **secondary** client:
+```
 >>> ds.clean_slate()
 ```
 
-#### 2.7: *Running another arbitrary package attack*
+#### 2.7: *Running another arbitrary package attack on the image repository*
 ```
 >>> di.add_target_and_write_to_live(filename='firmware.img', file_content='new firmware')
 >>> dd.add_target_and_write_to_live(filename='firmware.img', file_content='new firmware', vin='111', ecu_serial='22222')

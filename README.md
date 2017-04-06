@@ -422,11 +422,19 @@ On the **secondary** client:
 ```
 
 #### 2.7: *Running another arbitrary package attack on the image repository*
+
+Note: The following code snippet should be executed in the listed order.  Pay special attention to which
+repository is being modified.
+
 ```
 >>> di.add_target_and_write_to_live(filename='firmware.img', file_content='new firmware')
->>> dd.add_target_and_write_to_live(filename='firmware.img', file_content='new firmware', vin='111', ecu_serial='22222')
+>>> dd.add_target_and_write_to_live(filename='firmware.img', file_content='new firmware',
+    vin='111', ecu_serial='22222')
+
 >>> di.mitm_arbitrary_package_attack('firmware.img')
+
 >>> dp.update_cycle()
+
 >>> di.undo_arbitrary_package_attack('firmware.img')
 ```
 

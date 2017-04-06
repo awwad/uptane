@@ -20,19 +20,23 @@ from pyasn1.type import univ, tag
 
 from uptane.encoding.asn1_definitions import *
 
+import calendar
+from datetime import datetime
+
+
 def get_asn_signed(json_signed):
   signed = ECUVersionManifestSigned()\
            .subtype(implicitTag=tag.Tag(tag.tagClassContext,
                                         tag.tagFormatConstructed, 0))
 
   signed['ecuIdentifier'] = json_signed['ecu_serial']
-  signed['previousTime'] = \
-            metadata.iso8601_to_epoch(json_signed['previous_timeserver_time'])
-  signed['currentTime'] = \
-                    metadata.iso8601_to_epoch(json_signed['timeserver_time'])
+  signed['previousTime'] = calendar.timegm(datetime.strptime(
+      json_signed['previous_timeserver_time'], "%Y-%m-%dT%H:%M:%SZ").timetuple())
+  signed['currentTime'] = calendar.timegm(datetime.strptime(
+      json_signed['timeserver_time'], "%Y-%m-%dT%H:%M:%SZ").timetuple())
 
   # Optional bit.
-  if 'attacks_detected' in json_signed:
+  if 'attacks_detected' in json_signed and json_signed['attacks_detected']:
     attacks_detected = json_signed['attacks_detected']
     assert len(attacks_detected) > 0,\
            'attacks_detected cannot be an empty string!'
@@ -49,9 +53,16 @@ def get_asn_signed(json_signed):
                                                 tag.tagFormatSimple, 3))
   numberOfHashes = 0
 
-  for hash_function, hash_value in filemeta['hashes'].items():
+  # We're going to generate a list of hashes from the dictionary of hashes.
+  # The DER will contain this list, and the order of items in this list will
+  # affect hashing of the DER, and therefore signature verification.
+  # We have to make the order deterministic.
+  sorted_hash_functions = sorted(filemeta['hashes'])
+
+  for hash_function in sorted_hash_functions:
+    hash_value = filemeta['hashes'][hash_function]
     hash = Hash()
-    hash['function'] = int(HashFunction(hash_function.encode('ascii')))
+    hash['function'] = int(HashFunction(hash_function))
     digest = BinaryData()\
              .subtype(explicitTag=tag.Tag(tag.tagClassContext,
                                           tag.tagFormatConstructed, 1))
@@ -71,11 +82,14 @@ def get_asn_signed(json_signed):
 
 
 def get_json_signed(asn_metadata):
+  # TODO: Fix obnoxious property: that this function takes asn_metadata instead
+  # of asn_metadata['signed'].
   asn_signed = asn_metadata['signed']
 
-  timeserver_time = metadata.epoch_to_iso8601(asn_signed['currentTime'])
-  previous_timeserver_time = \
-          metadata.epoch_to_iso8601(asn_signed['previousTime'])
+  timeserver_time = datetime.utcfromtimestamp(
+      asn_signed['currentTime']).isoformat() + 'Z'
+  previous_timeserver_time = datetime.utcfromtimestamp(
+      asn_signed['previousTime']).isoformat() + 'Z'
   ecu_serial = str(asn_signed['ecuIdentifier'])
 
   target = asn_signed['installedImage']
@@ -108,12 +122,12 @@ def get_json_signed(asn_metadata):
     'ecu_serial': ecu_serial,
     'installed_image': installed_image,
     'previous_timeserver_time': previous_timeserver_time,
-    'timeserver_time': timeserver_time
+    'timeserver_time': timeserver_time,
+    'attacks_detected': ''
   }
 
   # Optional bit.
-  attacks_detected = asn_signed['securityAttack']
-  if attacks_detected:
-    json_signed['attacks_detected'] = str(attacks_detected)
+  if asn_signed['securityAttack']:
+    json_signed['attacks_detected'] = str(asn_signed['securityAttack'])
 
   return json_signed

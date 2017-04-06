@@ -777,18 +777,32 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
         signable_vehicle_manifest)
 
-    # Now sign with that key.
-    signed_vehicle_manifest = sign_signable(
-        signable_vehicle_manifest, [self.primary_key])
-    uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
-        signed_vehicle_manifest)
+    # We could replace the if/else below by calling
+    # uptane.common.sign_signable() and adding the DER/non-DER logic there
+    # instead.
+    if tuf.conf.METADATA_FORMAT == 'der':
+      # Convert to DER and sign, replacing the Python dictionary.
+      signable_vehicle_manifest = asn1_codec.convert_signed_metadata_to_der(
+          signable_vehicle_manifest, private_key=self.primary_key,
+          resign=True, datatype='vehicle_manifest')
+
+    else:
+      # If we're not using ASN.1, sign the Python dictionary in a JSON encoding.
+      signable_vehicle_manifest['signatures'].append(tuf.keys.create_signature(
+          self.primary_key,
+          signable_vehicle_manifest['signed'],
+          force_treat_as_pydict=True))
+
+      uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
+          signable_vehicle_manifest)
+
 
     # Now that the ECU manifests have been incorporated into a vehicle manifest,
     # discard the ECU manifests.
 
     self.ecu_manifests = dict()
 
-    return signed_vehicle_manifest
+    return signable_vehicle_manifest
 
     # if use_json:
     #   return signed_vehicle_manifest
@@ -848,7 +862,8 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
 
 
-  def register_ecu_manifest(self, vin, ecu_serial, nonce, signed_ecu_manifest):
+  def register_ecu_manifest(
+      self, vin, ecu_serial, nonce, signed_ecu_manifest, force_pydict=False):
     """
     Called by Secondaries (in the demo, this is via an XMLRPC interface, or
     through another interface and passed through the XMLRPC interface).
@@ -865,10 +880,20 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     """
     # check arg format and that serial is registered
     self._check_ecu_serial(ecu_serial)
+    tuf.formats.BOOLEAN_SCHEMA.check_match(force_pydict)
 
     if vin != self.vin:
       raise uptane.Error('Received an ECU Manifest supposedly hailing from a '
           'different vehicle....')
+
+    if tuf.conf.METADATA_FORMAT == 'der' and not force_pydict:
+      # If we're working with ASN.1/DER, convert it into the format specified in
+      # uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.
+      signed_ecu_manifest = asn1_codec.convert_signed_der_to_dersigned_json(
+          signed_ecu_manifest, datatype='ecu_manifest')
+
+    # Else, we're working with standard Python dictionaries and no conversion
+    # is necessary.
 
     if ecu_serial != signed_ecu_manifest['signed']['ecu_serial']:
       # TODO: Choose an exception class.

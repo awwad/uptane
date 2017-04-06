@@ -11,11 +11,13 @@ from __future__ import unicode_literals
 
 import tuf.formats
 import tuf.keys
+import tuf.repository_tool as repo_tool
 import uptane
 import uptane.formats
 
 import uptane.encoding.asn1_codec as asn1_codec
 import uptane.encoding.timeserver_asn1_coder as timeserver_asn1_coder
+import uptane.encoding.ecu_manifest_asn1_coder as ecu_manifest_asn1_coder
 import uptane.encoding.asn1_definitions as asn1_spec
 import pyasn1.codec.der.encoder as p_der_encoder
 import pyasn1.codec.der.decoder as p_der_decoder
@@ -24,7 +26,7 @@ from pyasn1.type import tag, univ
 import sys # to test Python version 2 vs 3, for byte string behavior
 import hashlib
 import unittest
-import os.path
+import os
 import time
 import copy
 import shutil
@@ -34,7 +36,7 @@ import demo # for generate_key, import_public_key, import_private_key
 
 TEST_DATA_DIR = os.path.join(uptane.WORKING_DIR, 'tests', 'test_data')
 TEMP_TEST_DIR = os.path.join(TEST_DATA_DIR, 'temp_test_encoding')
-
+test_signing_key = None
 
 
 def destroy_temp_dir():
@@ -58,6 +60,12 @@ def setUpModule():
 
   destroy_temp_dir()
 
+  private_key_fname = os.path.join(
+      os.getcwd(), 'demo', 'keys', 'director')
+
+  global test_signing_key
+  test_signing_key = repo_tool.import_ed25519_privatekey_from_file(
+      private_key_fname, 'pw')
 
 
 
@@ -366,6 +374,156 @@ class TestASN1(unittest.TestCase):
 
 
 
+  def test_07_encode_and_validate_resigned_time_attestation_again(self):
+    """
+    This is a redundant test, repeating much of test 06 above with a slightly
+    different method.
+    """
+    signable_attestation = {
+        str('signatures'): [
+        {str('keyid'):
+        str('79c796d7e87389d1ebad04edce49faef611d139ee41ea9fb1931732afbfaac2e'),
+        str('sig'):
+        str('a5ea6a3b685ad64f96c8c12145beda4efafddfac60bcdb45def35fe43c7d1150a182a1b50a1463bfffb0ef8d30b6203aa8b5365b0b7176312e1e9d7e355e550e'),
+        str('method'): str('ed25519')}],
+        str('signed'): {str('nonces'): [1],
+        str('time'): str('2017-03-08T17:09:56Z')}}
+    conversion_tester(
+        signable_attestation, 'time_attestation', self)
+
+
+
+
+
+
+
+  def test_10_ecu_manifest_asn1_conversion(self):
+
+    # First try the low-level asn1 conversion.
+    asn_signed = ecu_manifest_asn1_coder.get_asn_signed(
+        SAMPLE_ECU_MANIFEST_SIGNABLE['signed'])#ecu_manifest_signed_component)
+
+    # Convert back to a basic Python dictionary.
+    json_signed = ecu_manifest_asn1_coder.get_json_signed({'signed': asn_signed})
+
+    # Make sure that the result of conversion to ASN.1 and back is the same
+    # as the original.
+    self.assertEqual(json_signed, SAMPLE_ECU_MANIFEST_SIGNABLE['signed'])
+
+
+
+
+
+  def test_11_ecu_manifest_der_conversion(self):
+
+    conversion_tester(
+        SAMPLE_ECU_MANIFEST_SIGNABLE, 'ecu_manifest', self)
+
+
+    # Redundant tests. The above call should cover all of the following tests.
+    der_ecu_manifest = asn1_codec.convert_signed_metadata_to_der(
+        SAMPLE_ECU_MANIFEST_SIGNABLE, only_signed=True, datatype='ecu_manifest')
+
+    der_ecu_manifest = asn1_codec.convert_signed_metadata_to_der(
+        SAMPLE_ECU_MANIFEST_SIGNABLE, datatype='ecu_manifest')
+
+    pydict_ecu_manifest = asn1_codec.convert_signed_der_to_dersigned_json(
+        der_ecu_manifest, datatype='ecu_manifest')
+
+    self.assertEqual(
+        pydict_ecu_manifest, SAMPLE_ECU_MANIFEST_SIGNABLE)
+
+
+
+
+
+  def test_20_vehicle_manifest_der_conversion(self):
+    uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
+        SAMPLE_VEHICLE_MANIFEST_SIGNABLE)
+    conversion_tester(
+        SAMPLE_VEHICLE_MANIFEST_SIGNABLE, 'vehicle_manifest', self)
+
+
+
+
+
+
+def conversion_tester(signable_pydict, datatype, cls): # cls: clunky
+  """
+  Tests each of the different kinds of conversions into ASN.1/DER, and tests
+  converting back. In one type of conversion, compares to make sure the data
+  has not changed.
+
+  This function takes as a third parameter the unittest.TestCase object whose
+  functions (assertTrue etc) it can use. This is awkward and inappropriate. :P
+  Find a different means of providing modularity instead of this one.
+  (Can't just have this method in the class above because it would be run as
+  a test. Could have default parameters and do that, but that's clunky, too.)
+  Does unittest allow/test private functions in UnitTest classes?
+  """
+
+
+  # Test type 1: only-signed
+  # Convert and return only the 'signed' portion, the metadata payload itself,
+  # without including any signatures.
+  signed_der = asn1_codec.convert_signed_metadata_to_der(
+      signable_pydict, only_signed=True, datatype=datatype)
+
+  cls.assertTrue(is_valid_nonempty_der(signed_der))
+
+  # TODO: Add function to asn1_codec that will convert signed-only DER back to
+  # Python dictionary. Might be useful, and is useful for testing only_signed
+  # in any case.
+
+
+  # Test type 2: full conversion
+  # Convert the full signable ('signed' and 'signatures'), maintaining the
+  # existing signature in a new format and encoding.
+  signable_der = asn1_codec.convert_signed_metadata_to_der(
+      signable_pydict, datatype=datatype)
+  cls.assertTrue(is_valid_nonempty_der(signable_der))
+
+  # Convert it back.
+  signable_reverted = asn1_codec.convert_signed_der_to_dersigned_json(
+      signable_der, datatype=datatype)
+
+  # Ensure the original is equal to what is converted back.
+  cls.assertEqual(signable_pydict, signable_reverted)
+
+
+
+  # Test type 3: full conversion with re-signing
+  # Convert the full signable ('signed' and 'signatures'), but discarding the
+  # original signatures and re-signing over, instead, the hash of the converted,
+  # ASN.1/DER 'signed' element.
+  resigned_der = asn1_codec.convert_signed_metadata_to_der(
+      signable_pydict, resign=True, private_key=test_signing_key,
+      datatype=datatype)
+  cls.assertTrue(is_valid_nonempty_der(resigned_der))
+
+  # Convert the re-signed DER manifest back in order to split it up.
+  resigned_reverted = asn1_codec.convert_signed_der_to_dersigned_json(
+      resigned_der, datatype=datatype)
+  resigned_signature = resigned_reverted['signatures'][0]
+  # These names get pretty confusing. This next variable, resigned_signed_der,
+  # is the re-signed DER, but only the 'signed' element. Separating it required
+  # conversion back and forth.
+  resigned_signed_der = asn1_codec.convert_signed_metadata_to_der(
+      resigned_reverted, only_signed=True, datatype=datatype)
+
+  cls.assertTrue(tuf.keys.verify_signature(
+      test_signing_key, resigned_signature,
+      hashlib.sha256(resigned_signed_der).digest(), is_binary_data=True))
+
+  # The signatures will not match, because a new signature was made, but the
+  # 'signed' elements should match when converted back.
+  cls.assertEqual(
+      signable_pydict['signed'], resigned_reverted['signed'])
+
+
+
+
+
 def is_valid_nonempty_der(der_string):
   """
   Currently a hacky test to see if the result is a non-empty byte string.
@@ -387,6 +545,57 @@ def is_valid_nonempty_der(der_string):
     return '\\x' in repr(der_string)
   else:
     return isinstance(der_string, bytes)
+
+
+
+
+
+SAMPLE_ECU_MANIFEST_SIGNABLE = {
+  'signed': {
+    'timeserver_time': '2017-03-27T16:19:17Z',
+    'previous_timeserver_time': '2017-03-27T16:19:17Z',
+    'ecu_serial': '22222',
+    'attacks_detected': '',
+    'installed_image': {
+      'filepath': '/secondary_firmware.txt',
+      'fileinfo': {
+        'length': 37,
+        'hashes': {
+          'sha256': '6b9f987226610bfed08b824c93bf8b2f59521fce9a2adef80c495f363c1c9c44',
+          'sha512': '706c283972c5ae69864b199e1cdd9b4b8babc14f5a454d0fd4d3b35396a04ca0b40af731671b74020a738b5108a78deb032332c36d6ae9f31fae2f8a70f7e1ce'}}}},
+  'signatures': [{
+    'sig': '42e6f4b398dbad0404cca847786a926972b54ca2ae71c7334f3d87fc62a10d08e01f7b5aa481cd3add61ef36f2037a9f68beca9f6ea26d2f9edc6f4ba0ba2a06',
+    'method': 'ed25519',
+    'keyid': '49309f114b857e4b29bfbff1c1c75df59f154fbc45539b2eb30c8a867843b2cb'}]}
+
+
+
+SAMPLE_VEHICLE_MANIFEST_SIGNABLE = {
+  'signed': {
+    'primary_ecu_serial': '11111',
+    'vin': '111',
+    'ecu_version_manifests': {
+      '22222': [{
+          'signed': {
+            'previous_timeserver_time': '2017-03-31T15:48:31Z',
+            'timeserver_time': '2017-03-31T15:48:31Z',
+            'ecu_serial': '22222',
+            'attacks_detected': '',
+            'installed_image': {
+              'filepath': '/secondary_firmware.txt',
+              'fileinfo': {
+                'length': 37,
+                'hashes': {
+                  'sha256': '6b9f987226610bfed08b824c93bf8b2f59521fce9a2adef80c495f363c1c9c44',
+                  'sha512': '706c283972c5ae69864b199e1cdd9b4b8babc14f5a454d0fd4d3b35396a04ca0b40af731671b74020a738b5108a78deb032332c36d6ae9f31fae2f8a70f7e1ce'}}}},
+          'signatures': [{
+              'keyid': '49309f114b857e4b29bfbff1c1c75df59f154fbc45539b2eb30c8a867843b2cb',
+              'sig': '40069be1dd6f3fc091300307d61bc1646683a3ab8ebefac855bec0082c6fa067136800b744a2276564d9216cfcaafdea3976fc7f2128d2454d8d46bac79ebe05',
+              'method': 'ed25519'}]}]}},
+  'signatures': [{
+      'keyid': '9a406d99e362e7c93e7acfe1e4d6585221315be817f350c026bbee84ada260da',
+      'sig': '222e3fe0f3aa4fd14e163ec68f61954a9f4714d6d91d7114190e0a19a5ecc1cc43d9684e99dd8082c519815a01dd2e55a7a63d1467612cfb360937178586530c',
+      'method': 'ed25519'}]}
 
 
 

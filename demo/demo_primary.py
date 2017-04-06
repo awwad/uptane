@@ -374,11 +374,16 @@ def submit_vehicle_manifest_to_director(signed_vehicle_manifest=None):
   if signed_vehicle_manifest is None:
     signed_vehicle_manifest = most_recent_signed_vehicle_manifest
 
+  if tuf.conf.METADATA_FORMAT == 'der':
+    # If we're working with DER ECU Manifests, check that the manifest to send
+    # is a byte array, and encapsulate it in a Binary() object for XMLRPC
+    # transmission.
+    uptane.formats.DER_DATA_SCHEMA.check_match(signed_vehicle_manifest)
+    signed_vehicle_manifest = xmlrpc_client.Binary(signed_vehicle_manifest)
 
-  uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
-      signed_vehicle_manifest)
-  # TODO: <~> Be sure to update the previous line to indicate an ASN.1
-  # version of the ecu_manifest after encoders have been implemented.
+  else:
+    uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
+        signed_vehicle_manifest)
 
 
   server = xmlrpc_client.ServerProxy(
@@ -763,6 +768,22 @@ class RequestHandler(xmlrpc_server.SimpleXMLRPCRequestHandler):
 
 
 
+def register_ecu_manifest_wrapper(vin, ecu_serial, nonce, signed_ecu_manifest):
+  """
+  This function is a wrapper for primary.Primary::register_ecu_manifest().
+
+  This wrapper is now necessary because of ASN.1/DER combined with XMLRPC:
+  XMLRPC has to wrap binary data in a Binary() object, and the raw data has to
+  be extracted before it is passed to the underlying primary.py (in the
+  reference implementation), which doesn't know anything about XMLRPC.
+  """
+  primary_ecu.register_ecu_manifest(
+      vin, ecu_serial, nonce, signed_ecu_manifest.data)
+
+
+
+
+
 def listen():
   """
   Listens on an available port from list PRIMARY_SERVER_AVAILABLE_PORTS, for
@@ -808,7 +829,14 @@ def listen():
   # demonstration.
 
   server.register_function(
-      primary_ecu.register_ecu_manifest, 'submit_ecu_manifest')
+      # This wrapper is now necessary because of ASN.1/DER combined with XMLRPC:
+      # XMLRPC has to wrap binary data in a Binary() object, and the raw data
+      # has to be extracted before it is passed to the underlying primary.py
+      # (in the reference implementation), which doesn't know anything about
+      # XMLRPC.
+      register_ecu_manifest_wrapper, 'submit_ecu_manifest')
+      # The previous line used to be this:
+      #primary_ecu.register_ecu_manifest, 'submit_ecu_manifest')
 
   # Please note that registrations here are NOT secure, and intended for
   # convenience of the demonstration. An OEM will have their own mechanisms for

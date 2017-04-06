@@ -21,7 +21,7 @@ Fedora-based distributions can instead install these libraries with dnf.
 $ dnf install redhat-rpm-config openssl-devel libffi-devel python-devel python3-devel
 ```
 
-OS X users can instead install these header libraries with the `Homebrew <http://brew.sh/>`_ package manager.
+OS X users can instead install these header libraries with the [Homebrew](http://brew.sh/) package manager.
 ```shell
 $ brew install python
 $ brew install libffi

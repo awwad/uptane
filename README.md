@@ -248,21 +248,25 @@ should update successfully.
 #### 2.1: *Running an Arbitrary Package Attack on the Image repository without Compromised Keys*
 
 ```
->>> di.arbitrary_package_attack(firmware_fname)
+>>> di.mitm_arbitrary_package_attack(firmware_fname)
 
 >>> dp.update_cycle()
 ```
 
 
-The primary client is expected to discard the malicious `firmware.img` downloaded from the Image repository,
-and only download the valid version of the file from the Director repository.
+The primary client is expected to discard the malicious `firmware.img` downloaded from the Image repository
+and print a "Defended" banner.  If you were to inspect the console to locate the cause of the error, you should
+find the following:
 
 ```Python
+Downloading: u'http://localhost:30301/targets/firmware.img'
+Downloaded 14 bytes out of the expected 14 bytes.
+Not decompressing http://localhost:30301/targets/firmware.img
 Update failed from http://localhost:30301/targets/firmware.img.
 BadHashError
 Failed to update /firmware.img from all mirrors: {u'http://localhost:30301/targets/firmware.img': BadHashError()}
 Downloading: u'http://localhost:30401/111/targets/firmware.img'
-Downloaded 17 bytes out of the expected 17 bytes.
+Could not download URL: u'http://localhost:30401/111/targets/firmware.img'
 ```
 
 Undo the the arbitrary package attack so that subsequent sections can be reproduced as expected.

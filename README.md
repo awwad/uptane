@@ -112,7 +112,7 @@ python demo/demo_timeserver.py
 The Primary client started below is likely to run on a more capable and
 connected ECU in the vehicle - potentially the head unit / infotainment. It will
 obtain metadata and images from the Image Repository as instructed by the Director
-and distribute them appropriately to other, Secondary ECUs in the vehicle,
+and di1stribute them appropriately to other, Secondary ECUs in the vehicle,
 and it will receive ECU Manifests indicating the software on each Secondary ECU,
 and bundle these into a Vehicle Manifest which it will send to the Director.
 ```python
@@ -218,7 +218,7 @@ attacker does not have the keys to correctly sign new metadata (and so it is an 
 
 In the **Director's** window, run:
 ```python
->>> dd.attack_mitm(vin, new_target_fname)
+>>> dd.mitm_arbitrary_package_attack(vin, new_target_fname)
 ```
 
 Now, in the **Primary's** window, run:
@@ -232,7 +232,7 @@ able to discard the manipulated file without even sending it to the Secondary.
 If you want to resume toying with the repositories, you can run a script to put the repository back in a
 normal state (undoing what the attack did) by running the following in the Director's window:
 ```python
->>> dd.recover_mitm(vin, new_target_fname)
+>>> dd.recover_mitm_arbitrary_package_attack(vin, new_target_fname)
 ```
 
 If the primary client runs an update_cycle() after the restoration of the Director repository, file5.txt
@@ -257,7 +257,7 @@ to the Secondary).
 #### *Running an Arbitrary Package Attack on the Image repository without Compromised Keys*
 
 ```
->>> do.arbitrary_package_attack(new_target_fname)
+>>> di.arbitrary_package_attack(new_target_fname)
 
 >>> dp.update_cycle()
 ```
@@ -277,7 +277,7 @@ Downloaded 17 bytes out of the expected 17 bytes.
 Undo the the arbitrary package attack so that subsequent sections can be reproduced as expected.
 
 ```
->>> do.undo_arbitrary_package_attack(new_target_fname)
+>>> di.undo_mitm_arbitrary_package_attack(new_target_fname)
 ```
 
 #### *Running a Rollback Attack without a compromised Director key*
@@ -329,7 +329,7 @@ Finally, restore `timestamp.der`.  The valid, latest version of timestamp is mov
 
 To start, add a new file to the image and director repositories.
 ```
->>> do.add_target_and_write_to_live(filename='evil', file_content='original content')
+>>> di.add_target_and_write_to_live(filename='evil', file_content='original content')
 ```
 
 The new file is also added to the director repository.  We clear the previously
@@ -358,7 +358,7 @@ us to download a file that does  does not exactly match the Image Repository met
 
 #### *Compromise the Image repository to also serve the arbitrary package*
 ```
->>> do.add_target_and_write_to_live(filename='evil', file_content='evil content')
+>>> di.add_target_and_write_to_live(filename='evil', file_content='evil content')
 ```
 
 Finally, the primary and secondary are updated.  Note, both the image and director repositories have been
@@ -387,12 +387,12 @@ a clean slate.  Thereupon, the compromised keys can then be revoked.
 
 In the **Image** repository window:
 ```
->>> do.kill_server()
+>>> di.kill_server()
 >>> exit()
 $ python
->>> import demo.demo_oem_repo as do
->>> do.clean_slate()
->>> do.revoke_and_add_new_key_and_write_to_live()
+>>> import demo.demo_image_repo as di
+>>> di.clean_slate()
+>>> di.revoke_and_add_new_key_and_write_to_live()
 ```
 
 And in the **Director** repository window:
@@ -414,11 +414,11 @@ $ python
 
 #### *Running another arbitrary package attack*
 ```
->>> do.add_target_and_write_to_live(filename='file6.txt', file_content='new content')
+>>> di.add_target_and_write_to_live(filename='file6.txt', file_content='new content')
 >>> dd.add_target_and_write_to_live(filename='file6.txt', file_content='new content', vin='111', ecu_serial='22222')
->>> do.arbitrary_package_attack('file6.txt')
+>>> di.mitm_arbitrary_package_attack('file6.txt')
 >>> dp.update_cycle()
->>> do.undo_arbitrary_package_attack('file6.txt')
+>>> di.undo_arbitrary_package_attack('file6.txt')
 ```
 
 The primary client should again discard the malicious "file6.txt" file provided by the image repository.

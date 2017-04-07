@@ -324,7 +324,17 @@ Finally, restore `timestamp.der`.  The valid, latest version of timestamp is mov
 
 #### 2.3: *Running an Arbitrary Package Attack with a Compromised Director Key*
 
-To start, add new firmware to the image and director repositories.
+Thus far we have simulated a few attacks that have not depended on compromised keys.  In
+the arbitrary and rollback attacks (via a Man in the Middle), an attacker has
+simply modified the images or metadata requested by a primary or secondary client, and
+these clients have blocked the attacks because the malicious images did not match what
+was listed in signed, trusted metadata.  However, what happens if an attacker compromises a
+repository key and signs for a malicious image?  Is the client able to block a compromise
+of just the image repository?  What about a compromise of both the image and director
+repositories?
+
+To start the simulated arbitrary package attack (with a compromised key), add new firmware to
+both image and director repositories.
 ```
 >>> di.add_target_and_write_to_live(filename='new_firmware.img', file_content='new firmware image')
 ```

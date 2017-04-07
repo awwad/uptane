@@ -167,11 +167,11 @@ The Secondary's update_cycle() call:
 
 
 ### 1: *Delivering an Update*
-To deliver an Update via Uptane, you'll need to add the image file to the Image Repository, then assign it to a vehicle
-and ECU in the Director Repository. Then, the Primary will obtain the new files, and the Secondary will update from the
+To deliver an Update via Uptane, you'll need to add the firmware image to the Image repository, then assign it to a vehicle
+and ECU in the Director repository. Then, the Primary will obtain the new firmware, and the Secondary will update from the
 Primary.
 
-Perform the following in the **Image repository's** window to create a new file, add it to the repository, and host
+Execute the following code in the **Image repository's** window to create a new file, add it to the repository, and host
 newly-written metadata:
 
 
@@ -206,8 +206,8 @@ You should see an Updated banner on the Secondary, indicating a successful, vali
 
 
 ### 2: *Blocking Attacks*
-Uptane is designed to secure the software updates delivered between repositories and vehicles.  Section
-7.3 of the [Uptane Design Overview](https://docs.google.com/document/d/1pBK--40BCg_ofww4GES0weYFB6tZRedAjUy6PJ4Rgzk/edit?usp=sharing) covers all of the known attacks in more detail.  We begin this section with a demonstration
+Uptane is designed to secure the software updates delivered between repositories and vehicles.  [Section
+7.3](https://docs.google.com/document/d/1pBK--40BCg_ofww4GES0weYFB6tZRedAjUy6PJ4Rgzk/edit#heading=h.jta2pcxo2frp) of the [Uptane Design Overview](https://docs.google.com/document/d/1pBK--40BCg_ofww4GES0weYFB6tZRedAjUy6PJ4Rgzk/edit?usp=sharing) covers all of the known attacks in more detail.  We begin this section with a demonstration
 of the Arbitrary Package Attack.
 
 

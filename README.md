@@ -304,7 +304,8 @@ back the timestamp file to a previous version.
 >>> dd.rollback_timestamp(vin='111')
 ```
 
-The primary client may now perform an update cycle, which should detect the rollback attack.         
+The primary client may now perform an update cycle, which should detect the rollback attack by printing
+a REPLAY banner.  The console also logs the cause of the download failure (ReplayedMetadataError exception).
 ```
 >>> dp.update_cycle()
 ...

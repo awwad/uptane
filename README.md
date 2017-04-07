@@ -221,12 +221,12 @@ In the **Director's** window, run:
 >>> dd.mitm_arbitrary_package_attack(vin, firmware_fname)
 ```
 
-As a result of the attack above, the Director will instruct the secondary client in vehicle 111 to install firmware.img
+As a result of the attack above, the Director will instruct the secondary client in vehicle 111 to install *firmware.img*.
 Since this file is not on (and validated by) the Image Repository, the Primary will refuse to download it
 (and a Full Verification Secondary would likewise refuse it even if a compromised Primary delivered it
 to the Secondary).
 
-Now, in the **Primary's** window, run:
+In the **Primary's** window, run:
 ```python
 >>> dp.update_cycle()
 ```
@@ -237,15 +237,17 @@ able to discard the manipulated file without even sending it to the Secondary.
 If you want to resume toying with the repositories, you can run a script to put the repository back in a
 normal state (undoing what the attack did) by running the following in the Director's window:
 ```python
->>> dd.recover_mitm_arbitrary_package_attack(vin, firmware_fname)
+>>> dd.undo_mitm_arbitrary_package_attack(vin, firmware_fname)
 ```
 
-If the primary client runs an update_cycle() after the restoration of the Director repository, firmware.img
-should update successfully.
+If the primary client runs an update_cycle() after the restoration of the Director repository, *firmware.img*
+should updated successfully.
 
 
 
 #### 2.2: *Running an Arbitrary Package Attack on the Image repository without Compromised Keys*
+In the previous section, the firmware available on the director repository was replaced with a malicious one.
+What if the image repository is corrupted with a malicious firmware?
 
 ```
 >>> di.mitm_arbitrary_package_attack(firmware_fname)
@@ -254,7 +256,7 @@ should update successfully.
 ```
 
 
-The primary client is expected to discard the malicious `firmware.img` downloaded from the Image repository
+The primary client is expected to also discard the malicious `firmware.img` downloaded from the Image repository
 and print a DEFENDED banner.  If you were to inspect the console to locate the cause of the error, you should
 find the following:
 
@@ -279,7 +281,7 @@ Undo the the arbitrary package attack so that subsequent sections can be reprodu
 
 We next demonstrate a rollback attack, where the client is given an older (and previously trusted)
 version of metadata.  This attack can cause secondary clients to use older firmware than they
-currently trust.  The [Deny Functionality](https://docs.google.com/document/d/1pBK--40BCg_ofww4GES0weYFB6tZRedAjUy6PJ4Rgzk/edit#heading=h.4mo91b3dvcqd) subsection of [Design Overview](https://docs.google.com/document/d/1pBK--40BCg_ofww4GES0weYFB6tZRedAjUy6PJ4Rgzk/edit?usp=sharing) covers the rollback attack in more detail.
+currently trust.  The [Deny Functionality](https://docs.google.com/document/d/1pBK--40BCg_ofww4GES0weYFB6tZRedAjUy6PJ4Rgzk/edit#heading=h.4mo91b3dvcqd) subsection of the [Design Overview](https://docs.google.com/document/d/1pBK--40BCg_ofww4GES0weYFB6tZRedAjUy6PJ4Rgzk/edit?usp=sharing) covers the rollback attack in more detail.
 
 First, switch to the Director window and copy `timestamp.der` to `backup_timestamp.der`
 A function is available to perform this action:
@@ -327,14 +329,14 @@ Finally, restore `timestamp.der`.  The valid, latest version of timestamp is mov
 Thus far we have simulated a few attacks that have not depended on compromised keys.  In
 the arbitrary and rollback attacks (via a Man in the Middle), an attacker has
 simply modified the images or metadata requested by a primary or secondary client, and
-these clients have blocked the attacks because the malicious images did not match what
-was listed in signed, trusted metadata.  However, what happens if an attacker compromises a
+these clients have blocked the attacks because the malicious images do not match what
+is listed in signed, trusted metadata.  However, what happens if an attacker compromises a
 repository key and signs for a malicious image?  Is the client able to block a compromise
 of just the image repository?  What about a compromise of both the image and director
 repositories?
 
 To start the simulated arbitrary package attack (with a compromised key), add new firmware to
-both image and director repositories.
+both the image and director repositories.
 ```
 >>> di.add_target_and_write_to_live(filename='new_firmware.img', file_content='new firmware image')
 ```
@@ -374,17 +376,18 @@ The primary client now attempts to download the malicious file.
 ```
 
 The primary client should print a DEFENDED banner and provide the following error message: The Director has instructed
-us to download a file that does  does not exactly match the Image Repository metadata. File: '/new_firmware'
+us to download a file that does  does not exactly match the Image Repository metadata. File: '/new_firmware.img'
 
 
 
 #### 2.5: *Compromise the Image repository to also serve the arbitrary package*
+So the director repository now provides malicious firmware that has been signed by a compromised key.
+What happens if the image repository is also compromised?
 ```
 >>> di.add_target_and_write_to_live(filename='new_firmware.img', file_content='evil content')
 ```
 
-Finally, the primary and secondary are updated.  Note, both the image and director repositories have been
-compromised.  The primary installs the "new_firmware" file, however, the secondary does not.
+Finally, the primary and secondary are updated.
 
 On the **primary** client:
 ```
@@ -396,12 +399,20 @@ On the **secondary** cilent:
 >>> ds.update_cycle()
 ```
 
-The secondary should detect that a malicious file was installed.  Since
-both director and image repositories were compromised, the client would normally
-be unable to detect this attack.  For demonstration purposes, the secondary ECU
-in the demo code prints a banner indicating that the "evil" file was malicously 
+Note, both the image and director repositories have been compromised.  The primary installs the
+*new_firmware.img*, however, the secondary does not.  Unfortunately, an attack of this kind,
+where all available repositories are compromised, would not be blocked in practice because both
+director and image repositories are compromised.
+
+For demonstration purposes, the secondary detects that a malicious file is installed.  The secondary
+client in the demo code prints a banner indicating that the *new_firmware.img* image was malicously 
 installed: A malicious update has been installed! Arbitrary package attack successful:
-this Secondary has been compromised! Image: 'new_firmware'
+this Secondary has been compromised! Image: 'new_firmware.img'
+
+To improve resilience against repository compromises, multiple keys should be used to sign for
+images.  If a repository needs to be recovered after a compromise, maintainers would have
+to restore the repositories to the last known good state, and revoke the keys that have been
+compromised.
 
 
 
@@ -414,7 +425,6 @@ a clean slate.  Thereupon, the compromised keys can then be revoked.
 
 In the **Image** repository window:
 ```
->>> di.kill_server()
 >>> exit()
 $ python
 >>> import demo.demo_image_repo as di
@@ -445,6 +455,9 @@ On the **secondary** client:
 
 #### 2.8: *Running another arbitrary package attack on the image repository*
 
+Finally, we attempt to launch another arbitrary package attack to show that compromised keys have been revoked
+as expected, and that clients are able to update once again and detect subsequent attacks.
+
 Note: The following code snippet should be executed in the listed order.  Pay special attention to which
 repository is being modified.
 
@@ -457,7 +470,7 @@ repository is being modified.
 
 >>> dp.update_cycle()
 
->>> di.undo_arbitrary_package_attack('firmware.img')
+>>> di.undo_mitm_arbitrary_package_attack('firmware.img')
 ```
 
-The primary client should again discard the malicious "firmware.img" file provided by the image repository.
+The primary client should again discard the malicious *firmware.img* image provided by the image repository.

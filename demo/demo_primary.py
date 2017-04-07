@@ -339,7 +339,24 @@ def update_cycle():
   # This will update the Primary's metadata and download images from the
   # Director and OEM Repositories, and create a mapping of assignments from
   # each Secondary ECU to its Director-intended target.
-  primary_ecu.primary_update_cycle()
+  try:
+    primary_ecu.primary_update_cycle()
+
+  # Print a REPLAY banner if ReplayedMetadataError is raised by
+  # primary_update_cycle() while performing an update from the director
+  # repository.  This banner is strictly a demo check for replayed metadata for
+  # Timestamp metadata, and all others should be re-raised.
+  except tuf.NoWorkingMirrorError as exception:
+    director_file = os.path.join(_vin, 'metadata', 'timestamp' + demo.METADATA_EXTENSION)
+    for mirror_url in exception.mirror_errors:
+      if mirror_url.endswith(director_file):
+        if isinstance(exception.mirror_errors[mirror_url], tuf.ReplayedMetadataError):
+          print_banner(BANNER_REPLAY, color=WHITE+BLACK_BG,
+              text='The Director has instructed us to download a Timestamp'
+              ' that is older than the currently trusted version.', sound=SATAN)
+
+        else:
+          raise
 
   # All targets have now been downloaded.
 

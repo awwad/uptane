@@ -231,7 +231,7 @@ Now, in the **Primary's** window, run:
 >>> dp.update_cycle()
 ```
 
-Now, when the Primary runs dp.update_cycle(), it'll display the Defended banner and play a sound clip, as it's
+Now, when the Primary runs dp.update_cycle(), it'll display the DEFENDED banner and play a sound clip, as it's
 able to discard the manipulated file without even sending it to the Secondary.
 
 If you want to resume toying with the repositories, you can run a script to put the repository back in a
@@ -255,7 +255,7 @@ should update successfully.
 
 
 The primary client is expected to discard the malicious `firmware.img` downloaded from the Image repository
-and print a "Defended" banner.  If you were to inspect the console to locate the cause of the error, you should
+and print a DEFENDED banner.  If you were to inspect the console to locate the cause of the error, you should
 find the following:
 
 ```Python
@@ -304,7 +304,7 @@ back the timestamp file to a previous version.
 >>> dd.rollback_timestamp(vin='111')
 ```
 
-The primary client may now perform an update cycle, which should detect the rollback attack by printing
+The primary client may now perform an update cycle, which should detect the rollback attack and print
 a REPLAY banner.  The console also logs the cause of the download failure (ReplayedMetadataError exception).
 ```
 >>> dp.update_cycle()
@@ -324,22 +324,37 @@ Finally, restore `timestamp.der`.  The valid, latest version of timestamp is mov
 
 #### 2.3: *Running an Arbitrary Package Attack with a Compromised Director Key*
 
-To start, add a new file to the image and director repositories.
+To start, add new firmware to the image and director repositories.
 ```
->>> di.add_target_and_write_to_live(filename='evil', file_content='original content')
+>>> di.add_target_and_write_to_live(filename='new_firmware.img', file_content='new firmware image')
 ```
 
-The new file is also added to the director repository.  We clear the previously
-added target file so that the secondary client correctly installs a single target/firmware file.
+The new firmware is also added to the director repository.  We clear the previously
+added target file so that the secondary client correctly installs a single firmware image.
 ```
 >>> dd.clear_vehicle_targets(vin='111')
->>> dd.add_target_and_write_to_live(filename='evil', file_content='original content',
+>>> dd.add_target_and_write_to_live(filename='new_firmware.img', file_content='new firmware image',
     vin='111', ecu_serial='22222')
 ```
 
-To simulate a compromised directory key, we simply sign for a new "evil" version of the original file.
+The primary and secondary clients can perform an update cycle to retrieve the new firmware, which will
+be modified shortly to include malicious content.
+
+**primary**:
 ```
->>> dd.add_target_and_write_to_live(filename='evil', file_content='evil content',
+dp.update_cycle()
+```
+
+**secondary**:
+```
+ds.update_cycle()
+```
+
+To simulate a compromised directory key, we simply sign for a "new_firmware.img" that includes malicious
+content ("evil content" in this case).
+
+```
+>>> dd.add_target_and_write_to_live(filename='new_firmware.img', file_content='evil content',
     vin='111', ecu_serial='22222')
 ```
 
@@ -348,18 +363,18 @@ The primary client now attempts to download the malicious file.
 >>> dp.update_cycle()
 ```
 
-The primary client should print a "Defended" banner and provide the following error message: The Director has instructed
-us to download a file that does  does not exactly match the Image Repository metadata. File: '/evil'
+The primary client should print a DEFENDED banner and provide the following error message: The Director has instructed
+us to download a file that does  does not exactly match the Image Repository metadata. File: '/new_firmware'
 
 
 
 #### 2.4: *Compromise the Image repository to also serve the arbitrary package*
 ```
->>> di.add_target_and_write_to_live(filename='evil', file_content='evil content')
+>>> di.add_target_and_write_to_live(filename='new_firmware.img', file_content='evil content')
 ```
 
 Finally, the primary and secondary are updated.  Note, both the image and director repositories have been
-compromised.  The primary installs the "evil" file, however, the secondary does not.
+compromised.  The primary installs the "new_firmware" file, however, the secondary does not.
 
 On the **primary** client:
 ```
@@ -376,7 +391,7 @@ both director and image repositories were compromised, the client would normally
 be unable to detect this attack.  For demonstration purposes, the secondary ECU
 in the demo code prints a banner indicating that the "evil" file was malicously 
 installed: A malicious update has been installed! Arbitrary package attack successful:
-this Secondary has been compromised! Image: 'evil'
+this Secondary has been compromised! Image: 'new_firmware'
 
 
 

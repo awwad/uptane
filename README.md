@@ -212,7 +212,7 @@ of the Arbitrary Package Attack.
 
 
 
-#### *Running an Arbitrary Package Attack on the Director repository without Compromised Keys*
+#### 2.1: *Running an Arbitrary Package Attack on the Director repository without Compromised Keys*
 This is a simple attack simulating a Man in the Middle that provides a malicious image file. In this attack, the
 attacker does not have the keys to correctly sign new metadata (and so it is an exceptionally basic attack).
 
@@ -245,7 +245,7 @@ should update successfully.
 
 
 
-#### 2.1: *Running an Arbitrary Package Attack on the Image repository without Compromised Keys*
+#### 2.2: *Running an Arbitrary Package Attack on the Image repository without Compromised Keys*
 
 ```
 >>> di.mitm_arbitrary_package_attack(firmware_fname)
@@ -275,7 +275,7 @@ Undo the the arbitrary package attack so that subsequent sections can be reprodu
 >>> di.undo_mitm_arbitrary_package_attack(firmware_fname)
 ```
 
-#### 2.2: *Running a Rollback Attack without a compromised Director key*
+#### 2.3: *Running a Rollback Attack without a compromised Director key*
 
 We next demonstrate a rollback attack, where the client is given an older (and previously trusted)
 version of metadata.  This attack can cause secondary clients to use older firmware than they
@@ -322,7 +322,7 @@ Finally, restore `timestamp.der`.  The valid, latest version of timestamp is mov
  
 
 
-#### 2.3: *Running an Arbitrary Package Attack with a Compromised Director Key*
+#### 2.4: *Running an Arbitrary Package Attack with a Compromised Director Key*
 
 Thus far we have simulated a few attacks that have not depended on compromised keys.  In
 the arbitrary and rollback attacks (via a Man in the Middle), an attacker has
@@ -378,7 +378,7 @@ us to download a file that does  does not exactly match the Image Repository met
 
 
 
-#### 2.4: *Compromise the Image repository to also serve the arbitrary package*
+#### 2.5: *Compromise the Image repository to also serve the arbitrary package*
 ```
 >>> di.add_target_and_write_to_live(filename='new_firmware.img', file_content='evil content')
 ```
@@ -405,7 +405,7 @@ this Secondary has been compromised! Image: 'new_firmware'
 
 
 
-#### 2.5: *Recover from the compromised Director or Image keys*
+#### 2.6: *Recover from the compromised Director or Image keys*
 
 We first restore the compromised repositories by reverting them to a
 previously known, good state.  For the demo, this can be
@@ -431,7 +431,7 @@ $ python
 >>> dd.revoke_and_add_new_key_and_write_to_live()
 ```
 
-#### 2.6: *Restore the Primary and Seconday clients*
+#### 2.7: *Restore the Primary and Seconday clients*
 
 On the **primary** client:
 ```
@@ -443,7 +443,7 @@ On the **secondary** client:
 >>> ds.clean_slate()
 ```
 
-#### 2.7: *Running another arbitrary package attack on the image repository*
+#### 2.8: *Running another arbitrary package attack on the image repository*
 
 Note: The following code snippet should be executed in the listed order.  Pay special attention to which
 repository is being modified.

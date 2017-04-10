@@ -342,7 +342,8 @@ def update_cycle():
         if isinstance(exception.mirror_errors[mirror_url], tuf.ReplayedMetadataError):
           print_banner(BANNER_REPLAY, color=WHITE+BLACK_BG,
               text='The Director has instructed us to download a Timestamp'
-              ' that is older than the currently trusted version.', sound=SATAN)
+              ' that is older than the currently trusted version. This '
+              'instruction has been rejected.', sound=SATAN)
 
         else:
           raise

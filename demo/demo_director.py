@@ -552,33 +552,8 @@ def undo_mitm_arbitrary_package_attack(vin, target_filepath):
 
 
 """
-How to simulate a rollback attack:
-
->>> import demo.demo_director as dd
->>> dd.clean_slate()
-
-Primary performs an update cycle...
-
-Copy timestamp.der to backup_timestamp.der
-1. dd.backup_timestamp()
-
-A new timestamp.der & snapshot.der are written
-2. dd.write_to_live()
-
-Primary ECU successfully performs update...
->>> import demo.demo_primary as dp
-
-3. dp.update_cycle()
-
-Move backup_timestamp to timestamp.der (timestamp.der is saved to
-current_timestamp.der)
-4. dd.rollback_timestamp()
-
-Primary ECU performs an update cycle, but it detects a rollback attack.
-5. dp.update_cycle()
-
-Restore timestamp.der.  The valid, current timestamp is moved back into place.
-6. dd.restore_timestamp()
+Simulating a rollback attack can be done with instructions in README.md,
+using the functions below.
 """
 
 def backup_timestamp(vin):

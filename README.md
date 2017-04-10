@@ -241,7 +241,7 @@ of the Arbitrary Package Attack.
 This is a simple attack simulating a Man in the Middle that provides a malicious image file. In this attack, the
 attacker does not have the keys to correctly sign new metadata (and so it is an exceptionally basic attack).
 
-In the **Director's** window, run:
+In WINDOW 2, **Director's** window, run:
 ```python
 >>> dd.mitm_arbitrary_package_attack(vin, firmware_fname)
 ```
@@ -251,7 +251,7 @@ Since this file is not on (and validated by) the Image Repository, the Primary w
 (and a Full Verification Secondary would likewise refuse it even if a compromised Primary delivered it
 to the Secondary).
 
-In the **Primary's** window, run:
+In WINDOW 4, the **Primary's** window, run:
 ```python
 >>> dp.update_cycle()
 ```
@@ -259,8 +259,9 @@ In the **Primary's** window, run:
 Now, when the Primary runs dp.update_cycle(), it'll display the DEFENDED banner and play a sound clip, as it's
 able to discard the manipulated file without even sending it to the Secondary.
 
-If you want to resume toying with the repositories, you can run a script to put the repository back in a
-normal state (undoing what the attack did) by running the following in the Director's window:
+To resume experimenting with the repositories, run this script to put the
+repository back in a normal state (undoing what the attack did) by running the
+following in the **Director's** window:
 ```python
 >>> dd.undo_mitm_arbitrary_package_attack(vin, firmware_fname)
 ```
@@ -274,18 +275,25 @@ should updated successfully.
 In the previous section, the firmware available on the director repository was replaced with a malicious one.
 What if the image repository is corrupted with a malicious firmware?
 
-```
+Run the following in WINDOW 1, the **Image Repository's** window.
+```python
 >>> di.mitm_arbitrary_package_attack(firmware_fname)
+```
 
+You can see the update once again proceeding normally by running this in the
+**Primary's window** (WINDOW 4):
+```python
 >>> dp.update_cycle()
 ```
 
 
-The primary client is expected to also discard the malicious `firmware.img` downloaded from the Image repository
-and print a DEFENDED banner.  If you were to inspect the console to locate the cause of the error, you should
+The result is the same: The primary client is expected to also discard the
+malicious `firmware.img` downloaded from the Image repository
+and print a DEFENDED banner.  If you inspect messages further up in
+the console (above the banner) to get more detail, you should
 find the following:
 
-```Python
+```
 Downloading: u'http://localhost:30301/targets/firmware.img'
 Downloaded 14 bytes out of the expected 14 bytes.
 Not decompressing http://localhost:30301/targets/firmware.img
@@ -296,9 +304,12 @@ Downloading: u'http://localhost:30401/111/targets/firmware.img'
 Could not download URL: u'http://localhost:30401/111/targets/firmware.img'
 ```
 
+Uptane detected that the image retrieved did not have a hash matching what the
+signed, validated metadata indicated we should expect.
+
 Undo the the arbitrary package attack so that subsequent sections can be reproduced as expected.
 
-```
+```python
 >>> di.undo_mitm_arbitrary_package_attack(firmware_fname)
 ```
 

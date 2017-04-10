@@ -301,19 +301,20 @@ First, switch to the Director window and copy `timestamp.der` to `backup_timesta
 A function is available to perform this action:
 ```
 >>> dd.backup_timestamp(vin='111')
-```                                                                     
-
-A new `timestamp.der` and `snapshot.der` can be written to the live Director repository.                                 
-```
->>> dd.write_to_live()                                                           
 ```
 
-The primary client now performs an update...                                                                                
+A new `timestamp.der` and `snapshot.der` can be written to the live Director repository.
 ```
->>> dp.update_cycle()                                                            
-```                                                                             
+>>> dd.write_to_live()
+```
 
-Next, move `backup_timestamp` to `timestamp.der` (`timestamp.der` is saved to               
+The primary client now performs an update...
+
+```
+>>> dp.update_cycle()
+```
+
+Next, move `backup_timestamp` to `timestamp.der` (`timestamp.der` is saved to
 `current_timestamp.der` so that it can later be restored), effectively rolling
 back the timestamp file to a previous version.
 ```
@@ -331,14 +332,14 @@ Failed to update timestamp.der from all mirrors:
 {u'http://localhost:30401/111/metadata/timestamp.der': ReplayedMetadataError()}
 ```
 
-Finally, restore `timestamp.der`.  The valid, latest version of timestamp is moved back into place.  
+Finally, restore `timestamp.der`.  The valid, latest version of timestamp is moved back into place.
 ```
 >>> dd.restore_timestamp(vin='111')
-``` 
- 
+```
 
 
 #### 2.4: *Running an Arbitrary Package Attack with a Compromised Director Key*
+
 
 Thus far we have simulated a few attacks that have not depended on compromised keys.  In
 the arbitrary and rollback attacks (via a Man in the Middle), an attacker has
@@ -419,7 +420,7 @@ where all available repositories are compromised, would not be blocked in practi
 director and image repositories are compromised.
 
 For demonstration purposes, the secondary detects that a malicious file is installed.  The secondary
-client in the demo code prints a banner indicating that the *new_firmware.img* image was malicously 
+client in the demo code prints a banner indicating that the *new_firmware.img* image was malicously
 installed: A malicious update has been installed! Arbitrary package attack successful:
 this Secondary has been compromised! Image: 'new_firmware.img'
 

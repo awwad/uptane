@@ -193,13 +193,13 @@ def write_to_live(vin_to_update=None):
 
 
 
-def revoke_and_add_new_key_and_write_to_live():
+def revoke_and_add_new_keys_and_write_to_live():
   """
   <Purpose>
-    Revoke the current Targets verification key for all vehicles and add a new
-    key for it.  This is a high-level version of the common function to update
-    a role key. The director service instance is also updated with the key
-    changes.
+    Revoke the current Timestamp, Snapshot, and Targets keys for all vehicles
+    and add a new key for each role.  This is a high-level version of the common
+    function to update a role key. The director service instance is also updated
+    with the key changes.
 
   <Arguments>
     None.
@@ -219,35 +219,51 @@ def revoke_and_add_new_key_and_write_to_live():
   # Generate a new key for the Targets role.  Make sure that the director
   # service instance is updated to use the new key.  'director' argument to
   # generate_key() actually references the targets role.
+  # TODO: Change Director's targets key to 'directortargets' from 'director'.
   demo.generate_key('director')
   new_targets_public_key = demo.import_public_key('director')
   new_targets_private_key = demo.import_private_key('director')
   old_targets_public_key = director_service_instance.key_dirtarg_pub
-  old_targets_private_key = director_service_instance.key_dirtarg_pri
+
+  demo.generate_key('directortimestamp')
+  new_timestamp_public_key = demo.import_public_key('directortimestamp')
+  new_timestamp_private_key = demo.import_private_key('directortimestamp')
+  old_timestamp_public_key = director_service_instance.key_dirtime_pub
+  old_timestamp_private_key = director_service_instance.key_dirtime_pri
+
+  demo.generate_key('directorsnapshot')
+  new_snapshot_public_key = demo.import_public_key('directorsnapshot')
+  new_snapshot_private_key = demo.import_private_key('directorsnapshot')
+  old_snapshot_public_key = director_service_instance.key_dirsnap_pub
+  old_snapshot_private_key = director_service_instance.key_dirsnap_pri
 
   # Set the new public and private Targets keys in the director service.
   # These keys are shared between all vehicle repositories.
   director_service_instance.key_dirtarg_pub = new_targets_public_key
   director_service_instance.key_dirtarg_pri = new_targets_private_key
+  director_service_instance.key_dirtime_pub = new_timestamp_public_key
+  director_service_instance.key_dirtime_pri = new_timestamp_private_key
+  director_service_instance.key_dirsnap_pub = new_snapshot_public_key
+  director_service_instance.key_dirsnap_pri = new_snapshot_private_key
 
   for vin in director_service_instance.vehicle_repositories:
     repository = director_service_instance.vehicle_repositories[vin]
 
+    # Swap verification keys for the three roles.
     repository.targets.remove_verification_key(old_targets_public_key)
     repository.targets.add_verification_key(new_targets_public_key)
 
-    root_private_key = director_service_instance.key_dirroot_pri
-    snapshot_private_key = director_service_instance.key_dirsnap_pri
-    timestamp_private_key = director_service_instance.key_dirtime_pri
+    repository.timestamp.remove_verification_key(old_timestamp_public_key)
+    repository.timestamp.add_verification_key(new_timestamp_public_key)
 
-    # We need to re-sign root because it revoked the Targets key.  Snapshot
-    # must be written to make a new release.
-    # TODO: Find out if this is necessary and if it is necessary that it be
-    # necessary.
-    repository.root.load_signing_key(root_private_key)
+    repository.snapshot.remove_verification_key(old_snapshot_public_key)
+    repository.snapshot.add_verification_key(new_snapshot_public_key)
+
+    # Load the new signing keys to write metadata. The root key is unchanged,
+    # and in the demo it is already loaded.
     repository.targets.load_signing_key(new_targets_private_key)
-    repository.snapshot.load_signing_key(snapshot_private_key)
-    repository.timestamp.load_signing_key(timestamp_private_key)
+    repository.snapshot.load_signing_key(new_snapshot_private_key)
+    repository.timestamp.load_signing_key(new_timestamp_private_key)
 
     # Write all the metadata changes to disk.  Note: write() will be writeall()
     # in the latest version of the TUF codebase.

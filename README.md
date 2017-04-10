@@ -43,7 +43,7 @@ If you want the demo to play notification sounds you need one of the following a
 - omxplayer (built-in on Raspbian)
 - afplay (built-in on OS X)
 
-## Running the demo
+# 0: Starting the Demo
 The code below is intended to be run in five or more consoles:
 - [WINDOW 1](#window-1-the-image-repository): Python shell for the Image Repository. This serves HTTP (repository files, including metadata).
 - [WINDOW 2](#window-2-the-director): Python shell for the Director (Repository and Service). This serves metadata and image files via HTTP,111
@@ -53,8 +53,8 @@ The code below is intended to be run in five or more consoles:
 - [WINDOW 5](#window-5-the-secondary-clients): Python shell for a Secondary in the vehicle. This communicates directly only with the Primary via XMLRPC, and will perform full metadata verification. (More of these can be run, simulating more ECUs in one or more vehicles.)
 
 
-  
-### *WINDOW 1: the Image Repository*
+
+### WINDOW 1: the Image Repository
 These instructions start a demonstration version of an OEM's or Supplier's main repository
 for software, hosting images and the metadata Uptane requires.
 
@@ -77,7 +77,7 @@ In the Python shell, run the following:
 ```
 
 
-### *WINDOW 2: the Director*
+### WINDOW 2: the Director
 The following starts a Director server, which generates metadata for specific
 vehicles indicating which ECUs should install what firmware (validated against
 and obtained from the Image Repository). It also receives and validates
@@ -115,7 +115,7 @@ $ python demo/demo_timeserver.py
 
 
 
-### *WINDOW 4(+): the Primary client(s):*
+### WINDOW 4(+): the Primary client(s):
 (Image Repo, Director, and Timeserver must already have finished starting up.)
 The Primary client started below is likely to run on a more capable and
 connected ECU in the vehicle - potentially the head unit / infotainment. It will
@@ -152,8 +152,9 @@ For example:
 
 
 
-### *WINDOW 5(+): the Secondary client(s):*
-(The following assumes that the Image Repository, Director, Timeserver, and Primary have finished starting up and are hosting/listening.)
+### WINDOW 5(+): the Secondary client(s):
+(The following assumes that the Image Repository, Director, Timeserver, and
+Primary have finished starting up and are hosting/listening.)
 Here, we start a single Secondary ECU and generate a signed ECU Manifest
 with information about the "firmware" that it is running, which we send to the
 Primary.
@@ -180,7 +181,7 @@ The Secondary's update_cycle() call:
 
 
 
-### 1: *Delivering an Update*
+# 1: Delivering an Update
 To deliver an Update via Uptane, you'll need to add the firmware image to the Image repository, then assign it to a vehicle
 and ECU in the Director repository. Then, the Primary will obtain the new firmware, and the Secondary will update from the
 Primary.
@@ -219,14 +220,14 @@ You should see an Updated banner on the Secondary, indicating a successful, vali
 
 
 
-### 2: *Blocking Attacks*
+# 2: Blocking Attacks
 Uptane is designed to secure the software updates delivered between repositories and vehicles.  [Section
 7.3](https://docs.google.com/document/d/1pBK--40BCg_ofww4GES0weYFB6tZRedAjUy6PJ4Rgzk/edit#heading=h.jta2pcxo2frp) of the [Uptane Design Overview](https://docs.google.com/document/d/1pBK--40BCg_ofww4GES0weYFB6tZRedAjUy6PJ4Rgzk/edit?usp=sharing) covers all of the known attacks in more detail.  We begin this section with a demonstration
 of the Arbitrary Package Attack.
 
 
 
-#### 2.1: *Running an Arbitrary Package Attack on the Director repository without Compromised Keys*
+### 2.1: Running an Arbitrary Package Attack on the Director repository without Compromised Keys
 This is a simple attack simulating a Man in the Middle that provides a malicious image file. In this attack, the
 attacker does not have the keys to correctly sign new metadata (and so it is an exceptionally basic attack).
 
@@ -259,7 +260,7 @@ should updated successfully.
 
 
 
-#### 2.2: *Running an Arbitrary Package Attack on the Image repository without Compromised Keys*
+### 2.2: Running an Arbitrary Package Attack on the Image repository without Compromised Keys
 In the previous section, the firmware available on the director repository was replaced with a malicious one.
 What if the image repository is corrupted with a malicious firmware?
 
@@ -291,7 +292,7 @@ Undo the the arbitrary package attack so that subsequent sections can be reprodu
 >>> di.undo_mitm_arbitrary_package_attack(firmware_fname)
 ```
 
-#### 2.3: *Running a Rollback Attack without a compromised Director key*
+### 2.3: Running a Rollback Attack without a compromised Director key
 
 We next demonstrate a rollback attack, where the client is given an older (and previously trusted)
 version of metadata.  This attack can cause secondary clients to use older firmware than they
@@ -338,8 +339,8 @@ Finally, restore `timestamp.der`.  The valid, latest version of timestamp is mov
 ```
 
 
-#### 2.4: *Running an Arbitrary Package Attack with a Compromised Director Key*
 
+### 2.4: Running an Arbitrary Package Attack with a Compromised Director Key
 
 Thus far we have simulated a few attacks that have not depended on compromised keys.  In
 the arbitrary and rollback attacks (via a Man in the Middle), an attacker has
@@ -395,7 +396,7 @@ us to download a file that does  does not exactly match the Image Repository met
 
 
 
-#### 2.5: *Compromise the Image repository to also serve the arbitrary package*
+### 2.5: Compromise the Image repository to also serve the arbitrary package
 So the director repository now provides malicious firmware that has been signed by a compromised key.
 What happens if the image repository is also compromised?
 ```python
@@ -431,7 +432,7 @@ compromised.
 
 
 
-#### 2.6: *Recover from the compromised Director or Image keys*
+### 2.6: Recover from the compromised Director or Image keys
 
 We first restore the compromised repositories by reverting them to a
 previously known, good state.  For the demo, this can be
@@ -456,7 +457,7 @@ $ python
 >>> dd.revoke_and_add_new_key_and_write_to_live()
 ```
 
-#### 2.7: *Restore the Primary and Seconday clients*
+### 2.7: Restore the Primary and Seconday clients
 
 On the **primary** client:
 ```python
@@ -468,7 +469,7 @@ On the **secondary** client:
 >>> ds.clean_slate()
 ```
 
-#### 2.8: *Running another arbitrary package attack on the image repository*
+### 2.8: Running another arbitrary package attack on the image repository
 
 Finally, we attempt to launch another arbitrary package attack to show that compromised keys have been revoked
 as expected, and that clients are able to update once again and detect subsequent attacks.

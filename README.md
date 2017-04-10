@@ -367,25 +367,25 @@ The primary and secondary clients can perform an update cycle to retrieve the ne
 be modified shortly to include malicious content.
 
 **primary**:
-```
+```python
 dp.update_cycle()
 ```
 
 **secondary**:
-```
+```python
 ds.update_cycle()
 ```
 
 To simulate a compromised directory key, we simply sign for a "new_firmware.img" that includes malicious
 content ("evil content" in this case).
 
-```
+```python
 >>> dd.add_target_and_write_to_live(filename='new_firmware.img', file_content='evil content',
     vin='111', ecu_serial='22222')
 ```
 
 The primary client now attempts to download the malicious file.
-```
+```python
 >>> dp.update_cycle()
 ```
 
@@ -397,19 +397,19 @@ us to download a file that does  does not exactly match the Image Repository met
 #### 2.5: *Compromise the Image repository to also serve the arbitrary package*
 So the director repository now provides malicious firmware that has been signed by a compromised key.
 What happens if the image repository is also compromised?
-```
+```python
 >>> di.add_target_and_write_to_live(filename='new_firmware.img', file_content='evil content')
 ```
 
 Finally, the primary and secondary are updated.
 
 On the **primary** client:
-```
+```python
 >>> dp.update_cycle()
 ```
 
 On the **secondary** cilent:
-```
+```python
 >>> ds.update_cycle()
 ```
 
@@ -458,12 +458,12 @@ $ python
 #### 2.7: *Restore the Primary and Seconday clients*
 
 On the **primary** client:
-```
+```python
 >>> dp.clean_slate()
 ```
 
 On the **secondary** client:
-```
+```python
 >>> ds.clean_slate()
 ```
 
@@ -475,7 +475,7 @@ as expected, and that clients are able to update once again and detect subsequen
 Note: The following code snippet should be executed in the listed order.  Pay special attention to which
 repository is being modified.
 
-```
+```python
 >>> di.add_target_and_write_to_live(filename='firmware.img', file_content='new firmware')
 >>> dd.add_target_and_write_to_live(filename='firmware.img', file_content='new firmware',
     vin='111', ecu_serial='22222')

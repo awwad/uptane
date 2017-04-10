@@ -76,7 +76,7 @@ we test 2.7, 3.3, 3.4, and 3.5.)
 
 ```Bash
 $ python
-Python 2.7.6 (default, Oct 26 2016, 20:30:19) 
+Python 2.7.6 (default, Oct 26 2016, 20:30:19)
 [GCC 4.8.4] on linux2
 >>>
 ```
@@ -196,7 +196,7 @@ To deliver an Update via Uptane, you'll need to add the firmware image to the Im
 and ECU in the Director repository. Then, the Primary will obtain the new firmware, and the Secondary will update from the
 Primary.
 
-Execute the following code in the **Image repository's** window to create a new file, add it to the repository, and host
+Execute the following code in the **Image Repository's** window (WINDOW 1) to create a new file, add it to the repository, and host
 newly-written metadata:
 
 
@@ -207,7 +207,7 @@ newly-written metadata:
 >>> di.write_to_live()
 ```
 
-Perform the following in the **Director repository's** window to assign that Image file to vehicle 111, ECU 22222:
+Perform the following in the **Director Repository's** window (WINDOW 2) to assign that Image file to vehicle 111, ECU 22222:
 ```python
 >>> firmware_fname = filepath_in_repo = 'firmware.img'
 >>> ecu_serial = '22222'
@@ -216,12 +216,12 @@ Perform the following in the **Director repository's** window to assign that Ima
 >>> dd.write_to_live(vin_to_update=vin)
 ```
 
-Next, you can update the Primary in the Primary's window:
+Next, you can update the Primary in the Primary's window (WINDOW 4):
 ```python
 >>> dp.update_cycle()
 ```
 
-When the Primary has finished, you can update the Secondary in the Secondary's window:
+When the Primary has finished, you can update the Secondary in the Secondary's window (WINDOW 5):
 ```python
 >>> ds.update_cycle()
 ```

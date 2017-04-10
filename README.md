@@ -156,9 +156,7 @@ window for each vehicle's Primary and provide a unique VIN and ECU for each of t
 For example:
 ```python
 >>> import demo.demo_primary as dp
-
-# Make sure the port matches the Primary's reported port, if there are multiple vehicles running.
->>> dp.clean_slate(vin='112', ecu_serial='PRIMARY_ECU_2', primary_port='30702') 
+>>> dp.clean_slate(vin='112', ecu_serial='PRIMARY_ECU_2')
 >>> dp.update_cycle()
 ```
 

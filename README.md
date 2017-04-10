@@ -319,33 +319,40 @@ We next demonstrate a rollback attack, where the client is given an older (and p
 version of metadata.  This attack can cause secondary clients to use older firmware than they
 currently trust.  The [Deny Functionality](https://docs.google.com/document/d/1pBK--40BCg_ofww4GES0weYFB6tZRedAjUy6PJ4Rgzk/edit#heading=h.4mo91b3dvcqd) subsection of the [Design Overview](https://docs.google.com/document/d/1pBK--40BCg_ofww4GES0weYFB6tZRedAjUy6PJ4Rgzk/edit?usp=sharing) covers the rollback attack in more detail.
 
-First, switch to the Director window and copy `timestamp.der` to `backup_timestamp.der`
+First, switch to the **Director's window** and copy the Timestamp role's
+metadata, `timestamp.der` to a backup. This is what we'll roll back to in the
+attack.
 A function is available to perform this action:
-```
+```python
 >>> dd.backup_timestamp(vin='111')
 ```
 
-A new `timestamp.der` and `snapshot.der` can be written to the live Director repository.
-```
+Now, we update the metadata in the Director repository. In this case, a fairly
+empty update, writing a new `timestamp.der` and `snapshot.der` files. The backup
+we saved earlier is now old by comparison.
+```python
 >>> dd.write_to_live()
 ```
 
-The primary client now performs an update...
+In the **Primary's window**, the Primary client now performs an update,
+retrieving the new metadata we generated.
 
-```
+```python
 >>> dp.update_cycle()
 ```
 
-Next, move `backup_timestamp` to `timestamp.der` (`timestamp.der` is saved to
-`current_timestamp.der` so that it can later be restored), effectively rolling
-back the timestamp file to a previous version.
-```
+Next, in the **Director's window**, we simulate the rollback attack, trying to
+distribute the out-of-date metadata backed up earlier, effectively rolling back
+the timestamp file to a previous version.
+```python
 >>> dd.rollback_timestamp(vin='111')
 ```
 
-The primary client may now perform an update cycle, which should detect the rollback attack and print
-a REPLAY banner.  The console also logs the cause of the download failure (ReplayedMetadataError exception).
-```
+If this old metadata is presented to the Primary, the Primary rejects it,
+because it has already validated newer metadata. When you run the below, you
+should see a REPLAY banner. The console also logs the cause of the download
+failure (ReplayedMetadataError exception). In the **Primary's window**:
+```python
 >>> dp.update_cycle()
 ...
 Update failed from http://localhost:30401/111/metadata/timestamp.der.
@@ -354,8 +361,9 @@ Failed to update timestamp.der from all mirrors:
 {u'http://localhost:30401/111/metadata/timestamp.der': ReplayedMetadataError()}
 ```
 
-Finally, restore `timestamp.der`.  The valid, latest version of timestamp is moved back into place.
-```
+Finally, restore the valid, latest version of Timestamp metadata
+(`timestamp.der`) back into place in the **Director's window**.
+```python
 >>> dd.restore_timestamp(vin='111')
 ```
 

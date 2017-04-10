@@ -58,13 +58,18 @@ The code below is intended to be run in five or more consoles:
 These instructions start a demonstration version of an OEM's or Supplier's main repository
 for software, hosting images and the metadata Uptane requires.
 
+From within the root `uptane/` directory of the repository, open an interactive
+Python shell from the command line. (Any version of Python >=2.7 should do, but
+we test 2.7, 3.3, 3.4, and 3.5.)
+
 ```Bash
 $ python
 Python 2.7.6 (default, Oct 26 2016, 20:30:19) 
 [GCC 4.8.4] on linux2
-Type "help", "copyright", "credits" or "license" for more information.
->>> 
+>>>
 ```
+
+In the Python shell, run the following:
 
 ```python
 >>> import demo.demo_image_repo as di
@@ -80,6 +85,8 @@ Vehicle Manifests from Primaries, and the ECU Manifests from Secondaries
 within the Vehicle Manifests, which capture trustworthy information about what
 software is running on the ECUs, along with signed reports of any attacks
 observed by those ECUs.
+
+Open a new Python shell in a new terminal window and then run the following:
 
 ```python
 >>> import demo.demo_director as dd
@@ -100,9 +107,10 @@ times, bundled by the Primary, and produces a signed attestation that includes
 the nonces each Secondary ECU sent the Primary to include along with the
 time request, so that each ECU can better establish that it is not being tricked
 into accepting a false time.
+
+In a new terminal window, run the following command:
 ```Bash
-#!/bin/bash
-python demo/demo_timeserver.py
+$ python demo/demo_timeserver.py
 ```
 
 
@@ -112,9 +120,12 @@ python demo/demo_timeserver.py
 The Primary client started below is likely to run on a more capable and
 connected ECU in the vehicle - potentially the head unit / infotainment. It will
 obtain metadata and images from the Image Repository as instructed by the Director
-and di1stribute them appropriately to other, Secondary ECUs in the vehicle,
+and distribute them appropriately to other, Secondary ECUs in the vehicle,
 and it will receive ECU Manifests indicating the software on each Secondary ECU,
 and bundle these into a Vehicle Manifest which it will send to the Director.
+
+Open a Python shell in a new terminal window and then run the following:
+
 ```python
 >>> import demo.demo_primary as dp
 >>> dp.clean_slate() # sets up a fresh Primary that has never been updated
@@ -128,7 +139,7 @@ The Primary's update_cycle() call:
 - generates a Vehicle Version Manifest with some vehicle metadata and all ECU Version Manifests received from Secondaries, describing currently installed images, most recent times available to each ECU, and reports of any attacks observed by Secondaries (can also be called directly: `dp.generate_signed_vehicle_manifest()`)
 - sends that Vehicle Version Manifest to the Director (can also be called directly: `dp.submit_vehicle_manifest_to_director()`)
 
-If you wish to run the demo with multiple vehicles (one Primary each), you can open a new
+If you wish to run the demo with multiple vehicles (one Primary each), you can open a Python shell in a new terminal
 window for each vehicle's Primary and provide a unique VIN and ECU for each of them. Find the port that is chosen in the Primary's initialization and make note of it so that it can be provided to any Secondaries you set up in a moment (e.g. "Primary will now listen on port 30702")
 For example:
 ```python
@@ -146,6 +157,9 @@ For example:
 Here, we start a single Secondary ECU and generate a signed ECU Manifest
 with information about the "firmware" that it is running, which we send to the
 Primary.
+
+Open a Python shell in a new terminal window and then run the following:
+
 ```python
 >>> import demo.demo_secondary as ds
 >>> ds.clean_slate()

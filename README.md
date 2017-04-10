@@ -380,39 +380,18 @@ repository key and signs for a malicious image?  Is the client able to block a c
 of just the image repository?  What about a compromise of both the image and director
 repositories?
 
-To start the simulated arbitrary package attack (with a compromised key), add new firmware to
-both the image and director repositories.
-```
->>> di.add_target_and_write_to_live(filename='new_firmware.img', file_content='new firmware image')
-```
+Both repositories currently have metadata about 'firmware.img', which we added
+in the [1: Delivering an Update](#1-delivering-an-update) section.
 
-The new firmware is also added to the director repository.  We clear the previously
-added target file so that the secondary client correctly installs a single firmware image.
-```
->>> dd.clear_vehicle_targets(vin='111')
->>> dd.add_target_and_write_to_live(filename='new_firmware.img', file_content='new firmware image',
-    vin='111', ecu_serial='22222')
-```
+For this attack, we'll modify that to include malicious content.
 
-The primary and secondary clients can perform an update cycle to retrieve the new firmware, which will
-be modified shortly to include malicious content.
-
-**primary**:
-```python
-dp.update_cycle()
-```
-
-**secondary**:
-```python
-ds.update_cycle()
-```
-
-To simulate a compromised directory key, we simply sign for a "new_firmware.img" that includes malicious
-content ("evil content" in this case).
+To simulate a compromised directory key, we simply sign for an updated
+"firmware.img" that includes malicious content (the phrase "evil content" in
+this case), in the **Director's window**:
 
 ```python
->>> dd.add_target_and_write_to_live(filename='new_firmware.img', file_content='evil content',
-    vin='111', ecu_serial='22222')
+>>> dd.add_target_and_write_to_live(filename='firmware.img',
+    file_content='evil content', vin='111', ecu_serial='22222')
 ```
 
 The primary client now attempts to download the malicious file.
@@ -421,7 +400,7 @@ The primary client now attempts to download the malicious file.
 ```
 
 The primary client should print a DEFENDED banner and provide the following error message: The Director has instructed
-us to download a file that does  does not exactly match the Image Repository metadata. File: '/new_firmware.img'
+us to download a file that does  does not exactly match the Image Repository metadata. File: '/firmware.img'
 
 
 
@@ -429,7 +408,7 @@ us to download a file that does  does not exactly match the Image Repository met
 So the director repository now provides malicious firmware that has been signed by a compromised key.
 What happens if the image repository is also compromised?
 ```python
->>> di.add_target_and_write_to_live(filename='new_firmware.img', file_content='evil content')
+>>> di.add_target_and_write_to_live(filename='firmware.img', file_content='evil content')
 ```
 
 Finally, the primary and secondary are updated.
@@ -445,12 +424,12 @@ On the **secondary** cilent:
 ```
 
 Note, both the image and director repositories have been compromised.  The primary installs the
-*new_firmware.img*, however, the secondary does not.  Unfortunately, an attack of this kind,
+*firmware.img*, however, the secondary does not.  Unfortunately, an attack of this kind,
 where all available repositories are compromised, would not be blocked in practice because both
 director and image repositories are compromised.
 
 For demonstration purposes, the secondary detects that a malicious file is installed.  The secondary
-client in the demo code prints a banner indicating that the *new_firmware.img* image was malicously
+client in the demo code prints a banner indicating that the *firmware.img* image was malicously
 installed: A malicious update has been installed! Arbitrary package attack successful:
 this Secondary has been compromised! Image: 'new_firmware.img'
 

@@ -442,59 +442,48 @@ compromised.
 
 ### 2.6: Recover from the compromised Director or Image keys
 
-We first restore the compromised repositories by reverting them to a
-previously known, good state.  For the demo, this can be
-accomplished by restarting the affected repositories and beginning with
-a clean slate.  Thereupon, the compromised keys can then be revoked.
+If a malicious attacker has laid hands on your online keys, or found a way to
+force systems with such access to sign malicious metadata, trust in those keys
+should be revoked, and new keys should be used in their place. These are likely
+to be the Timestamp and Snapshot role keys, and the Targets role keys in some circumstances (generally the Director). (More information on these roles and
+deployment considerations are available in documentation
+[linked to above](#uptane).)
+
+Once the servers have been recovered, it is easy to revoke any keys that may
+have been compromised. We should also make sure that the targets in the
+repositories are correct, in case things have been changed by the attacker
+while in control. In this demo, these two things are done like so:
 
 In the **Image** repository window:
 ```
->>> exit()
-$ python
->>> import demo.demo_image_repo as di
->>> di.clean_slate()
->>> di.revoke_and_add_new_key_and_write_to_live()
+>>> di.revoke_and_add_new_keys_and_write_to_live()
+>>> di.add_target_and_write_to_live(filename='firmware.img',
+        file_content='Fresh firmware image')
 ```
 
 And in the **Director** repository window:
 ```
->>> exit()
-$ python
->>> import demo.demo_director as dd
->>> dd.clean_slate()
->>> dd.revoke_and_add_new_key_and_write_to_live()
+>>> dd.revoke_and_add_new_keys_and_write_to_live()
+>>> dd.add_target_and_write_to_live(filename='firmware.img',
+    file_content='Fresh firmware image', vin='111', ecu_serial='22222')
 ```
 
-### 2.7: Restore the Primary and Seconday clients
+We have just used the rarely-needed root keys of the two repositories to
+revoke the potentially compromised Timestamp, Snapshot, and Targets keys from
+both repositories. This is the first time they have needed to be used since the
+repositories' creation at the beginning of this demo. Root keys should be
+kept offline, as discussed in
+the [Uptane Deployment Considerations document](https://docs.google.com/document/d/17wOs-T7mugwte5_Dt-KLGMsp-3_yAARejpFmrAMefSE/edit?usp=sharing)).
+
+Any client that receives the new metadata will be able to validate the root key
+and will cease trusting the revoked keys.
 
 On the **primary** client:
 ```python
->>> dp.clean_slate()
+>>> dp.update_cycle()
 ```
 
 On the **secondary** client:
 ```python
->>> ds.clean_slate()
+>>> ds.update_cycle()
 ```
-
-### 2.8: Running another arbitrary package attack on the image repository
-
-Finally, we attempt to launch another arbitrary package attack to show that compromised keys have been revoked
-as expected, and that clients are able to update once again and detect subsequent attacks.
-
-Note: The following code snippet should be executed in the listed order.  Pay special attention to which
-repository is being modified.
-
-```python
->>> di.add_target_and_write_to_live(filename='firmware.img', file_content='new firmware')
->>> dd.add_target_and_write_to_live(filename='firmware.img', file_content='new firmware',
-    vin='111', ecu_serial='22222')
-
->>> di.mitm_arbitrary_package_attack('firmware.img')
-
->>> dp.update_cycle()
-
->>> di.undo_mitm_arbitrary_package_attack('firmware.img')
-```
-
-The primary client should again discard the malicious *firmware.img* image provided by the image repository.

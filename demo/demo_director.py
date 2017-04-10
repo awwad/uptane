@@ -194,6 +194,67 @@ def write_to_live(vin_to_update=None):
 
 
 
+def revoke_and_add_new_key_and_write_to_live():
+  """
+  <Purpose>
+    Revoke the current Targets verification key (all roles currently have one
+    verification key), and add a new key for it.  This is a high-level version
+    of the common function to update a role key. The director service instance
+    is also updated with the key changes.
+
+  <Arguments>
+    None.
+
+  <Exceptions>
+    None.
+
+  <Side Effecs>
+    None.
+
+  <Returns>
+    None.
+  """
+
+  global director_service_instance
+
+  # Generate a new key for the Targets role.  Make sure that the director
+  # service instance is updated to use the new key.  'director' argument to
+  # generate_key() actually references the targets role.
+  demo.generate_key('director')
+  new_targets_public_key = demo.import_public_key('director')
+  new_targets_private_key = demo.import_private_key('director')
+  old_targets_public_key = director_service_instance.key_dirtarg_pub
+  old_targets_private_key = director_service_instance.key_dirtarg_pri
+
+  # Set the new public and private Targets keys in the director service.
+  # These keys are shared between all vehicle repositories.
+  director_service_instance.key_dirtarg_pub = new_targets_public_key
+  director_service_instance.key_dirtarg_pri = new_targets_private_key
+
+  for vin, repository in director_service_instance.vehicle_repositories.iteritems():
+    repository.targets.remove_verification_key(old_targets_public_key)
+    repository.targets.add_verification_key(new_targets_public_key)
+
+    root_private_key = director_service_instance.key_dirroot_pri
+    snapshot_private_key = director_service_instance.key_dirsnap_pri
+    timestamp_private_key = director_service_instance.key_dirtime_pri
+
+    # We need to re-sign root because it revoked the Targets key.  Snapshot
+    # must be written to make a new release.
+    repository.root.load_signing_key(root_private_key)
+    repository.targets.load_signing_key(new_targets_private_key)
+    repository.snapshot.load_signing_key(snapshot_private_key)
+    repository.timestamp.load_signing_key(timestamp_private_key)
+
+    # Write all the metadata changes to disk.  Note: write() will be writeall()
+    # in the latest version of the TUF codebase.
+    repository.write()
+
+
+
+
+
+
 
 def add_target_to_director(target_fname, filepath_in_repo, vin, ecu_serial):
   """
@@ -390,10 +451,10 @@ def listen():
 
   server.register_function(clear_vehicle_targets, 'clear_vehicle_targets')
 
-  server.register_function(attack_mitm, 'attack_mitm')
-  server.register_function(recover_mitm, 'recover_mitm')
+  server.register_function(mitm_arbitrary_package_attack, 'mitm_arbitrary_package_attack')
+  server.register_function(undo_mitm_arbitrary_package_attack, 'undo_mitm_arbitrary_package_attack')
 
-  print(' Starting Director Services Thread: will now listen on port ' +
+  print('Starting Director Services Thread: will now listen on port ' +
       str(demo.DIRECTOR_SERVER_PORT))
   director_service_thread = threading.Thread(target=server.serve_forever)
   director_service_thread.setDaemon(True)
@@ -402,82 +463,208 @@ def listen():
 
 
 
-def attack_mitm(vin, target_filepath):
-  # Arbitrary package attack, no compromised keys.
-  # Move evil target file into place on Director without updating metadata
-  # (simulate bad mirror).
-  full_fname = os.path.join(
-      demo.DIRECTOR_REPO_DIR, vin, 'targets', target_filepath)
+def mitm_arbitrary_package_attack(vin, target_filepath):
+  # Simulate an arbitrary package attack by a Man in the Middle, without
+  # compromising any keys.  Move an evil target file into place on the Director
+  # repository without updating metadata.
+  full_target_filepath = os.path.join(demo.DIRECTOR_REPO_DIR, vin,
+      'targets', target_filepath)
+
   # TODO: NOTE THAT THIS ATTACK SCRIPT BREAKS IF THE TARGET FILE IS IN A
   # SUBDIRECTORY IN THE REPOSITORY.
-  backup_fname = os.path.join(
-      demo.DIRECTOR_REPO_DIR, vin, 'targets', '_backup__' + target_filepath)
+  backup_target_filepath = os.path.join(demo.DIRECTOR_REPO_DIR, vin,
+      'targets', 'backup_' + target_filepath)
 
-  full_mr_fname = os.path.join(
-      demo.MAIN_REPO_TARGETS_DIR, target_filepath)
-  backup_mr_fname = os.path.join(
-      demo.MAIN_REPO_TARGETS_DIR, '_backup__' + target_filepath)
+  image_repo_full_target_filepath = os.path.join(demo.MAIN_REPO_TARGETS_DIR,
+      target_filepath)
+  image_repo_backup_full_target_filepath = os.path.join(demo.MAIN_REPO_TARGETS_DIR,
+      'backup_' + target_filepath)
 
 
-  if not os.path.exists(full_fname) and not os.path.exists(full_mr_fname):
+  if not os.path.exists(full_target_filepath) and not os.path.exists(image_repo_full_target_filepath):
     raise Exception('The provided target file is not already in either the '
         'Director or Image repositories. This attack is intended to be run on '
         'an existing target that is already set to be delivered to a client.')
-  elif os.path.exists(backup_fname):
+
+  elif os.path.exists(backup_target_filepath):
     raise Exception('The attack is already in progress, or was never recovered '
         'from. Not running twice. Please check state and if everything is '
-        'otherwise okay, delete ' + repr(backup_fname))
+        'otherwise okay, delete ' + repr(backup_target_filepath))
 
-  # If the image file exists already on the Director (not necessary), then
-  # back it up.
-  if os.path.exists(full_fname):
-    shutil.copy(full_fname, backup_fname)
+  # If the image file already exists on the Director repository (not
+  # necessary), then back it up.
+  if os.path.exists(full_target_filepath):
+    shutil.copy(full_target_filepath, backup_target_filepath)
 
-  # Hide file on Main Repo so that client doesn't just grab an intact file from
-  # there, making the attack moot.
-  if os.path.exists(full_mr_fname):
-    os.rename(full_mr_fname, backup_mr_fname)
+  # Hide the image file on the image repository so that the client doesn't just
+  # grab an intact file from there, making the attack moot.
+  if os.path.exists(image_repo_full_target_filepath):
+    os.rename(image_repo_full_target_filepath,
+        image_repo_backup_full_target_filepath)
 
-  fobj = open(full_fname, 'w')
-  fobj.write('EVIL UPDATE: ARBITRARY PACKAGE ATTACK TO BE DELIVERED FROM '
-      'MITM / bad mirror (no keys compromised).')
-  fobj.close()
-  shutil.copy(full_fname, full_mr_fname)
-
+  with open(full_target_filepath, 'w') as file_object:
+    file_object.write('EVIL UPDATE: ARBITRARY PACKAGE ATTACK TO BE'
+        ' DELIVERED FROM MITM (no keys compromised).')
 
 
-def recover_mitm(vin, target_filepath):
-  # Arbitrary package attack recovery.
-  # Move evil target file out and normal target file back in.
-  full_fname = os.path.join(
-      demo.DIRECTOR_REPO_DIR, vin, 'targets', target_filepath)
+
+
+
+def undo_mitm_arbitrary_package_attack(vin, target_filepath):
+  # Undo the arbitrary package attack launched by
+  # mitm_arbitrary_package_attack().  Move evil target file out and normal
+  # target file back in.
+  full_target_filepath = os.path.join(demo.DIRECTOR_REPO_DIR, vin,
+      'targets', target_filepath)
+
   # TODO: NOTE THAT THIS ATTACK SCRIPT BREAKS IF THE TARGET FILE IS IN A
   # SUBDIRECTORY IN THE REPOSITORY.
-  backup_fname = os.path.join(
-      demo.DIRECTOR_REPO_DIR, vin, 'targets', '_backup__' + target_filepath)
+  backup_full_target_filepath = os.path.join(demo.DIRECTOR_REPO_DIR, vin,
+      'targets', 'backup_' + target_filepath)
 
-  full_mr_fname = os.path.join(
-      demo.MAIN_REPO_TARGETS_DIR, target_filepath)
-  backup_mr_fname = os.path.join(
-      demo.MAIN_REPO_TARGETS_DIR, '_backup__' + target_filepath)
+  image_repo_full_target_filepath = os.path.join(demo.MAIN_REPO_TARGETS_DIR, target_filepath)
+  image_repo_backup_full_target_filepath = os.path.join(demo.MAIN_REPO_TARGETS_DIR,
+      'backup_' + target_filepath)
 
-  if not os.path.exists(backup_fname) or not os.path.exists(full_fname):
+  if not os.path.exists(backup_full_target_filepath) or not os.path.exists(full_target_filepath):
     raise Exception('The expected backup or attacked files do not exist. No '
-        'attack is in progress to recover from, or manual manipulation has '
+        'attack is in progress to undo, or manual manipulation has '
         'broken the expected state.')
 
-  # In the case of the Director repo, we expect there to be a file replaced,
-  # so we restore the backup over it.
-  os.rename(backup_fname, full_fname)
+  # In the case of the Director repository, we expect there to be a malicious
+  # image file, so we restore the backup over it.
+  os.rename(backup_full_target_filepath, full_target_filepath)
 
-  # If the file existed on the Main Repo, was backed up and hidden by the
-  # attack, and hasn't since been replaced (by some other attack or manual
+  # If the file existed on the image repository, was backed up and hidden by
+  # the attack, and hasn't since been replaced (by some other attack or manual
   # manipulation), restore that file to its place. Either way, delete the
   # backup so that it's not there the next time to potentially confuse this.
-  if os.path.exists(backup_mr_fname) and not os.path.exists(full_mr_fname):
-    os.rename(full_mr_fname, backup_mr_fname)
-  elif os.path.exists(backup_mr_fname):
-    os.remove(backup_mr_fname)
+  if os.path.exists(image_repo_backup_full_target_filepath) and not os.path.exists(image_repo_full_target_filepath):
+    os.rename(image_repo_backup_full_target_filepath, image_repo_full_target_filepath)
+
+  elif os.path.exists(image_repo_backup_full_target_filepath):
+    os.remove(image_repo_backup_full_target_filepath)
+
+
+
+
+
+"""
+How to simulate a rollback attack:
+
+>>> import demo.demo_director as dd
+>>> dd.clean_slate()
+
+Primary performs an update cycle...
+
+Copy timestamp.der to backup_timestamp.der
+1. dd.backup_timestamp()
+
+A new timestamp.der & snapshot.der are written
+2. dd.write_to_live()
+
+Primary ECU successfully performs update...
+>>> import demo.demo_primary as dp
+
+3. dp.update_cycle()
+
+Move backup_timestamp to timestamp.der (timestamp.der is saved to
+current_timestamp.der)
+4. dd.rollback_timestamp()
+
+Primary ECU performs an update cycle, but it detects a rollback attack.
+5. dp.update_cycle()
+
+Restore timestamp.der.  The valid, current timestamp is moved back into place.
+6. dd.restore_timestamp()
+"""
+
+def backup_timestamp(vin):
+  """
+  Copy timestamp.der to backup_timestamp.der
+
+  Example:
+  >>> import demo.demo_director as dd
+  >>> dd.clean_slate()
+  >>> dd.backup_timestamp('111')
+  """
+
+  timestamp_filename = 'timestamp.' + tuf.conf.METADATA_FORMAT
+  timestamp_path = os.path.join(demo.DIRECTOR_REPO_DIR, vin, 'metadata',
+      timestamp_filename)
+
+  backup_timestamp_path = os.path.join(demo.DIRECTOR_REPO_DIR, vin,
+      'backup_' + timestamp_filename)
+
+  shutil.copyfile(timestamp_path, backup_timestamp_path)
+
+
+
+
+
+def rollback_timestamp(vin):
+  """
+  Move 'backup_timestamp.der' to 'timestamp.der', effectively rolling back
+  timestamp to a previous version.  'backup_timestamp.der' must already exist
+  at the expected path (can be created via backup_timestamp(vin)).
+  Prior to rolling back timestamp.der, the current timestamp is saved to
+  'current_timestamp.der'.
+
+  Example:
+  >>> import demo.demo_director as dd
+  >>> dd.clean_slate()
+  >>> dd.backup_timestamp('111')
+  >>> dd.rollback_timestamp()
+  """
+
+  timestamp_filename = 'timestamp.' + tuf.conf.METADATA_FORMAT
+  backup_timestamp_path = os.path.join(demo.DIRECTOR_REPO_DIR, vin,
+      'backup_' + timestamp_filename)
+
+  if not os.path.exists(backup_timestamp_path):
+    raise Exception('Cannot rollback the Timestamp'
+        ' file.  ' + repr(backup_timestamp_path) + ' must already exist.'
+        '  It can be created by calling backup_timestamp(vin).')
+
+  else:
+    timestamp_path = os.path.join(demo.DIRECTOR_REPO_DIR, vin, 'metadata',
+        timestamp_filename)
+    current_timestamp_backup = os.path.join(demo.DIRECTOR_REPO_DIR, vin,
+        'current_' + timestamp_filename)
+
+    # First backup the current timestamp.
+    shutil.move(timestamp_path, current_timestamp_backup)
+    shutil.move(backup_timestamp_path, timestamp_path)
+
+
+
+
+
+
+def restore_timestamp(vin):
+  """
+  # restore timestamp.der (first move current_timestamp.der to timestamp.der).
+
+  Example:
+  >>> import demo.demo_director as dd
+  >>> dd.clean_slate()
+  >>> dd.backup_timestamp('111')
+  >>> dd.rollback_timestamp()
+  >>> dd.restore_timestamp()
+  """
+
+  timestamp_filename = 'timestamp.' + tuf.conf.METADATA_FORMAT
+  current_timestamp_backup = os.path.join(demo.DIRECTOR_REPO_DIR, vin,
+      'current_' + timestamp_filename)
+
+  if not os.path.exists(current_timestamp_backup):
+    raise Exception('A backup copy of the timestamp file'
+        ' could not be found.  Missing: ' + repr(current_timestamp_backup))
+
+  else:
+    timestamp_path = os.path.join(demo.DIRECTOR_REPO_DIR, vin, 'metadata',
+        timestamp_filename)
+    shutil.move(current_timestamp_backup, timestamp_path)
 
 
 
@@ -485,6 +672,29 @@ def recover_mitm(vin, target_filepath):
 
 def clear_vehicle_targets(vin):
   director_service_instance.vehicle_repositories[vin].targets.clear_targets()
+
+
+
+
+
+def add_target_and_write_to_live(filename, file_content, vin, ecu_serial):
+  """
+  High-level version of add_target_to_director() that creates 'filename'
+  and writes the changes to the live directory repository.
+  """
+
+  # Create 'filename' in the current working directory, but it should
+  # ideally be to a temporary destination.  The demo code will eventually
+  # be modified to use temporary directories (which will cleaned up after
+  # running the demo code).
+  with open(filename, 'w') as file_object:
+    file_object.write(file_content.decode('utf-8'))
+
+  # The path that will identify the file in the repository.
+  filepath_in_repo = filename
+
+  add_target_to_director(filename, filepath_in_repo, vin, ecu_serial)
+  write_to_live()
 
 
 

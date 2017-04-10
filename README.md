@@ -201,10 +201,10 @@ newly-written metadata:
 
 
 ```python
-firmware_fname = filepath_in_repo = 'firmware.img'
-open(firmware_fname, 'w').write('Fresh firmware image')
-di.add_target_to_imagerepo(firmware_fname, filepath_in_repo)
-di.write_to_live()
+>>> firmware_fname = filepath_in_repo = 'firmware.img'
+>>> open(firmware_fname, 'w').write('Fresh firmware image')
+>>> di.add_target_to_imagerepo(firmware_fname, filepath_in_repo)
+>>> di.write_to_live()
 ```
 
 Perform the following in the **Director repository's** window to assign that Image file to vehicle 111, ECU 22222:

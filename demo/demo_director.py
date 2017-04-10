@@ -39,7 +39,6 @@ demo_director.kill_server()
 """
 from __future__ import print_function
 from __future__ import unicode_literals
-from io import open
 
 import demo
 import uptane
@@ -231,7 +230,9 @@ def revoke_and_add_new_key_and_write_to_live():
   director_service_instance.key_dirtarg_pub = new_targets_public_key
   director_service_instance.key_dirtarg_pri = new_targets_private_key
 
-  for vin, repository in director_service_instance.vehicle_repositories.iteritems():
+  for vin in director_service_instance.vehicle_repositories:
+    repository = director_service_instance.vehicle_repositories[vin]
+
     repository.targets.remove_verification_key(old_targets_public_key)
     repository.targets.add_verification_key(new_targets_public_key)
 
@@ -665,7 +666,7 @@ def add_target_and_write_to_live(filename, file_content, vin, ecu_serial):
   # be modified to use temporary directories (which will cleaned up after
   # running the demo code).
   with open(filename, 'w') as file_object:
-    file_object.write(file_content.decode('utf-8'))
+    file_object.write(file_content)
 
   # The path that will identify the file in the repository.
   filepath_in_repo = filename

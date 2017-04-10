@@ -26,7 +26,6 @@ di.kill_server()
 """
 from __future__ import print_function
 from __future__ import unicode_literals
-from io import open
 
 import demo
 import uptane
@@ -358,7 +357,7 @@ def add_target_and_write_to_live(filename, file_content):
   # be modified to use temporary directories (which will cleaned up after
   # running demo code).
   with open(filename, 'w') as file_object:
-    file_object.write(file_content.decode('utf-8'))
+    file_object.write(file_content)
 
   filepath_in_repo = filename
   add_target_to_imagerepo(filename, filepath_in_repo)

@@ -688,7 +688,7 @@ def add_target_and_write_to_live(filename, file_content, vin, ecu_serial):
   filepath_in_repo = filename
 
   add_target_to_director(filename, filepath_in_repo, vin, ecu_serial)
-  write_to_live()
+  write_to_live(vin_to_update=vin)
 
 
 

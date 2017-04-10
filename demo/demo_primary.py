@@ -3,7 +3,6 @@ demo_primary.py
 
 Demonstration code handling a Primary client.
 
-
 Use:
 
 import demo.demo_primary as dp
@@ -13,8 +12,7 @@ dp.clean_slate() # also listens, xmlrpc
 dp.generate_signed_vehicle_manifest()
 dp.submit_vehicle_manifest_to_director()
 
-
-
+Please see README.md for further instructions.
 
 """
 from __future__ import print_function
@@ -42,7 +40,7 @@ import time
 from six.moves import xmlrpc_client
 from six.moves import xmlrpc_server
 from six.moves import range
-import socket # for socket.error, to catch listening failures from six's xmlrpc server
+import socket # to catch listening failures from six's xmlrpc server
 
 # Import a CAN communications module for partial-verification Secondaries
 import ctypes
@@ -657,10 +655,10 @@ def get_metadata_for_ecu(ecu_serial, force_partial_verification=False):
     else:
       # If this is a Full Verification Secondary not running on a CAN network,
       # select the full metadata archive.
-      print('Treating requester as full-verification Secondary without a CAN '
-          'interface because the C CAN interface is off or the ECU Serial (' +
-          repr(ecu_serial) + ') does not appear in the mapping of ECU Serials '
-          'to CAN IDs.')
+      # print('Treating requester as full-verification Secondary without a CAN '
+      #     'interface because the C CAN interface is off or the ECU Serial (' +
+      #     repr(ecu_serial) + ') does not appear in the mapping of ECU Serials '
+      #     'to CAN IDs.')
       fname = primary_ecu.get_full_metadata_archive_fname()
 
     if not os.path.exists(fname):
@@ -752,10 +750,10 @@ def get_time_attestation_for_ecu(ecu_serial):
 
 
   else:
-    print('Treating requester as full-verification Secondary without a CAN '
-        'interface because the C CAN interface is off or the ECU Serial (' +
-        repr(ecu_serial) + ') does not appear in the mapping of ECU Serials '
-        'to CAN IDs. Sending time attestation back.')
+    # print('Treating requester as full-verification Secondary without a CAN '
+    #     'interface because the C CAN interface is off or the ECU Serial (' +
+    #     repr(ecu_serial) + ') does not appear in the mapping of ECU Serials '
+    #     'to CAN IDs. Sending time attestation back.')
 
     print('Distributing time attestation to ECU ' + repr(ecu_serial))
     return attestation

@@ -197,10 +197,10 @@ def write_to_live(vin_to_update=None):
 def revoke_and_add_new_key_and_write_to_live():
   """
   <Purpose>
-    Revoke the current Targets verification key (all roles currently have one
-    verification key), and add a new key for it.  This is a high-level version
-    of the common function to update a role key. The director service instance
-    is also updated with the key changes.
+    Revoke the current Targets verification key for all vehicles and add a new
+    key for it.  This is a high-level version of the common function to update
+    a role key. The director service instance is also updated with the key
+    changes.
 
   <Arguments>
     None.
@@ -241,6 +241,8 @@ def revoke_and_add_new_key_and_write_to_live():
 
     # We need to re-sign root because it revoked the Targets key.  Snapshot
     # must be written to make a new release.
+    # TODO: Find out if this is necessary and if it is necessary that it be
+    # necessary.
     repository.root.load_signing_key(root_private_key)
     repository.targets.load_signing_key(new_targets_private_key)
     repository.snapshot.load_signing_key(snapshot_private_key)

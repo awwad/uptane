@@ -7,8 +7,20 @@ Please note that extensive documentation on design can be found in the following
 * [Implementation Specification](https://docs.google.com/document/d/1wjg3hl0iDLNh7jIRaHl3IXhwm0ssOtDje5NemyTBcaw/edit?usp=sharing)
 * [Deployment Considerations](https://docs.google.com/document/d/17wOs-T7mugwte5_Dt-KLGMsp-3_yAARejpFmrAMefSE/edit?usp=sharing)
 
+
 # Instructions on use of the Uptane demonstration code
-## Installation
+
+Below are the instructions on use of the Uptane demonstration and reference
+implementation code, divided into these sections:
+
+* [0: Installation](#0-installation)
+* [1: Starting the Demo](#0-starting-the-demo)
+* [2: Delivering an Update](#1-delivering-an-update)
+* [3: Blocking Attacks](#2-blocking-attacks)
+
+
+
+# 0: Installation
 Uptane fully supports Python2 and Python3. As usual for Python, [virtual environments](https://python-docs.readthedocs.io/en/latest/dev/virtualenvs.html) are recommended for development and testing, but not necessary.
 
 Some development libraries are necessary to install some of Uptane's dependencies. If your system uses apt, the command to install them will be:

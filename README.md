@@ -493,3 +493,10 @@ On the **secondary** client:
 ```python
 >>> ds.update_cycle()
 ```
+
+As ever, if a particular ECU has been compromised and attacker code has been
+run on it, being certain that specific device is secured is of course difficult
+to assure. Devices that have not been compromised in such an attack, however,
+should thereafter be protected from the use of those compromised keys by an
+attacker.
+

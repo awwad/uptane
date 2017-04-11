@@ -14,9 +14,9 @@ Below are the instructions on use of the Uptane demonstration and reference
 implementation code, divided into these sections:
 
 * [0: Installation](#0-installation)
-* [1: Starting the Demo](#0-starting-the-demo)
-* [2: Delivering an Update](#1-delivering-an-update)
-* [3: Blocking Attacks](#2-blocking-attacks)
+* [1: Starting the Demo](#1-starting-the-demo)
+* [2: Delivering an Update](#2-delivering-an-update)
+* [3: Blocking Attacks](#3-blocking-attacks)
 
 
 
@@ -55,7 +55,7 @@ If you want the demo to play notification sounds you need one of the following a
 - omxplayer (built-in on Raspbian)
 - afplay (built-in on OS X)
 
-# 0: Starting the Demo
+# 1: Starting the Demo
 The code below is intended to be run in five or more consoles:
 - [WINDOW 1](#window-1-the-image-repository): Python shell for the Image Repository. This serves HTTP (repository files, including metadata).
 - [WINDOW 2](#window-2-the-director): Python shell for the Director (Repository and Service). This serves metadata and image files via HTTP,111
@@ -108,12 +108,12 @@ Open a new Python shell in a new terminal window and then run the following:
 After that, proceed to the following Windows to prepare clients.
 Once those are ready, you can perform a variety of modifications and attacks.
 Various manipulations can be made here to the Director's interface. Examples
-will be discussed below in the [Delivering an Update](#delivering-an-update)
+will be discussed below in the [Delivering an Update](#2-delivering-an-update)
 and [Blocking Attacks](#blocking-attacks) sections.
 
 
 
-### *WINDOW 3: the Timeserver:*
+### WINDOW 3: the Timeserver:
 The following starts a simple Timeserver, which receives requests for signed
 times, bundled by the Primary, and produces a signed attestation that includes
 the nonces each Secondary ECU sent the Primary to include along with the
@@ -191,7 +191,7 @@ The Secondary's update_cycle() call:
 
 
 
-# 1: Delivering an Update
+# 2: Delivering an Update
 To deliver an Update via Uptane, you'll need to add the firmware image to the Image repository, then assign it to a vehicle
 and ECU in the Director repository. Then, the Primary will obtain the new firmware, and the Secondary will update from the
 Primary.
@@ -230,14 +230,14 @@ You should see an Updated banner on the Secondary, indicating a successful, vali
 
 
 
-# 2: Blocking Attacks
+# 3: Blocking Attacks
 Uptane is designed to secure the software updates delivered between repositories and vehicles.  [Section
 7.3](https://docs.google.com/document/d/1pBK--40BCg_ofww4GES0weYFB6tZRedAjUy6PJ4Rgzk/edit#heading=h.jta2pcxo2frp) of the [Uptane Design Overview](https://docs.google.com/document/d/1pBK--40BCg_ofww4GES0weYFB6tZRedAjUy6PJ4Rgzk/edit?usp=sharing) covers all of the known attacks in more detail.  We begin this section with a demonstration
 of the Arbitrary Package Attack.
 
 
 
-### 2.1: Running an Arbitrary Package Attack on the Director repository without Compromised Keys
+### 3.1: Running an Arbitrary Package Attack on the Director repository without Compromised Keys
 This is a simple attack simulating a Man in the Middle that provides a malicious image file. In this attack, the
 attacker does not have the keys to correctly sign new metadata (and so it is an exceptionally basic attack).
 
@@ -271,7 +271,7 @@ should updated successfully.
 
 
 
-### 2.2: Running an Arbitrary Package Attack on the Image repository without Compromised Keys
+### 3.2: Running an Arbitrary Package Attack on the Image repository without Compromised Keys
 In the previous section, the firmware available on the director repository was replaced with a malicious one.
 What if the image repository is corrupted with a malicious firmware?
 
@@ -313,7 +313,7 @@ Undo the the arbitrary package attack so that subsequent sections can be reprodu
 >>> di.undo_mitm_arbitrary_package_attack(firmware_fname)
 ```
 
-### 2.3: Running a Rollback Attack without a compromised Director key
+### 3.3: Running a Rollback Attack without a compromised Director key
 
 We next demonstrate a rollback attack, where the client is given an older (and previously trusted)
 version of metadata.  This attack can cause secondary clients to use older firmware than they
@@ -369,7 +369,7 @@ Finally, restore the valid, latest version of Timestamp metadata
 
 
 
-### 2.4: Running an Arbitrary Package Attack with a Compromised Director Key
+### 3.4: Running an Arbitrary Package Attack with a Compromised Director Key
 
 Thus far we have simulated a few attacks that have not depended on compromised keys.  In
 the arbitrary and rollback attacks (via a Man in the Middle), an attacker has
@@ -381,7 +381,7 @@ of just the image repository?  What about a compromise of both the image and dir
 repositories?
 
 Both repositories currently have metadata about 'firmware.img', which we added
-in the [1: Delivering an Update](#1-delivering-an-update) section.
+in the [2: Delivering an Update](#2-delivering-an-update) section.
 
 For this attack, we'll modify that to include malicious content.
 
@@ -404,7 +404,7 @@ us to download a file that does  does not exactly match the Image Repository met
 
 
 
-### 2.5: Compromise the Image repository to also serve the arbitrary package
+### 3.5: Compromise the Image repository to also serve the arbitrary package
 So the director repository now provides malicious firmware that has been signed by a compromised key.
 What happens if the image repository is also compromised?
 ```python
@@ -418,7 +418,7 @@ On the **primary** client:
 >>> dp.update_cycle()
 ```
 
-On the **secondary** cilent:
+On the **secondary** client:
 ```python
 >>> ds.update_cycle()
 ```

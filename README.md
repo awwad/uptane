@@ -17,7 +17,12 @@ implementation code, divided into these sections:
 * [1: Starting the Demo](#1-starting-the-demo)
 * [2: Delivering an Update](#2-delivering-an-update)
 * [3: Blocking Attacks](#3-blocking-attacks)
-
+  * [3.1: Arbitrary Package Attack on Director Repository without Compromised Keys](#31-arbitrary-package-attack-on-director-repository-without-compromised-keys)
+  * [3.2: Arbitrary Package Attack on Image Repository without Compromised Keys](#32-arbitrary-package-attack-on-image-repository-without-compromised-keys)
+  * [3.3: Rollback Attack without Compromised Keys](#33-rollback-attack-without-compromised-keys)
+  * [3.4: Arbitrary Package Attack with a Compromised Director Key](#34-arbitrary-package-attack-with-a-compromised-director-key)
+  * [3.5: Compromise Both Repositories Simultaneously to Serve Arbitrary Package](#35-compromise-both-repositories-simultaneously-to-server-arbitrary-package)
+  * [3.6: Recover from Major Key Compromise](#36-recover-from-major-key-compromise)
 
 
 # 0: Installation
@@ -70,7 +75,7 @@ The code below is intended to be run in five or more consoles:
 These instructions start a demonstration version of an OEM's or Supplier's main repository
 for software, hosting images and the metadata Uptane requires.
 
-From within the root `uptane/` directory of the repository, open an interactive
+From within the root `uptane/` directory of the downloaded code (which contains e.g. the `setup.py` file), open an interactive
 Python shell from the command line. (Any version of Python >=2.7 should do, but
 we test 2.7, 3.3, 3.4, and 3.5.)
 
@@ -152,8 +157,8 @@ The Primary's update_cycle() call:
 - sends that Vehicle Version Manifest to the Director (can also be called directly: `dp.submit_vehicle_manifest_to_director()`)
 
 If you wish to run the demo with multiple vehicles (one Primary each), you can open a Python shell in a new terminal
-window for each vehicle's Primary and provide a unique VIN and ECU for each of them. Find the port that is chosen in the Primary's initialization and make note of it so that it can be provided to any Secondaries you set up in a moment (e.g. "Primary will now listen on port 30702")
-For example:
+window for each vehicle's Primary and provide a unique VIN and ECU Serial for each of them. Because each Secondary will need to communicate with the correct Primary in this demo, find port that is chosen in the Primary's initialization (when `dp.clean_slate()` is called) and make note of it so that it can be provided to any Secondaries you set up in a moment. The message will be e.g. "Primary will now listen on port 30702")
+Example setting up a different Primary for a different vehicle:
 ```python
 >>> import demo.demo_primary as dp
 >>> dp.clean_slate(vin='112', ecu_serial='PRIMARY_ECU_2')
@@ -237,7 +242,7 @@ of the Arbitrary Package Attack.
 
 
 
-### 3.1: Running an Arbitrary Package Attack on the Director repository without Compromised Keys
+### 3.1: Arbitrary Package Attack on Director Repository without Compromised Keys
 This is a simple attack simulating a Man in the Middle that provides a malicious image file. In this attack, the
 attacker does not have the keys to correctly sign new metadata (and so it is an exceptionally basic attack).
 
@@ -271,7 +276,7 @@ should updated successfully.
 
 
 
-### 3.2: Running an Arbitrary Package Attack on the Image repository without Compromised Keys
+### 3.2: Arbitrary Package Attack on Image Repository without Compromised Keys
 In the previous section, the firmware available on the director repository was replaced with a malicious one.
 What if the image repository is corrupted with a malicious firmware?
 
@@ -313,7 +318,7 @@ Undo the the arbitrary package attack so that subsequent sections can be reprodu
 >>> di.undo_mitm_arbitrary_package_attack(firmware_fname)
 ```
 
-### 3.3: Running a Rollback Attack without a compromised Director key
+### 3.3: Rollback Attack without Compromised Keys
 
 We next demonstrate a rollback attack, where the client is given an older (and previously trusted)
 version of metadata.  This attack can cause secondary clients to use older firmware than they
@@ -369,7 +374,7 @@ Finally, restore the valid, latest version of Timestamp metadata
 
 
 
-### 3.4: Running an Arbitrary Package Attack with a Compromised Director Key
+### 3.4: Arbitrary Package Attack with a Compromised Director Key
 
 Thus far we have simulated a few attacks that have not depended on compromised keys.  In
 the arbitrary and rollback attacks (via a Man in the Middle), an attacker has
@@ -383,7 +388,8 @@ repositories?
 Both repositories currently have metadata about 'firmware.img', which we added
 in the [2: Delivering an Update](#2-delivering-an-update) section.
 
-For this attack, we'll modify that to include malicious content.
+For this attack, we'll modify `firmware.img` to include malicious content, and
+will sign metadata certifying that malicious firmware file.
 
 To simulate a compromised directory key, we simply sign for an updated
 "firmware.img" that includes malicious content (the phrase "evil content" in
@@ -404,7 +410,7 @@ us to download a file that does  does not exactly match the Image Repository met
 
 
 
-### 3.5: Compromise the Image repository to also serve the arbitrary package
+### 3.5: Compromise Both Repositories Simultaneously to Serve Arbitrary Package
 So the director repository now provides malicious firmware that has been signed by a compromised key.
 What happens if the image repository is also compromised?
 ```python
@@ -440,7 +446,7 @@ compromised.
 
 
 
-### 2.6: Recover from the compromised Director or Image keys
+### 3.6: Recover from Major Key Compromise
 
 If a malicious attacker has laid hands on your online keys, or found a way to
 force systems with such access to sign malicious metadata, trust in those keys

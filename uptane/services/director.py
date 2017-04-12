@@ -360,6 +360,42 @@ class Director:
 
     ecu_public_key = inventory.ecu_public_keys[primary_ecu_serial]
 
+    # Here, we check to see if the key that signed the Vehicle Manifest is the
+    # same key as ecu_public_key (the one the director expects), so that we can
+    # generate a more informative error, allowing user/debugger to distinguish
+    # between a bad signature ostensibly from the right key and a signature
+    # from the wrong key.
+    # TODO: Fix(?) assumption that one signature is used below.
+    keyid_used_in_signature = vehicle_manifest['signatures'][0]['keyid']
+    # Note, though, that there could be some edge cases here that the TUF code
+    # might actually resolve: for example, if the keyid hash algorithm used
+    # in the signature is not the same one as the one used in the key listing,
+    # this check would provide a false failure. So we don't raise an error here,
+    # and instead just log this difference and let the final arbiter of the
+    # validity of the signature be the dedicated code in tuf.keys.
+    if keyid_used_in_signature != ecu_public_key['keyid']:
+      log.info(
+          'Key used to sign Vehicle Manifest has a different keyid from that '
+          'listed in the inventory DB. Expect signature validation to fail, '
+          'unless the key is the same but the keyid differently hashed.')
+
+
+    if tuf.conf.METADATA_FORMAT == 'der':
+      # To check the signature, we have to make sure to encode the data as it
+      # was when the signature was made. If we're using ASN.1/DER as the
+      # data format/encoding, then we convert the 'signed' portion of the data
+      # back to ASN.1/DER to check it.
+      # Further, since for ASN.1/DER, a SHA256 hash is taken of the data and
+      # *that* is what is signed, we perform that hashing as well and retrieve
+      # the raw binary digest.
+      data_to_check = asn1_codec.convert_signed_metadata_to_der(
+          vehicle_manifest, only_signed=True, datatype='vehicle_manifest')
+      data_to_check = hashlib.sha256(data_to_check).digest()
+
+    else:
+      data_to_check = vehicle_manifest['signed']
+
+
     valid = uptane.common.verify_signature_over_metadata(
         ecu_public_key,
         vehicle_manifest['signatures'][0], # TODO: Fix assumptions.

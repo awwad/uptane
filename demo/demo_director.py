@@ -193,16 +193,20 @@ def write_to_live(vin_to_update=None):
 
 
 
-def revoke_and_add_new_keys_and_write_to_live():
+def revoke_and_add_new_keys_and_write_to_live(prefix_of_new_keys=None):
   """
   <Purpose>
     Revoke the current Timestamp, Snapshot, and Targets keys for all vehicles
-    and add a new key for each role.  This is a high-level version of the common
-    function to update a role key. The director service instance is also updated
-    with the key changes.
+    and add a new key for each role.  This is a high-level version of the
+    common function to update a role key. The director service instance is also
+    updated with the key changes.
 
   <Arguments>
-    None.
+    prefix_of_new_keys:
+      A prefix that is optionally prepended to the default names of the key
+      files.  For example: if prefix_of_new_keys = 'new_', new keyfiles would be
+      named 'new_director', 'new_directorsnapshot', and
+      'new_directortimestamp'.
 
   <Exceptions>
     None.
@@ -217,23 +221,27 @@ def revoke_and_add_new_keys_and_write_to_live():
   global director_service_instance
 
   # Generate a new key for the Targets role.  Make sure that the director
-  # service instance is updated to use the new key.  'director' argument to
-  # generate_key() actually references the targets role.
+  # service instance is updated to use the new key.  'director' name
+  # actually references the targets role.
   # TODO: Change Director's targets key to 'directortargets' from 'director'.
-  demo.generate_key('director')
-  new_targets_public_key = demo.import_public_key('director')
-  new_targets_private_key = demo.import_private_key('director')
-  old_targets_public_key = director_service_instance.key_dirtarg_pub
+  if prefix_of_new_keys is None:
+    prefix_keyname = ''
 
-  demo.generate_key('directortimestamp')
-  new_timestamp_public_key = demo.import_public_key('directortimestamp')
-  new_timestamp_private_key = demo.import_private_key('directortimestamp')
+  demo.generate_key(prefix_of_new_keys + 'director')
+  new_targets_public_key = demo.import_public_key(prefix_of_new_keys + 'director')
+  new_targets_private_key = demo.import_private_key(prefix_of_new_keys + 'director')
+  old_targets_public_key = director_service_instance.key_dirtarg_pub
+  old_targets_private_key = director_service_instance.key_dirtarg_pri
+
+  demo.generate_key(prefix_of_new_keys + 'directortimestamp')
+  new_timestamp_public_key = demo.import_public_key(prefix_of_new_keys + 'directortimestamp')
+  new_timestamp_private_key = demo.import_private_key(prefix_of_new_keys + 'directortimestamp')
   old_timestamp_public_key = director_service_instance.key_dirtime_pub
   old_timestamp_private_key = director_service_instance.key_dirtime_pri
 
-  demo.generate_key('directorsnapshot')
-  new_snapshot_public_key = demo.import_public_key('directorsnapshot')
-  new_snapshot_private_key = demo.import_private_key('directorsnapshot')
+  demo.generate_key(prefix_of_new_keys + 'directorsnapshot')
+  new_snapshot_public_key = demo.import_public_key(prefix_of_new_keys + 'directorsnapshot')
+  new_snapshot_private_key = demo.import_private_key(prefix_of_new_keys + 'directorsnapshot')
   old_snapshot_public_key = director_service_instance.key_dirsnap_pub
   old_snapshot_private_key = director_service_instance.key_dirsnap_pri
 
@@ -259,17 +267,208 @@ def revoke_and_add_new_keys_and_write_to_live():
     repository.snapshot.remove_verification_key(old_snapshot_public_key)
     repository.snapshot.add_verification_key(new_snapshot_public_key)
 
+    # Unload the old signing keys so that the new metadata only contains
+    # signatures produced by the new signing keys.
+    repository.targets.unload_signing_key(old_targets_private_key)
+    repository.snapshot.unload_signing_key(old_snapshot_private_key)
+    repository.timestamp.unload_signing_key(old_timestamp_private_key)
+
     # Load the new signing keys to write metadata. The root key is unchanged,
     # and in the demo it is already loaded.
     repository.targets.load_signing_key(new_targets_private_key)
     repository.snapshot.load_signing_key(new_snapshot_private_key)
     repository.timestamp.load_signing_key(new_timestamp_private_key)
 
-    # Write all the metadata changes to disk.  Note: write() will be writeall()
-    # in the latest version of the TUF codebase.
-    repository.write()
+    # The root role is not automatically marked as dirty when the verification
+    # keys are updated via repository.<non-root-role>.add_verification_key().
+    # TODO: Verify this behavior with the latest version of the TUF codebase.
+    repository.mark_dirty(['root'])
+
+    # Copy the staged metadata to a backup directory we'll move back into
+    # place when we undo the write_to_live_with_previous_keys() call later.
+    # atomically in a moment.
+    shutil.copytree(
+        os.path.join(repo_dir, 'metadata.staged'),
+        os.path.join(repo_dir, 'metadata.backup'))
+
+  write_to_live()
 
 
+
+def write_to_live_with_previous_keys(prefix_of_previous_keys=None):
+  """
+  <Purpose>
+    Re-generate Timestamp, Snapshot, and Targets metadata for all vehicles and
+    sign each of these roles with its previously revoked key.  The default key
+    names (director, directorsnapshot, directortimestamp, etc.) of the key
+    files are used if prefix_of_previous_keys is None, otherwise
+    'prefix_of_previous_keys' is prepended to them.  This is a high-level version
+    of the common function to update a role key. The director service instance
+    is also updated with the key changes.
+
+  <Arguments>
+    prefix_of_previous_keys:
+      If not None, the previous keys with names prefix_of_previous_keys+director,
+      prefix_of_previous_keys+directorsnapshot, etc., are loaded to sign the new
+      Timestamp, Snapshot, and Targets metadata.
+
+  <Side Effects>
+    None.
+
+  <Exceptions>
+    None.
+
+  <Returns>
+    None.
+  """
+
+  global director_service_instance
+
+  if prefix_of_previous_keys is None:
+    prefix_of_previous_keys = ''
+
+  old_targets_private_key = demo.import_private_key(prefix_of_previous_keys + 'director')
+  old_timestamp_private_key = demo.import_private_key(prefix_of_previous_keys + 'directortimestamp')
+  old_snapshot_private_key = demo.import_private_key(prefix_of_previous_keys + 'directorsnapshot')
+
+  current_targets_private_key = director_service_instance.key_dirtarg_pri
+  current_timestamp_private_key = director_service_instance.key_dirtime_pri
+  current_snapshot_private_key = director_service_instance.key_dirsnap_pri
+
+  # Set the new private keys in the director service.  These keys are shared
+  # between all vehicle repositories.
+  director_service_instance.key_dirtarg_pri = old_targets_private_key
+  director_service_instance.key_dirtime_pri = old_timestamp_private_key
+  director_service_instance.key_dirsnap_pri = old_snapshot_private_key
+
+  repo_dir = None
+
+  for vin in director_service_instance.vehicle_repositories:
+
+    repository = director_service_instance.vehicle_repositories[vin]
+    repo_dir = repository._repository_directory
+
+    repository.targets.unload_signing_key(current_targets_private_key)
+    repository.snapshot.unload_signing_key(current_snapshot_private_key)
+    repository.timestamp.unload_signing_key(current_timestamp_private_key)
+
+    # Load the new signing keys to write metadata. The root key is unchanged,
+    # and in the demo it is already loaded.
+    repository.targets.load_signing_key(old_targets_private_key)
+    repository.snapshot.load_signing_key(old_snapshot_private_key)
+    repository.timestamp.load_signing_key(old_timestamp_private_key)
+
+    repository.timestamp.version = repository.targets.version + 1
+    repository.timestamp.version = repository.snapshot.version + 1
+    repository.timestamp.version = repository.timestamp.version + 1
+
+    # Metadata must be partially written, otherwise write() will throw
+    # a UnsignedMetadata exception due to the invalid signing keys (i.e.,
+    # we are using the old signing keys, which have since been revoked.
+    repository.write(write_partial=True)
+
+    # Copy the staged metadata to a temp directory we'll move into place
+    # atomically in a moment.
+    shutil.copytree(
+        os.path.join(repo_dir, 'metadata.staged'),
+        os.path.join(repo_dir, 'metadata.livetemp'))
+
+    # Empty the existing (old) live metadata directory (relatively fast).
+    if os.path.exists(os.path.join(repo_dir, 'metadata')):
+      shutil.rmtree(os.path.join(repo_dir, 'metadata'))
+
+    # Atomically move the new metadata into place.
+    os.rename(
+        os.path.join(repo_dir, 'metadata.livetemp'),
+        os.path.join(repo_dir, 'metadata'))
+
+
+
+def undo_write_to_live_with_previous_keys(prefix_of_valid_keys=None)
+  """
+  <Purpose>
+    Undo the actions executed by write_to_live_with_previous_keys().  Namely,
+    move the valid metadata into the live and staged directories, and reload
+    the valid keys for each repository.
+
+  <Arguments>
+    prefix_of_valid_keys:
+      The previous keys prepended with this prefix are reloaded for each
+      repository.
+
+  <Side Effects>
+    None.
+
+  <Exceptions>
+    None.
+
+  <Returns>
+    None.
+  """
+
+  global director_service_instance
+
+  if prefix_of_valid_keys is None:
+    prefix_of_valid_keys = ''
+
+  valid_targets_private_key = demo.import_private_key(prefix_of_valid_keys + 'director')
+  valid_timestamp_private_key = demo.import_private_key(prefix_of_valid_keys + 'directortimestamp')
+  valid_snapshot_private_key = demo.import_private_key(prefix_of_valid_keys + 'directorsnapshot')
+
+  # Set the new private keys in the director service.  These keys are shared
+  # between all vehicle repositories.
+  director_service_instance.key_dirtarg_pri = old_targets_private_key
+  director_service_instance.key_dirtime_pri = old_timestamp_private_key
+  director_service_instance.key_dirsnap_pri = old_snapshot_private_key
+
+  current_targets_private_key = director_service_instance.key_dirtarg_pri
+  current_timestamp_private_key = director_service_instance.key_dirtime_pri
+  current_snapshot_private_key = director_service_instance.key_dirsnap_pri
+
+
+  for vin in director_service_instance.vehicle_repositories:
+
+    repository = director_service_instance.vehicle_repositories[vin]
+    repo_dir = repository._repository_directory
+
+    # Copy the backup metadata to the staged and live directories.  The backup
+    # metadata should already exist if write_to_live_with_previous_keys() was
+    # called.
+
+    # Empty the existing (old) live metadata directory (relatively fast).
+    if os.path.exists(os.path.join(repo_dir, 'metadata')):
+      shutil.rmtree(os.path.join(repo_dir, 'metadata'))
+
+    # Atomically move the new metadata into place.
+    os.rename(os.path.join(repo_dir, 'metadata.backup'),
+        os.path.join(repo_dir, 'metadata.staged'))
+
+    repository = load_repository(repo_dir)
+
+    repository.targets.unload_signing_key(current_targets_private_key)
+    repository.snapshot.unload_signing_key(current_snapshot_private_key)
+    repository.timestamp.unload_signing_key(current_timestamp_private_key)
+
+    # Load the new signing keys to write metadata. The root key is unchanged,
+    # and in the demo it is already loaded.
+    repository.targets.load_signing_key(valid_targets_private_key)
+    repository.snapshot.load_signing_key(valid_snapshot_private_key)
+    repository.timestamp.load_signing_key(valid_timestamp_private_key)
+
+    # Copy the staged metadata to a temp directory we'll move into place
+    # atomically in a moment.
+    shutil.copytree(
+        os.path.join(repo_dir, 'metadata.staged'),
+        os.path.join(repo_dir, 'metadata.livetemp'))
+
+    # Empty the existing (old) live metadata directory (relatively fast).
+    if os.path.exists(os.path.join(repo_dir, 'metadata')):
+      shutil.rmtree(os.path.join(repo_dir, 'metadata'))
+
+    # Atomically move the new metadata into place.
+    os.rename(
+        os.path.join(repo_dir, 'metadata.livetemp'),
+        os.path.join(repo_dir, 'metadata'))
 
 
 

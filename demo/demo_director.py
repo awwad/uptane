@@ -407,9 +407,12 @@ def register_vehicle_manifest_wrapper(
   be extracted before it is passed to the underlying director.py (in the
   reference implementation), which doesn't know anything about XMLRPC.
   """
-  director_service_instance.register_vehicle_manifest(
-      vin, primary_ecu_serial, signed_vehicle_manifest.data)
-
+  if tuf.conf.METADATA_FORMAT == 'der':
+    director_service_instance.register_vehicle_manifest(
+        vin, primary_ecu_serial, signed_vehicle_manifest.data)
+  else:
+    director_service_instance.register_vehicle_manifest(
+        vin, primary_ecu_serial, signed_vehicle_manifest)
 
 
 

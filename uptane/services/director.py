@@ -391,16 +391,18 @@ class Director:
       data_to_check = asn1_codec.convert_signed_metadata_to_der(
           vehicle_manifest, only_signed=True, datatype='vehicle_manifest')
       data_to_check = hashlib.sha256(data_to_check).digest()
+      is_binary_data = True
 
     else:
       data_to_check = vehicle_manifest['signed']
+      is_binary_data = False
 
 
     valid = tuf.keys.verify_signature(
         ecu_public_key,
         vehicle_manifest['signatures'][0], # TODO: Fix assumptions.
         data_to_check,
-        is_binary_data=True)
+        is_binary_data=is_binary_data)
 
     if not valid:
       log.debug(

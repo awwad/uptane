@@ -37,6 +37,7 @@ demo_director.kill_server()
 
 
 """
+
 from __future__ import print_function
 from __future__ import unicode_literals
 
@@ -146,7 +147,7 @@ def clean_slate(use_new_keys=False):
 
 
 
-def write_to_live(vin_to_update=None):
+def write_to_live(vin_to_update=None, backup_repo=False):
   # Release updated metadata.
 
   global director_service_instance
@@ -190,6 +191,12 @@ def write_to_live(vin_to_update=None):
         os.path.join(repo_dir, 'metadata.livetemp'),
         os.path.join(repo_dir, 'metadata'))
 
+    if backup_repo:
+      # Copy the staged metadata to a backup directory we'll move back into
+      # place when we undo the write_to_live_with_previous_keys() call later.
+      # atomically in a moment.
+      shutil.copytree(os.path.join(repo_dir, 'metadata.staged'),
+          os.path.join(repo_dir, 'metadata.backup'))
 
 
 
@@ -225,7 +232,7 @@ def revoke_and_add_new_keys_and_write_to_live(prefix_of_new_keys=None):
   # actually references the targets role.
   # TODO: Change Director's targets key to 'directortargets' from 'director'.
   if prefix_of_new_keys is None:
-    prefix_keyname = ''
+    prefix_of_new_keys = ''
 
   demo.generate_key(prefix_of_new_keys + 'director')
   new_targets_public_key = demo.import_public_key(prefix_of_new_keys + 'director')
@@ -256,6 +263,7 @@ def revoke_and_add_new_keys_and_write_to_live(prefix_of_new_keys=None):
 
   for vin in director_service_instance.vehicle_repositories:
     repository = director_service_instance.vehicle_repositories[vin]
+    repo_dir = repository._repository_directory
 
     # Swap verification keys for the three roles.
     repository.targets.remove_verification_key(old_targets_public_key)
@@ -284,14 +292,8 @@ def revoke_and_add_new_keys_and_write_to_live(prefix_of_new_keys=None):
     # TODO: Verify this behavior with the latest version of the TUF codebase.
     repository.mark_dirty(['root'])
 
-    # Copy the staged metadata to a backup directory we'll move back into
-    # place when we undo the write_to_live_with_previous_keys() call later.
-    # atomically in a moment.
-    shutil.copytree(
-        os.path.join(repo_dir, 'metadata.staged'),
-        os.path.join(repo_dir, 'metadata.backup'))
 
-  write_to_live()
+  write_to_live(backup_repo=True)
 
 
 
@@ -302,9 +304,9 @@ def write_to_live_with_previous_keys(prefix_of_previous_keys=None):
     sign each of these roles with its previously revoked key.  The default key
     names (director, directorsnapshot, directortimestamp, etc.) of the key
     files are used if prefix_of_previous_keys is None, otherwise
-    'prefix_of_previous_keys' is prepended to them.  This is a high-level version
-    of the common function to update a role key. The director service instance
-    is also updated with the key changes.
+    'prefix_of_previous_keys' is prepended to them.  This is a high-level
+    version of the common function to update a role key. The director service
+    instance is also updated with the key changes.
 
   <Arguments>
     prefix_of_previous_keys:
@@ -369,8 +371,7 @@ def write_to_live_with_previous_keys(prefix_of_previous_keys=None):
 
     # Copy the staged metadata to a temp directory we'll move into place
     # atomically in a moment.
-    shutil.copytree(
-        os.path.join(repo_dir, 'metadata.staged'),
+    shutil.copytree(os.path.join(repo_dir, 'metadata.staged'),
         os.path.join(repo_dir, 'metadata.livetemp'))
 
     # Empty the existing (old) live metadata directory (relatively fast).
@@ -378,13 +379,12 @@ def write_to_live_with_previous_keys(prefix_of_previous_keys=None):
       shutil.rmtree(os.path.join(repo_dir, 'metadata'))
 
     # Atomically move the new metadata into place.
-    os.rename(
-        os.path.join(repo_dir, 'metadata.livetemp'),
+    os.rename(os.path.join(repo_dir, 'metadata.livetemp'),
         os.path.join(repo_dir, 'metadata'))
 
 
 
-def undo_write_to_live_with_previous_keys(prefix_of_valid_keys=None)
+def undo_write_to_live_with_previous_keys(prefix_of_valid_keys=None):
   """
   <Purpose>
     Undo the actions executed by write_to_live_with_previous_keys().  Namely,
@@ -415,16 +415,15 @@ def undo_write_to_live_with_previous_keys(prefix_of_valid_keys=None)
   valid_timestamp_private_key = demo.import_private_key(prefix_of_valid_keys + 'directortimestamp')
   valid_snapshot_private_key = demo.import_private_key(prefix_of_valid_keys + 'directorsnapshot')
 
-  # Set the new private keys in the director service.  These keys are shared
-  # between all vehicle repositories.
-  director_service_instance.key_dirtarg_pri = old_targets_private_key
-  director_service_instance.key_dirtime_pri = old_timestamp_private_key
-  director_service_instance.key_dirsnap_pri = old_snapshot_private_key
-
   current_targets_private_key = director_service_instance.key_dirtarg_pri
   current_timestamp_private_key = director_service_instance.key_dirtime_pri
   current_snapshot_private_key = director_service_instance.key_dirsnap_pri
 
+  # Set the new private keys in the director service.  These keys are shared
+  # between all vehicle repositories.
+  director_service_instance.key_dirtarg_pri = valid_targets_private_key
+  director_service_instance.key_dirtime_pri = valid_timestamp_private_key
+  director_service_instance.key_dirsnap_pri = valid_snapshot_private_key
 
   for vin in director_service_instance.vehicle_repositories:
 
@@ -436,29 +435,32 @@ def undo_write_to_live_with_previous_keys(prefix_of_valid_keys=None)
     # called.
 
     # Empty the existing (old) live metadata directory (relatively fast).
-    if os.path.exists(os.path.join(repo_dir, 'metadata')):
-      shutil.rmtree(os.path.join(repo_dir, 'metadata'))
+    if os.path.exists(os.path.join(repo_dir, 'metadata.staged')):
+      shutil.rmtree(os.path.join(repo_dir, 'metadata.staged'))
 
     # Atomically move the new metadata into place.
     os.rename(os.path.join(repo_dir, 'metadata.backup'),
         os.path.join(repo_dir, 'metadata.staged'))
 
-    repository = load_repository(repo_dir)
+    repository = rt.load_repository(repo_dir)
 
+    """
     repository.targets.unload_signing_key(current_targets_private_key)
     repository.snapshot.unload_signing_key(current_snapshot_private_key)
     repository.timestamp.unload_signing_key(current_timestamp_private_key)
-
+    """
     # Load the new signing keys to write metadata. The root key is unchanged,
     # and in the demo it is already loaded.
+
+    valid_root_private_key = demo.import_private_key('directorroot')
+    repository.root.load_signing_key(valid_root_private_key)
     repository.targets.load_signing_key(valid_targets_private_key)
     repository.snapshot.load_signing_key(valid_snapshot_private_key)
     repository.timestamp.load_signing_key(valid_timestamp_private_key)
 
     # Copy the staged metadata to a temp directory we'll move into place
     # atomically in a moment.
-    shutil.copytree(
-        os.path.join(repo_dir, 'metadata.staged'),
+    shutil.copytree(os.path.join(repo_dir, 'metadata.staged'),
         os.path.join(repo_dir, 'metadata.livetemp'))
 
     # Empty the existing (old) live metadata directory (relatively fast).
@@ -466,8 +468,7 @@ def undo_write_to_live_with_previous_keys(prefix_of_valid_keys=None)
       shutil.rmtree(os.path.join(repo_dir, 'metadata'))
 
     # Atomically move the new metadata into place.
-    os.rename(
-        os.path.join(repo_dir, 'metadata.livetemp'),
+    os.rename(os.path.join(repo_dir, 'metadata.livetemp'),
         os.path.join(repo_dir, 'metadata'))
 
 

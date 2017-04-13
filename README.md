@@ -469,7 +469,7 @@ In the **Image** repository window:
 
 And in the **Director** repository window:
 ```
->>> dd.revoke_and_add_new_keys_and_write_to_live()
+>>> dd.revoke_and_add_new_keys_and_write_to_live(prefix_of_new_keys='new_')
 >>> dd.add_target_and_write_to_live(filename='firmware.img',
     file_content='Fresh firmware image', vin='111', ecu_serial='22222')
 ```
@@ -499,4 +499,55 @@ run on it, being certain that specific device is secured is of course difficult
 to assure. Devices that have not been compromised in such an attack, however,
 should thereafter be protected from the use of those compromised keys by an
 attacker.
+
+
+
+### 3.7: Arbitrary Package Attack with Revoked Keys
+
+Generate metadata signed with the keys revoked in the previous section.
+
+```Python
+dd.write_to_live_with_previous_keys(prefix_of_previous_keys=None)
+```
+
+
+The Primary attempts to download the maliciously-signed metadata...
+
+```Python
+dp.update_cycle()
+```
+
+and detects a bad signature on it.  The Primary does not trust the key
+used to sign the metadata, as expected.  If you were to inspect the cause of
+the download failure, you'd find the following exception:
+```
+Downloading: u'http://localhost:30401/111/metadata/timestamp.der'
+Downloaded 202 bytes out of an upper limit of 16384 bytes.
+Not decompressing http://localhost:30401/111/metadata/timestamp.der
+metadata_role: u'timestamp'
+Update failed from http://localhost:30401/111/metadata/timestamp.der.
+BadSignatureError
+Failed to update timestamp.der from all mirrors: {u'http://localhost:30401/111/metadata/timestamp.der': BadSignatureError()}
+Valid top-level metadata cannot be downloaded.  Unsafely update the Root metadata.
+```
+
+Restore metadata to the previously trusted state, where the compromised keys
+had been revoked and new keys were added for the Targets, Snapshot, and
+Timestamp roles.
+
+```Python
+dd.undo_write_to_live_with_previous_keys(prefix_of_valid_keys='new_')
+```
+
+If the Primary performs an update cycle once again, it would appear to be
+up-to-date.  The metadata that was signed by the revoked keys should not
+have been saved by the Primary.
+
+
+```Python
+# This call should indicate that the client is up-to-date
+dp.update_cycle()
+```
+
+
 

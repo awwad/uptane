@@ -780,8 +780,12 @@ def register_ecu_manifest_wrapper(vin, ecu_serial, nonce, signed_ecu_manifest):
   be extracted before it is passed to the underlying primary.py (in the
   reference implementation), which doesn't know anything about XMLRPC.
   """
-  primary_ecu.register_ecu_manifest(
-      vin, ecu_serial, nonce, signed_ecu_manifest.data)
+  if tuf.conf.METADATA_FORMAT == 'der':
+    primary_ecu.register_ecu_manifest(
+        vin, ecu_serial, nonce, signed_ecu_manifest.data)
+  else:
+    primary_ecu.register_ecu_manifest(
+        vin, ecu_serial, nonce, signed_ecu_manifest)
 
 
 

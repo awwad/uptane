@@ -777,9 +777,6 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
         signable_vehicle_manifest)
 
-    # We could replace the if/else below by calling
-    # uptane.common.sign_signable() and adding the DER/non-DER logic there
-    # instead.
     if tuf.conf.METADATA_FORMAT == 'der':
       # Convert to DER and sign, replacing the Python dictionary.
       signable_vehicle_manifest = asn1_codec.convert_signed_metadata_to_der(
@@ -788,10 +785,10 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
     else:
       # If we're not using ASN.1, sign the Python dictionary in a JSON encoding.
-      signable_vehicle_manifest['signatures'].append(tuf.keys.create_signature(
-          self.primary_key,
-          signable_vehicle_manifest['signed'],
-          force_treat_as_pydict=True))
+      uptane.common.sign_signable(
+          signable_vehicle_manifest,
+          [self.primary_key],
+          datatype='vehicle_manifest')
 
       uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
           signable_vehicle_manifest)
@@ -983,22 +980,11 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     # multiple keys for some reason, that can be accomodated.
     assert len(timeserver_attestation['signatures']) == 1
 
-    # The signature validation method depends on whether the signature was
-    # made over a DER encoding of ASN.1 or directly over Uptane's standard
-    # Python dictionary.
-    if tuf.conf.METADATA_FORMAT != 'der':
-      valid = tuf.keys.verify_signature(
-          self.timeserver_public_key,
-          timeserver_attestation['signatures'][0],
-          timeserver_attestation['signed'])
-    else:
-      der_signed = asn1_codec.convert_signed_metadata_to_der(
-        timeserver_attestation, only_signed=True)
-      valid = tuf.keys.verify_signature(
-          self.timeserver_public_key,
-          timeserver_attestation['signatures'][0],
-          hashlib.sha256(der_signed).digest(),
-          is_binary_data=True)
+    valid = uptane.common.verify_signature_over_metadata(
+        self.timeserver_public_key,
+        timeserver_attestation['signatures'][0],
+        timeserver_attestation['signed'],
+        datatype='time_attestation')
 
     if not valid:
       raise tuf.BadSignatureError('Timeserver returned an invalid signature. '

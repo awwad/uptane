@@ -67,8 +67,11 @@ def get_signed_time(nonces):
   uptane.formats.SIGNABLE_TIMESERVER_ATTESTATION_SCHEMA.check_match(
       signable_time_attestation)
 
-  signable_time_attestation = uptane.common.sign_signable(
-      signable_time_attestation, [timeserver_key])
+  uptane.common.sign_signable(
+      signable_time_attestation,
+      [timeserver_key],
+      datatype='time_attestation',
+      metadata_format='json')
 
   return signable_time_attestation
 

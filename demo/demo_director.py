@@ -444,11 +444,6 @@ def undo_write_to_live_with_previous_keys(prefix_of_valid_keys=None):
 
     repository = rt.load_repository(repo_dir)
 
-    """
-    repository.targets.unload_signing_key(current_targets_private_key)
-    repository.snapshot.unload_signing_key(current_snapshot_private_key)
-    repository.timestamp.unload_signing_key(current_timestamp_private_key)
-    """
     # Load the new signing keys to write metadata. The root key is unchanged,
     # and in the demo it is already loaded.
 

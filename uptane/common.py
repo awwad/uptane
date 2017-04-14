@@ -18,12 +18,22 @@ import hashlib
 # signature-related functions into a new module (sig or something) that
 # imports asn1_codec.
 import uptane.encoding.asn1_codec as asn1_codec
+import uptane
+import uptane.formats
 
 SUPPORTED_KEY_TYPES = ['ed25519', 'rsa']
 
-def sign_signable(signable, keys_to_sign_with):
+def sign_signable(
+  signable, keys_to_sign_with, datatype,
+  metadata_format=tuf.conf.METADATA_FORMAT):
   """
   Signs the given signable (e.g. an ECU manifest) with all the given keys.
+
+  Wraps sign_over_metadata such that multiple signatures can be generated,
+  and places them all in the 'signatures' field of the given signable.
+
+  Also does some additional argument validation.
+
 
   Arguments:
 
@@ -33,6 +43,17 @@ def sign_signable(signable, keys_to_sign_with):
 
     keys_to_sign_with:
       A list whose elements must conform to tuf.formats.ANYKEY_SCHEMA.
+
+    datatype:
+      The type of data signable['signed'] represents. This is necessary because
+      if we're signing over ASN.1/DER, we need to convert to ASN.1/DER first,
+      and conversion to ASN.1/DER varies by type. This value doesn't matter if
+      signing is occuring over JSON.
+
+    metadata_format: (optional; default tuf.conf.METADATA_FORMAT)
+      'json' or 'der'. Determines what the signature will be over.
+      Should generally be left to the default except when testing different
+      encodings or otherwise intentionally signing a different format.
 
   Returns:
 
@@ -69,21 +90,17 @@ def sign_signable(signable, keys_to_sign_with):
 
     # Else, all is well. Sign the signable with the given key, adding that
     # signature to the signatures list in the signable.
-    signable['signatures'].append(
-        tuf.keys.create_signature(
-        signing_key, signable['signed'], force_treat_as_pydict=True))
+    signable['signatures'].append(sign_over_metadata(
+        signing_key, signable['signed'], datatype=datatype,
+        metadata_format=metadata_format))
 
 
-  # Confirm that the formats match what is expected post-signing, including a
-  # check again for SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA. Raise
-  # 'tuf.FormatError' if the format is wrong.
+  uptane.formats.ANY_SIGNABLE_UPTANE_METADATA_SCHEMA.check_match(signable)
 
-  # TODO: <~> Make the function call below useful. The problem is that it
-  # demancs a _type field in the 'signed' sub-object, but we don't guarantee
-  # that will be there here. (TUF signs roles. This isn't a role.))
-  #tuf.formats.check_signable_object_format(signable)
+  return
 
-  return signable # Fully signed
+
+
 
 
 def sign_over_metadata(

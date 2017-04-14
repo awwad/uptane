@@ -671,10 +671,21 @@ def register_vehicle_manifest_wrapper(
   """
   This function is a wrapper for director.Director::register_vehicle_manifest().
 
-  This wrapper is now necessary because of ASN.1/DER combined with XMLRPC:
-  XMLRPC has to wrap binary data in a Binary() object, and the raw data has to
-  be extracted before it is passed to the underlying director.py (in the
-  reference implementation), which doesn't know anything about XMLRPC.
+  The purpose of this wrapper is to make sure that the data that goes to
+  director.register_vehicle_manifest is what is expected.
+
+  In the demo, there are two scenarios:
+
+    - If we're using ASN.1/DER, then the vehicle manifest is a binary object
+      and signed_vehicle_manifest had to be wrapped in an XMLRPC Binary()
+      object. The reference implementation has no notion of XMLRPC (and should
+      not), so the vehicle manifest has to be extracted from the XMLRPC Binary()
+      object that is signed_vehicle_manifest in this case.
+
+    - If we're using JSON, then the vehicle manifest was transfered as an
+      object that the reference implementation can already understand, and we
+      just pass the argument along to the director module.
+
   """
   if tuf.conf.METADATA_FORMAT == 'der':
     director_service_instance.register_vehicle_manifest(

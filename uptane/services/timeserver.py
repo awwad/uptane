@@ -12,7 +12,7 @@ from __future__ import unicode_literals
 
 import uptane
 import uptane.formats
-import uptane.common  # for sign_signable and canonical_key_from_pub_and_pri
+import uptane.common
 import uptane.encoding.asn1_codec as asn1_codec
 import tuf
 PYASN1_EXISTS = False
@@ -47,9 +47,7 @@ def set_timeserver_key(private_key):
 
 
 
-
-
-def get_signed_time(nonces):
+def get_time(nonces):
   uptane.formats.NONCE_LIST_SCHEMA.check_match(nonces)
 
   # Get the time, format it appropriately, and check the resulting format.
@@ -62,6 +60,15 @@ def get_signed_time(nonces):
     'time': clock,
     'nonces': nonces
   }
+
+  return time_attestation
+
+
+
+
+
+def get_signed_time(nonces):
+  time_attestation = get_time(nonces)
 
   signable_time_attestation = tuf.formats.make_signable(time_attestation)
   uptane.formats.SIGNABLE_TIMESERVER_ATTESTATION_SCHEMA.check_match(
@@ -89,7 +96,11 @@ def get_signed_time_der(nonces):
   if not PYASN1_EXISTS:
     raise uptane.Error('This Timeserver does not support DER: pyasn1 is not '
         'installed.')
-  signable_time_attestation = get_signed_time(nonces)
+  time_attestation = get_time(nonces)
+
+  signable_time_attestation = tuf.formats.make_signable(time_attestation)
+  uptane.formats.SIGNABLE_TIMESERVER_ATTESTATION_SCHEMA.check_match(
+      signable_time_attestation)
 
   # Convert it, re-signing over the hash of the DER encoding of the attestation.
   der_attestation = asn1_codec.convert_signed_metadata_to_der(

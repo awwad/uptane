@@ -507,19 +507,20 @@ attacker.
 Generate metadata signed with the keys revoked in the previous section.
 
 ```Python
-dd.write_to_live_with_previous_keys(prefix_of_previous_keys=None)
+>>> dd.write_to_live_with_previous_keys(prefix_of_previous_keys=None)
 ```
 
 
 The Primary attempts to download the maliciously-signed metadata...
 
 ```Python
-dp.update_cycle()
+>>> dp.update_cycle()
 ```
 
-and detects a bad signature on it.  The Primary does not trust the key
-used to sign the metadata, as expected.  If you were to inspect the cause of
-the download failure, you'd find the following exception:
+... and detects a bad signature on it by displaying a DEFENDED banner.  The
+Primary does not trust the keys used to sign the metadata, as expected.  If you
+were to inspect the cause of the download failure, you'd find the following
+exception:
 ```
 Downloading: u'http://localhost:30401/111/metadata/timestamp.der'
 Downloaded 202 bytes out of an upper limit of 16384 bytes.
@@ -536,7 +537,7 @@ had been revoked and new keys were added for the Targets, Snapshot, and
 Timestamp roles.
 
 ```Python
-dd.undo_write_to_live_with_previous_keys(prefix_of_valid_keys='new_')
+>>> dd.undo_write_to_live_with_previous_keys(prefix_of_valid_keys='new_')
 ```
 
 If the Primary performs an update cycle once again, it would appear to be
@@ -546,7 +547,7 @@ have been saved by the Primary.
 
 ```Python
 # This call should indicate that the client is up-to-date
-dp.update_cycle()
+>>> dp.update_cycle()
 ```
 
 

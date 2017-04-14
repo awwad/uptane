@@ -200,7 +200,7 @@ def write_to_live(vin_to_update=None, backup_repo=False):
 
 
 
-def revoke_and_add_new_keys_and_write_to_live():
+def revoke_compromised_keys():
   """
   <Purpose>
     Revoke the current Timestamp, Snapshot, and Targets keys for all vehicles
@@ -294,7 +294,7 @@ def revoke_and_add_new_keys_and_write_to_live():
 
 
 
-def write_to_live_with_previous_keys():
+def sign_with_compromised_keys_attack():
   """
   <Purpose>
     Re-generate Timestamp, Snapshot, and Targets metadata for all vehicles and
@@ -375,10 +375,10 @@ def write_to_live_with_previous_keys():
 
 
 
-def undo_write_to_live_with_previous_keys():
+def undo_sign_with_compromised_keys_attack():
   """
   <Purpose>
-    Undo the actions executed by write_to_live_with_previous_keys().  Namely,
+    Undo the actions executed by sign_with_compromised_keys_attack().  Namely,
     move the valid metadata into the live and staged directories, and reload
     the valid keys for each repository.
 

@@ -551,48 +551,6 @@ def ATTACK_send_corrupt_manifest_to_primary():
 
 
 
-def ATTACK_send_manifest_with_wrong_sig_to_primary():
-  """
-  Attack: MITM w/o key modifies ECU manifest and signs with a different ECU's
-  key.
-  """
-  # Discard the signatures and copy the signed contents of the most recent
-  # signed ecu manifest.
-  import copy
-  corrupt_manifest = copy.copy(most_recent_signed_ecu_manifest['signed'])
-
-  corrupt_manifest['attacks_detected'] += 'Everything is great; PLEASE BELIEVE ME THIS TIME!'
-
-  signable_corrupt_manifest = tuf.formats.make_signable(corrupt_manifest)
-  uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
-      signable_corrupt_manifest)
-
-  # Attacker loads a key she may have (perhaps some other ECU's key)
-  key2_pub = demo.import_public_key('secondary2')
-  key2_pri = demo.import_private_key('secondary2')
-  ecu2_key = uptane.common.canonical_key_from_pub_and_pri(key2_pub, key2_pri)
-  keys = [ecu2_key]
-
-  # Attacker signs the modified manifest with that other key.
-  signed_corrupt_manifest = uptane.common.sign_signable(
-      signable_corrupt_manifest, keys)
-  uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
-      signed_corrupt_manifest)
-
-  try:
-    submit_ecu_manifest_to_primary(signed_corrupt_manifest)
-  except xmlrpc_client.Fault as e:
-    print('Primary REJECTED the fraudulent ECU manifest.')
-  else:
-    print('Primary ACCEPTED the fraudulent ECU manifest!')
-  # (Next, on the Primary, one would generate the vehicle manifest and submit
-  # that to the Director. The Director, in its window, should then indicate that
-  # it has received this manifest and rejected it because the signature doesn't
-  # match what is expected.)
-
-
-
-
 
 def register_self_with_director():
   """

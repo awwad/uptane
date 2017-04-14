@@ -200,7 +200,7 @@ def write_to_live(vin_to_update=None, backup_repo=False):
 
 
 
-def revoke_and_add_new_keys_and_write_to_live(prefix_of_new_keys=None):
+def revoke_and_add_new_keys_and_write_to_live():
   """
   <Purpose>
     Revoke the current Timestamp, Snapshot, and Targets keys for all vehicles
@@ -209,11 +209,7 @@ def revoke_and_add_new_keys_and_write_to_live(prefix_of_new_keys=None):
     updated with the key changes.
 
   <Arguments>
-    prefix_of_new_keys:
-      A prefix that is optionally prepended to the default names of the key
-      files.  For example: if prefix_of_new_keys = 'new_', new keyfiles would be
-      named 'new_director', 'new_directorsnapshot', and
-      'new_directortimestamp'.
+    None.
 
   <Exceptions>
     None.
@@ -231,24 +227,25 @@ def revoke_and_add_new_keys_and_write_to_live(prefix_of_new_keys=None):
   # service instance is updated to use the new key.  'director' name
   # actually references the targets role.
   # TODO: Change Director's targets key to 'directortargets' from 'director'.
-  if prefix_of_new_keys is None:
-    prefix_of_new_keys = ''
+  new_targets_keyname = 'new_director'
+  new_timestamp_keyname = 'new_directortimestamp'
+  new_snapshot_keyname = 'new_directorsnapshot'
 
-  demo.generate_key(prefix_of_new_keys + 'director')
-  new_targets_public_key = demo.import_public_key(prefix_of_new_keys + 'director')
-  new_targets_private_key = demo.import_private_key(prefix_of_new_keys + 'director')
+  demo.generate_key(new_targets_keyname)
+  new_targets_public_key = demo.import_public_key(new_targets_keyname)
+  new_targets_private_key = demo.import_private_key(new_targets_keyname)
   old_targets_public_key = director_service_instance.key_dirtarg_pub
   old_targets_private_key = director_service_instance.key_dirtarg_pri
 
-  demo.generate_key(prefix_of_new_keys + 'directortimestamp')
-  new_timestamp_public_key = demo.import_public_key(prefix_of_new_keys + 'directortimestamp')
-  new_timestamp_private_key = demo.import_private_key(prefix_of_new_keys + 'directortimestamp')
+  demo.generate_key(new_timestamp_keyname)
+  new_timestamp_public_key = demo.import_public_key(new_timestamp_keyname)
+  new_timestamp_private_key = demo.import_private_key(new_timestamp_keyname)
   old_timestamp_public_key = director_service_instance.key_dirtime_pub
   old_timestamp_private_key = director_service_instance.key_dirtime_pri
 
-  demo.generate_key(prefix_of_new_keys + 'directorsnapshot')
-  new_snapshot_public_key = demo.import_public_key(prefix_of_new_keys + 'directorsnapshot')
-  new_snapshot_private_key = demo.import_private_key(prefix_of_new_keys + 'directorsnapshot')
+  demo.generate_key(new_snapshot_keyname)
+  new_snapshot_public_key = demo.import_public_key(new_snapshot_keyname)
+  new_snapshot_private_key = demo.import_private_key(new_snapshot_keyname)
   old_snapshot_public_key = director_service_instance.key_dirsnap_pub
   old_snapshot_private_key = director_service_instance.key_dirsnap_pri
 
@@ -297,7 +294,7 @@ def revoke_and_add_new_keys_and_write_to_live(prefix_of_new_keys=None):
 
 
 
-def write_to_live_with_previous_keys(prefix_of_previous_keys=None):
+def write_to_live_with_previous_keys():
   """
   <Purpose>
     Re-generate Timestamp, Snapshot, and Targets metadata for all vehicles and
@@ -309,10 +306,7 @@ def write_to_live_with_previous_keys(prefix_of_previous_keys=None):
     instance is also updated with the key changes.
 
   <Arguments>
-    prefix_of_previous_keys:
-      If not None, the previous keys with names prefix_of_previous_keys+director,
-      prefix_of_previous_keys+directorsnapshot, etc., are loaded to sign the new
-      Timestamp, Snapshot, and Targets metadata.
+    None.
 
   <Side Effects>
     None.
@@ -326,12 +320,9 @@ def write_to_live_with_previous_keys(prefix_of_previous_keys=None):
 
   global director_service_instance
 
-  if prefix_of_previous_keys is None:
-    prefix_of_previous_keys = ''
-
-  old_targets_private_key = demo.import_private_key(prefix_of_previous_keys + 'director')
-  old_timestamp_private_key = demo.import_private_key(prefix_of_previous_keys + 'directortimestamp')
-  old_snapshot_private_key = demo.import_private_key(prefix_of_previous_keys + 'directorsnapshot')
+  old_targets_private_key = demo.import_private_key('director')
+  old_timestamp_private_key = demo.import_private_key('directortimestamp')
+  old_snapshot_private_key = demo.import_private_key('directorsnapshot')
 
   current_targets_private_key = director_service_instance.key_dirtarg_pri
   current_timestamp_private_key = director_service_instance.key_dirtime_pri
@@ -384,7 +375,7 @@ def write_to_live_with_previous_keys(prefix_of_previous_keys=None):
 
 
 
-def undo_write_to_live_with_previous_keys(prefix_of_valid_keys=None):
+def undo_write_to_live_with_previous_keys():
   """
   <Purpose>
     Undo the actions executed by write_to_live_with_previous_keys().  Namely,
@@ -392,9 +383,7 @@ def undo_write_to_live_with_previous_keys(prefix_of_valid_keys=None):
     the valid keys for each repository.
 
   <Arguments>
-    prefix_of_valid_keys:
-      The previous keys prepended with this prefix are reloaded for each
-      repository.
+    None.
 
   <Side Effects>
     None.
@@ -408,12 +397,10 @@ def undo_write_to_live_with_previous_keys(prefix_of_valid_keys=None):
 
   global director_service_instance
 
-  if prefix_of_valid_keys is None:
-    prefix_of_valid_keys = ''
 
-  valid_targets_private_key = demo.import_private_key(prefix_of_valid_keys + 'director')
-  valid_timestamp_private_key = demo.import_private_key(prefix_of_valid_keys + 'directortimestamp')
-  valid_snapshot_private_key = demo.import_private_key(prefix_of_valid_keys + 'directorsnapshot')
+  valid_targets_private_key = demo.import_private_key('new_director')
+  valid_timestamp_private_key = demo.import_private_key('new_directortimestamp')
+  valid_snapshot_private_key = demo.import_private_key('new_directorsnapshot')
 
   current_targets_private_key = director_service_instance.key_dirtarg_pri
   current_timestamp_private_key = director_service_instance.key_dirtime_pri

@@ -469,7 +469,7 @@ In the **Image** repository window:
 
 And in the **Director** repository window:
 ```
->>> dd.revoke_and_add_new_keys_and_write_to_live(prefix_of_new_keys='new_')
+>>> dd.revoke_compromised_keys()
 >>> dd.add_target_and_write_to_live(filename='firmware.img',
     file_content='Fresh firmware image', vin='111', ecu_serial='22222')
 ```
@@ -507,7 +507,7 @@ attacker.
 Generate metadata signed with the keys revoked in the previous section.
 
 ```Python
->>> dd.write_to_live_with_previous_keys(prefix_of_previous_keys=None)
+>>> dd.sign_with_compromised_keys_attack()
 ```
 
 
@@ -537,7 +537,7 @@ had been revoked and new keys were added for the Targets, Snapshot, and
 Timestamp roles.
 
 ```Python
->>> dd.undo_write_to_live_with_previous_keys(prefix_of_valid_keys='new_')
+>>> dd.undo_sign_with_compromised_keys_attack()
 ```
 
 If the Primary performs an update cycle once again, it would appear to be
@@ -549,6 +549,4 @@ have been saved by the Primary.
 # This call should indicate that the client is up-to-date
 >>> dp.update_cycle()
 ```
-
-
 

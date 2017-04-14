@@ -589,7 +589,7 @@ VehicleVersionManifestSigned.componentType = namedtype.NamedTypes(
     namedtype.NamedType('vehicleIdentifier', Identifier().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 0))),
     namedtype.NamedType('primaryIdentifier', Identifier().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 1))),
     namedtype.NamedType('numberOfECUVersionManifests', Length().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 2))),
-    namedtype.NamedType('ecuVersionManifests', ECUVersionManifests().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 3))),
+    namedtype.NamedType('ecuVersionManifests', ECUVersionManifests().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 3))), # Should this be tagFormatConstructed?
     namedtype.OptionalNamedType('securityAttack', char.VisibleString().subtype(subtypeSpec=constraint.ValueSizeConstraint(1, 1024)).subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 4)))
 )
 

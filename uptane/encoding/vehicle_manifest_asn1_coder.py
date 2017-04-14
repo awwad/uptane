@@ -33,7 +33,7 @@ def get_asn_signed(json_signed):
 
   ecuVersionManifests = ECUVersionManifests()\
                         .subtype(implicitTag=tag.Tag(tag.tagClassContext,
-                                                     tag.tagFormatSimple, 3))
+                                                     tag.tagFormatSimple, 3)) # Should this be tagFormatConstructed?
   numberOfECUVersionManifests = 0
 
   # We're going to generate a list of ECU Manifests from the dictionary of lists

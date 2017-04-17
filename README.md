@@ -429,10 +429,11 @@ On the **secondary** client:
 >>> ds.update_cycle()
 ```
 
-Note, both the image and director repositories have been compromised.  The primary installs the
-*firmware.img*, however, the secondary does not.  Unfortunately, an attack of this kind,
-where all available repositories are compromised, would not be blocked in practice because both
-director and image repositories are compromised.
+Note, both the image and director repositories have been compromised. As a
+result, unfortuantely, in an attack of this kind Secondary would install this
+malicious firmware.img, which neither the Primary nor the
+Secondary have any way of knowing is malicious, since every necessary key has
+signed metadata for that image.
 
 For demonstration purposes, the secondary detects that a malicious file is installed.  The secondary
 client in the demo code prints a banner indicating that the *firmware.img* image was malicously

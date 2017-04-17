@@ -147,12 +147,8 @@ def clean_slate(use_new_keys=False):
 
 
 
-def write_to_live(vin_to_update=None, backup_repo=False):
+def write_to_live(vin_to_update=None):
   # Release updated metadata.
-  # If backup_repo is True, the written changes/metadata are copied to
-  # '{repo_dir}/metadata.backup'.
-
-  global director_service_instance
 
   # For each vehicle repository:
   #   - write metadata.staged
@@ -193,11 +189,47 @@ def write_to_live(vin_to_update=None, backup_repo=False):
         os.path.join(repo_dir, 'metadata.livetemp'),
         os.path.join(repo_dir, 'metadata'))
 
-    if backup_repo:
-      # Copy the staged metadata to a backup directory, which we'll move back
-      # into place when we later undo sign_with_compromised_keys_attack().
-      shutil.copytree(os.path.join(repo_dir, 'metadata.staged'),
-          os.path.join(repo_dir, 'metadata.backup'))
+
+
+
+
+def backup_repositories():
+  """
+  <Purpose>
+    Back up the last-written state (contents of the 'metadata' directories in
+    each repository).
+
+    Metadata is copied from '{repo_dir}/metadata.staged' to
+    '{repo_dir}/metadata.backup'.
+
+  <Arguments>
+    None.
+
+  <Exceptions>
+    uptane.Error if backup already exists
+
+  <Side Effecs>
+    None.
+
+  <Returns>
+    None.
+  """
+  # For each vehicle repository:
+  #   - write metadata.staged
+  #   - copy metadata.staged to the live metadata directory
+  for vin in director_service_instance.vehicle_repositories:
+    repo = director_service_instance.vehicle_repositories[vin]
+    repo_dir = repo._repository_directory
+
+    if os.path.exists(os.path.join(repo_dir, 'metadata.backup')):
+      raise uptane.Error('Backup already exists for repository ' +
+          repr(repo_dir) + '; please delete or restore this backup before '
+          'trying to backup again.')
+
+    shutil.copytree(os.path.join(repo_dir, 'metadata.staged'),
+        os.path.join(repo_dir, 'metadata.backup'))
+
+
 
 
 
@@ -295,10 +327,8 @@ def revoke_compromised_keys():
     repository.mark_dirty(['root'])
 
 
-  # Push the changes to "live", and make sure to back up the changes so that
-  # they can be restored later (e.g., after launching a
-  # sign_with_compromised_keys_attack()).
-  write_to_live(backup_repo=True)
+  # Push the changes to "live".
+  write_to_live()
 
 
 
@@ -327,6 +357,10 @@ def sign_with_compromised_keys_attack():
   """
 
   global director_service_instance
+
+  # Start by backing up the repository before the attack occurs so that we
+  # can restore it afterwards in undo_sign_with_compromised_keys_attack.
+  backup_repositories()
 
   old_targets_private_key = demo.import_private_key('director')
   old_timestamp_private_key = demo.import_private_key('directortimestamp')

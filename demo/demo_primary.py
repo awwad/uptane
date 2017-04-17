@@ -330,9 +330,9 @@ def update_cycle():
     primary_ecu.primary_update_cycle()
 
   # Print a REPLAY or DEFENDED banner if ReplayedMetadataError or
-  # BadSignatureError are raised by primary_update_cycle().  These banners
-  # are strictly triggered in demo for bad Timestamp metadata, and all others
-  # should be re-raised.
+  # BadSignatureError is raised by primary_update_cycle().  These banners are
+  # only triggered for bad Timestamp metadata, and all other exception are
+  # re-raised.
   except tuf.NoWorkingMirrorError as exception:
     director_file = os.path.join(_vin, 'metadata', 'timestamp' + demo.METADATA_EXTENSION)
     for mirror_url in exception.mirror_errors:
@@ -341,12 +341,12 @@ def update_cycle():
           print_banner(BANNER_REPLAY, color=WHITE+BLACK_BG,
               text='The Director has instructed us to download a Timestamp'
               ' that is older than the currently trusted version. This'
-              ' instruction has been rejected.', sound=SATAN)
+              ' instruction has been rejected.', sound=TADA)
 
         elif isinstance(exception.mirror_errors[mirror_url], tuf.BadSignatureError):
           print_banner(BANNER_DEFENDED, color=WHITE+GREEN_BG,
               text='The Director has instructed us to download a Timestamp'
-              ' signed with keys that are untrusted.  This metadata has'
+              ' that is signed with keys that are untrusted.  This metadata has'
               ' been rejected.', sound=TADA)
 
         else:

@@ -436,6 +436,7 @@ def sign_with_compromised_keys_attack():
   # can restore it afterwards in undo_sign_with_compromised_keys_attack.
   backup_repositories()
 
+  # Load the now-revoked keys.
   old_targets_private_key = demo.import_private_key('director')
   old_timestamp_private_key = demo.import_private_key('directortimestamp')
   old_snapshot_private_key = demo.import_private_key('directorsnapshot')
@@ -444,8 +445,7 @@ def sign_with_compromised_keys_attack():
   current_timestamp_private_key = director_service_instance.key_dirtime_pri
   current_snapshot_private_key = director_service_instance.key_dirsnap_pri
 
-  # Set the new private keys in the director service.  These keys are shared
-  # between all vehicle repositories.
+  # Ensure the director service uses the old (now-revoked) keys.
   director_service_instance.key_dirtarg_pri = old_targets_private_key
   director_service_instance.key_dirtime_pri = old_timestamp_private_key
   director_service_instance.key_dirsnap_pri = old_snapshot_private_key
@@ -461,8 +461,8 @@ def sign_with_compromised_keys_attack():
     repository.snapshot.unload_signing_key(current_snapshot_private_key)
     repository.timestamp.unload_signing_key(current_timestamp_private_key)
 
-    # Load the new signing keys to write metadata. The root key is unchanged,
-    # and in the demo it is already loaded.
+    # Load the old signing keys to generate the malicious metadata. The root
+    # key is unchanged, and in the demo it is already loaded.
     repository.targets.load_signing_key(old_targets_private_key)
     repository.snapshot.load_signing_key(old_snapshot_private_key)
     repository.timestamp.load_signing_key(old_timestamp_private_key)
@@ -495,7 +495,7 @@ def undo_sign_with_compromised_keys_attack():
   """
   <Purpose>
     Undo the actions executed by sign_with_compromised_keys_attack().  Namely,
-    move the valid metadata into the live and metadat.staged directories, and
+    move the valid metadata into the live and metadata.staged directories, and
     reload the valid keys for each repository.
 
   <Arguments>

@@ -149,6 +149,8 @@ def clean_slate(use_new_keys=False):
 
 def write_to_live(vin_to_update=None, backup_repo=False):
   # Release updated metadata.
+  # If backup_repo is True, the written changes/metadata are copied to
+  # '{repo_dir}/metadata.backup'.
 
   global director_service_instance
 
@@ -192,9 +194,8 @@ def write_to_live(vin_to_update=None, backup_repo=False):
         os.path.join(repo_dir, 'metadata'))
 
     if backup_repo:
-      # Copy the staged metadata to a backup directory we'll move back into
-      # place when we undo the write_to_live_with_previous_keys() call later.
-      # atomically in a moment.
+      # Copy the staged metadata to a backup directory, which we'll move back
+      # into place when we later undo sign_with_compromised_keys_attack().
       shutil.copytree(os.path.join(repo_dir, 'metadata.staged'),
           os.path.join(repo_dir, 'metadata.backup'))
 
@@ -203,8 +204,8 @@ def write_to_live(vin_to_update=None, backup_repo=False):
 def revoke_compromised_keys():
   """
   <Purpose>
-    Revoke the current Timestamp, Snapshot, and Targets keys for all vehicles
-    and add a new key for each role.  This is a high-level version of the
+    Revoke the current Timestamp, Snapshot, and Targets keys for all vehicles,
+    and generate a new key for each role.  This is a high-level version of the
     common function to update a role key. The director service instance is also
     updated with the key changes.
 
@@ -223,26 +224,30 @@ def revoke_compromised_keys():
 
   global director_service_instance
 
-  # Generate a new key for the Targets role.  Make sure that the director
-  # service instance is updated to use the new key.  'director' name
-  # actually references the targets role.
+  # Generate news keys for the Targets, Snapshot, and Timestamp roles.  Make
+  # sure that the director service instance is updated to use the new keys.
+  # The 'director' name actually references the targets role.
   # TODO: Change Director's targets key to 'directortargets' from 'director'.
   new_targets_keyname = 'new_director'
   new_timestamp_keyname = 'new_directortimestamp'
   new_snapshot_keyname = 'new_directorsnapshot'
 
+  # References are needed for the old and new keys later below when we modify
+  # the repository.  Generate new keys for the Targets role...
   demo.generate_key(new_targets_keyname)
   new_targets_public_key = demo.import_public_key(new_targets_keyname)
   new_targets_private_key = demo.import_private_key(new_targets_keyname)
   old_targets_public_key = director_service_instance.key_dirtarg_pub
   old_targets_private_key = director_service_instance.key_dirtarg_pri
 
+  # Timestamp...
   demo.generate_key(new_timestamp_keyname)
   new_timestamp_public_key = demo.import_public_key(new_timestamp_keyname)
   new_timestamp_private_key = demo.import_private_key(new_timestamp_keyname)
   old_timestamp_public_key = director_service_instance.key_dirtime_pub
   old_timestamp_private_key = director_service_instance.key_dirtime_pri
 
+  # And Snapshot.
   demo.generate_key(new_snapshot_keyname)
   new_snapshot_public_key = demo.import_public_key(new_snapshot_keyname)
   new_snapshot_private_key = demo.import_private_key(new_snapshot_keyname)
@@ -290,6 +295,9 @@ def revoke_compromised_keys():
     repository.mark_dirty(['root'])
 
 
+  # Push the changes to "live", and make sure to back up the changes so that
+  # they can be restored later (e.g., after launching a
+  # sign_with_compromised_keys_attack()).
   write_to_live(backup_repo=True)
 
 

@@ -439,8 +439,11 @@ def undo_sign_with_compromised_keys_attack():
     os.rename(os.path.join(repo_dir, 'metadata.backup'),
         os.path.join(repo_dir, 'metadata.staged'))
 
-    # Re-load the restored metadata.stated directory.
-    repository = rt.load_repository(repo_dir)
+    # Re-load the repository from the restored metadata.stated directory.
+    # (We're using a temp variable here, so we have to assign the new reference
+    # to both the temp and the source variable.)
+    director_service_instance.vehicle_repositories[vin] = repository = \
+        rt.load_repository(repo_dir)
 
     # Load the new signing keys to write metadata. The root key is unchanged,
     # but must be reloaded because load_repository() was called.

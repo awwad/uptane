@@ -547,7 +547,7 @@ and Timestamp roles.
 >>> dd.undo_sign_with_compromised_keys_attack()
 ```
 
-If the Primary performs an update cycle once again, it would appear to be
+If the Primary initiates an update cycle once again, it would appear to be
 up-to-date.  The metadata that was signed by the revoked keys should not
 have been saved by the Primary.
 

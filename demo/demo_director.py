@@ -353,8 +353,8 @@ def sign_with_compromised_keys_attack():
     repository.snapshot.unload_signing_key(current_snapshot_private_key)
     repository.timestamp.unload_signing_key(current_timestamp_private_key)
 
-    # Load the new signing keys to write metadata. The root key is unchanged,
-    # and in the demo it is already loaded.
+    # Load the old signing keys to generate the malicious metadata. The root
+    # key is unchanged, and in the demo it is already loaded.
     repository.targets.load_signing_key(old_targets_private_key)
     repository.snapshot.load_signing_key(old_snapshot_private_key)
     repository.timestamp.load_signing_key(old_timestamp_private_key)

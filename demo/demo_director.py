@@ -387,8 +387,8 @@ def undo_sign_with_compromised_keys_attack():
   """
   <Purpose>
     Undo the actions executed by sign_with_compromised_keys_attack().  Namely,
-    move the valid metadata into the live and staged directories, and reload
-    the valid keys for each repository.
+    move the valid metadata into the live and metadat.staged directories, and
+    reload the valid keys for each repository.
 
   <Arguments>
     None.
@@ -406,6 +406,8 @@ def undo_sign_with_compromised_keys_attack():
   global director_service_instance
 
 
+  # Re-load the valid keys, so that the repository objects can be updated to
+  # reference them and replace the compromised keys set.
   valid_targets_private_key = demo.import_private_key('new_director')
   valid_timestamp_private_key = demo.import_private_key('new_directortimestamp')
   valid_snapshot_private_key = demo.import_private_key('new_directorsnapshot')
@@ -425,9 +427,9 @@ def undo_sign_with_compromised_keys_attack():
     repository = director_service_instance.vehicle_repositories[vin]
     repo_dir = repository._repository_directory
 
-    # Copy the backup metadata to the staged and live directories.  The backup
-    # metadata should already exist if write_to_live_with_previous_keys() was
-    # called.
+    # Copy the backup metadata to the metada.staged and live directories.  The
+    # backup metadata should already exist if
+    # sign_with_compromised_keys_attack() was called.
 
     # Empty the existing (old) live metadata directory (relatively fast).
     if os.path.exists(os.path.join(repo_dir, 'metadata.staged')):
@@ -437,18 +439,18 @@ def undo_sign_with_compromised_keys_attack():
     os.rename(os.path.join(repo_dir, 'metadata.backup'),
         os.path.join(repo_dir, 'metadata.staged'))
 
+    # Re-load the restored metadata.stated directory.
     repository = rt.load_repository(repo_dir)
 
     # Load the new signing keys to write metadata. The root key is unchanged,
-    # and in the demo it is already loaded.
-
+    # but must be reloaded because load_repository() was called.
     valid_root_private_key = demo.import_private_key('directorroot')
     repository.root.load_signing_key(valid_root_private_key)
     repository.targets.load_signing_key(valid_targets_private_key)
     repository.snapshot.load_signing_key(valid_snapshot_private_key)
     repository.timestamp.load_signing_key(valid_timestamp_private_key)
 
-    # Copy the staged metadata to a temp directory we'll move into place
+    # Copy the staged metadata to a temp directory, which we'll move into place
     # atomically in a moment.
     shutil.copytree(os.path.join(repo_dir, 'metadata.staged'),
         os.path.join(repo_dir, 'metadata.livetemp'))

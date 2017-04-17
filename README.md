@@ -504,7 +504,13 @@ attacker.
 
 ### 3.7: Arbitrary Package Attack with Revoked Keys
 
-Generate metadata signed with the keys revoked in the previous section.
+We should verify that the Primary does indeed reject metadata that's been
+signed with revoked keys.  As noted in the previous section, the Primary and
+secondaries automatically remove trust in revoked keys when they install the
+new Root metadata.
+
+Let's begin the demonstration by generating metadata that is maliciously
+signed with the keys revoked in the last section.
 
 ```Python
 >>> dd.sign_with_compromised_keys_attack()
@@ -517,10 +523,11 @@ The Primary attempts to download the maliciously-signed metadata...
 >>> dp.update_cycle()
 ```
 
-... and detects a bad signature on it by displaying a DEFENDED banner.  The
-Primary does not trust the keys used to sign the metadata, as expected.  If you
-were to inspect the cause of the download failure, you'd find the following
-exception:
+... and detects a bad signature by displaying a DEFENDED banner.  The Primary
+does not trust the keys and signature specified in the metadata, as expected.
+If you were to inspect the cause of the download failure, you'd find the
+following exception:
+
 ```
 Downloading: u'http://localhost:30401/111/metadata/timestamp.der'
 Downloaded 202 bytes out of an upper limit of 16384 bytes.
@@ -532,9 +539,9 @@ Failed to update timestamp.der from all mirrors: {u'http://localhost:30401/111/m
 Valid top-level metadata cannot be downloaded.  Unsafely update the Root metadata.
 ```
 
-Restore metadata to the previously trusted state, where the compromised keys
-had been revoked and new keys were added for the Targets, Snapshot, and
-Timestamp roles.
+We next restore metadata to the previously trusted state, where the compromised
+keys had been revoked and where new keys were added for the Targets, Snapshot,
+and Timestamp roles.
 
 ```Python
 >>> dd.undo_sign_with_compromised_keys_attack()
@@ -546,7 +553,7 @@ have been saved by the Primary.
 
 
 ```Python
-# This call should indicate that the client is up-to-date
+# This call should indicate that the client is up-to-date.
 >>> dp.update_cycle()
 ```
 

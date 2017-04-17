@@ -463,7 +463,7 @@ while in control. In this demo, these two things are done like so:
 
 In the **Image** repository window:
 ```
->>> di.revoke_and_add_new_keys_and_write_to_live()
+>>> di.revoke_compromised_keys()
 >>> di.add_target_and_write_to_live(filename='firmware.img',
         file_content='Fresh firmware image')
 ```

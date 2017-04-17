@@ -344,7 +344,7 @@ def update_cycle():
               ' instruction has been rejected.', sound=TADA)
 
         elif isinstance(exception.mirror_errors[mirror_url], tuf.BadSignatureError):
-          print_banner(BANNER_DEFENDED, color=WHITE+GREEN_BG,
+          print_banner(BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG,
               text='The Director has instructed us to download a Timestamp'
               ' that is signed with keys that are untrusted.  This metadata has'
               ' been rejected.', sound=TADA)

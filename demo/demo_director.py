@@ -328,6 +328,7 @@ def sign_with_compromised_keys_attack():
 
   global director_service_instance
 
+  # Load the now-revoked keys.
   old_targets_private_key = demo.import_private_key('director')
   old_timestamp_private_key = demo.import_private_key('directortimestamp')
   old_snapshot_private_key = demo.import_private_key('directorsnapshot')
@@ -336,8 +337,7 @@ def sign_with_compromised_keys_attack():
   current_timestamp_private_key = director_service_instance.key_dirtime_pri
   current_snapshot_private_key = director_service_instance.key_dirsnap_pri
 
-  # Set the new private keys in the director service.  These keys are shared
-  # between all vehicle repositories.
+  # Ensure the director service uses the old (now-revoked) keys.
   director_service_instance.key_dirtarg_pri = old_targets_private_key
   director_service_instance.key_dirtime_pri = old_timestamp_private_key
   director_service_instance.key_dirsnap_pri = old_snapshot_private_key

@@ -233,6 +233,80 @@ def backup_repositories():
 
 
 
+def restore_repositories():
+  """
+  <Purpose>
+    Restore the last backup of each Director repository.
+
+    Metadata is copied from '{repo_dir}/metadata.backup' to
+    '{repo_dir}/metadata.staged' and '{repo_dir}/metadata'
+
+  <Arguments>
+    None.
+
+  <Exceptions>
+    uptane.Error if backup does not exist
+
+  <Side Effecs>
+    None.
+
+  <Returns>
+    None.
+  """
+
+  for vin in director_service_instance.vehicle_repositories:
+
+    repo_dir = director_service_instance.vehicle_repositories[
+        vin]._repository_directory
+
+    # Copy the backup metadata to the metada.staged and live directories.  The
+    # backup metadata should already exist if
+    # sign_with_compromised_keys_attack() was called.
+
+    if not os.path.exists(os.path.join(repo_dir, 'metadata.backup')):
+      import ipdb; ipdb.set_trace()
+      raise uptane.Error('Unable to restore backup of ' + repr(repo_dir) +
+          '; no backup exists.')
+
+    # Empty the existing (old) live metadata directory (relatively fast).
+    print('deleting ' + os.path.join(repo_dir, 'metadata.staged'))
+    if os.path.exists(os.path.join(repo_dir, 'metadata.staged')):
+      shutil.rmtree(os.path.join(repo_dir, 'metadata.staged'))
+
+    # Atomically move the new metadata into place.
+    print('moving backup to ' + os.path.join(repo_dir, 'metadata.staged'))
+    os.rename(os.path.join(repo_dir, 'metadata.backup'),
+        os.path.join(repo_dir, 'metadata.staged'))
+
+    # Re-load the repository from the restored metadata.stated directory.
+    # (We're using a temp variable here, so we have to assign the new reference
+    # to both the temp and the source variable.)
+    director_service_instance.vehicle_repositories[vin] = rt.load_repository(
+        repo_dir)
+
+    # Load the new signing keys to write metadata. The root key is unchanged,
+    # but must be reloaded because load_repository() was called.
+    valid_root_private_key = demo.import_private_key('directorroot')
+    director_service_instance.vehicle_repositories[vin].root.load_signing_key(
+        valid_root_private_key)
+
+    # Copy the staged metadata to a temp directory, which we'll move into place
+    # atomically in a moment.
+    shutil.copytree(os.path.join(repo_dir, 'metadata.staged'),
+        os.path.join(repo_dir, 'metadata.livetemp'))
+
+    # Empty the existing (old) live metadata directory (relatively fast).
+    if os.path.exists(os.path.join(repo_dir, 'metadata')):
+      shutil.rmtree(os.path.join(repo_dir, 'metadata'))
+
+    # Atomically move the new metadata into place in the hosted directory.
+    os.rename(os.path.join(repo_dir, 'metadata.livetemp'),
+        os.path.join(repo_dir, 'metadata'))
+
+
+
+
+
 def revoke_compromised_keys():
   """
   <Purpose>
@@ -456,49 +530,18 @@ def undo_sign_with_compromised_keys_attack():
   director_service_instance.key_dirtime_pri = valid_timestamp_private_key
   director_service_instance.key_dirsnap_pri = valid_snapshot_private_key
 
+  # Revert to the last backup for all metadata in the Director repositories.
+  restore_repositories()
+
   for vin in director_service_instance.vehicle_repositories:
 
     repository = director_service_instance.vehicle_repositories[vin]
     repo_dir = repository._repository_directory
 
-    # Copy the backup metadata to the metada.staged and live directories.  The
-    # backup metadata should already exist if
-    # sign_with_compromised_keys_attack() was called.
-
-    # Empty the existing (old) live metadata directory (relatively fast).
-    if os.path.exists(os.path.join(repo_dir, 'metadata.staged')):
-      shutil.rmtree(os.path.join(repo_dir, 'metadata.staged'))
-
-    # Atomically move the new metadata into place.
-    os.rename(os.path.join(repo_dir, 'metadata.backup'),
-        os.path.join(repo_dir, 'metadata.staged'))
-
-    # Re-load the repository from the restored metadata.stated directory.
-    # (We're using a temp variable here, so we have to assign the new reference
-    # to both the temp and the source variable.)
-    director_service_instance.vehicle_repositories[vin] = repository = \
-        rt.load_repository(repo_dir)
-
-    # Load the new signing keys to write metadata. The root key is unchanged,
-    # but must be reloaded because load_repository() was called.
-    valid_root_private_key = demo.import_private_key('directorroot')
-    repository.root.load_signing_key(valid_root_private_key)
+    # Load the new signing keys to write metadata.
     repository.targets.load_signing_key(valid_targets_private_key)
     repository.snapshot.load_signing_key(valid_snapshot_private_key)
     repository.timestamp.load_signing_key(valid_timestamp_private_key)
-
-    # Copy the staged metadata to a temp directory, which we'll move into place
-    # atomically in a moment.
-    shutil.copytree(os.path.join(repo_dir, 'metadata.staged'),
-        os.path.join(repo_dir, 'metadata.livetemp'))
-
-    # Empty the existing (old) live metadata directory (relatively fast).
-    if os.path.exists(os.path.join(repo_dir, 'metadata')):
-      shutil.rmtree(os.path.join(repo_dir, 'metadata'))
-
-    # Atomically move the new metadata into place.
-    os.rename(os.path.join(repo_dir, 'metadata.livetemp'),
-        os.path.join(repo_dir, 'metadata'))
 
 
 

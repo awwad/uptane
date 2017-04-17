@@ -387,7 +387,7 @@ def undo_sign_with_compromised_keys_attack():
   """
   <Purpose>
     Undo the actions executed by sign_with_compromised_keys_attack().  Namely,
-    move the valid metadata into the live and metadat.staged directories, and
+    move the valid metadata into the live and metadata.staged directories, and
     reload the valid keys for each repository.
 
   <Arguments>

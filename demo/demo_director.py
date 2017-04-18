@@ -196,8 +196,8 @@ def write_to_live(vin_to_update=None):
 def backup_repositories():
   """
   <Purpose>
-    Back up the last-written state (contents of the 'metadata' directories in
-    each repository).
+    Back up the last-written state (contents of the 'metadata.staged'
+    directories in each repository).
 
     Metadata is copied from '{repo_dir}/metadata.staged' to
     '{repo_dir}/metadata.backup'.
@@ -214,9 +214,6 @@ def backup_repositories():
   <Returns>
     None.
   """
-  # For each vehicle repository:
-  #   - write metadata.staged
-  #   - copy metadata.staged to the live metadata directory
   for vin in director_service_instance.vehicle_repositories:
     repo = director_service_instance.vehicle_repositories[vin]
     repo_dir = repo._repository_directory
@@ -226,6 +223,7 @@ def backup_repositories():
           repr(repo_dir) + '; please delete or restore this backup before '
           'trying to backup again.')
 
+    print('  Backing up ' + os.path.join(repo_dir, 'metadata.staged'))
     shutil.copytree(os.path.join(repo_dir, 'metadata.staged'),
         os.path.join(repo_dir, 'metadata.backup'))
 
@@ -264,23 +262,23 @@ def restore_repositories():
     # sign_with_compromised_keys_attack() was called.
 
     if not os.path.exists(os.path.join(repo_dir, 'metadata.backup')):
-      import ipdb; ipdb.set_trace()
       raise uptane.Error('Unable to restore backup of ' + repr(repo_dir) +
           '; no backup exists.')
 
     # Empty the existing (old) live metadata directory (relatively fast).
-    print('deleting ' + os.path.join(repo_dir, 'metadata.staged'))
+    print('  Deleting ' + os.path.join(repo_dir, 'metadata.staged'))
     if os.path.exists(os.path.join(repo_dir, 'metadata.staged')):
       shutil.rmtree(os.path.join(repo_dir, 'metadata.staged'))
 
     # Atomically move the new metadata into place.
-    print('moving backup to ' + os.path.join(repo_dir, 'metadata.staged'))
+    print('  Moving backup to ' + os.path.join(repo_dir, 'metadata.staged'))
     os.rename(os.path.join(repo_dir, 'metadata.backup'),
         os.path.join(repo_dir, 'metadata.staged'))
 
     # Re-load the repository from the restored metadata.stated directory.
     # (We're using a temp variable here, so we have to assign the new reference
     # to both the temp and the source variable.)
+    print('  Reloading repository from backup ' + repo_dir)
     director_service_instance.vehicle_repositories[vin] = rt.load_repository(
         repo_dir)
 
@@ -296,13 +294,14 @@ def restore_repositories():
         os.path.join(repo_dir, 'metadata.livetemp'))
 
     # Empty the existing (old) live metadata directory (relatively fast).
+    print('  Deleting live hosted dir:' + os.path.join(repo_dir, 'metadata'))
     if os.path.exists(os.path.join(repo_dir, 'metadata')):
       shutil.rmtree(os.path.join(repo_dir, 'metadata'))
 
     # Atomically move the new metadata into place in the hosted directory.
     os.rename(os.path.join(repo_dir, 'metadata.livetemp'),
         os.path.join(repo_dir, 'metadata'))
-
+    print('Repository ' + repo_dir + ' restored and hosted.')
 
 
 

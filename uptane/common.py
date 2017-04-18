@@ -105,10 +105,8 @@ def sign_signable(
     # We should already be guaranteed to have a supported key type due to
     # the ANYKEY_SCHEMA.check_match call above. Defensive programming.
     if signing_key['keytype'] not in SUPPORTED_KEY_TYPES:
-      assert False, 'Programming error: key types have already been ' + \
-          'validated; should not be possible that we now have an ' + \
-          'unsupported key type, but we do: ' + repr(signing_key['keytype'])
-
+      raise uptane.Error(
+          'Unsupported key type: ' + repr(signing_key['keytype']))
 
     # Else, all is well. Sign the signable with the given key, adding that
     # signature to the signatures list in the signable.

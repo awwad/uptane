@@ -52,10 +52,17 @@ $ pip install -r dev-requirements.txt
 ```
 
 #### Updates
-When updating Uptane code, please reinstall its dependencies, as the corresponding TUF fork may be updated: `pip install --force-reinstall -r dev-requirements.txt`
+When updating Uptane code, please reinstall its dependencies, as the
+corresponding TUF fork may be updated:
+`pip install --force-reinstall -r dev-requirements.txt`
 
 #### Metadata format
-Note that the demonstration now operates using ASN.1 / DER format and encoding for metadata files by default. This can be switched back to JSON (which is human readable) by changing the tuf.conf.METADATA_FORMAT option in `uptane/__init__.py`.
+Note that the demonstration now operates using ASN.1 / DER format and encoding
+for metadata files by default. If desired, this can be switched to JSON (which
+results in human-readable metadata files) by changing the
+tuf.conf.METADATA_FORMAT option in `uptane/__init__.py`, from 'der' to 'json'
+`tuf.conf.METADATA_FORMAT = 'json'`
+
 
 #### Install command-line audio player (optional)
 If you want the demo to play notification sounds you need one of the following audio player command line utilities on your path:

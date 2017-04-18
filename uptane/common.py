@@ -116,10 +116,7 @@ def sign_signable(
         signing_key, signable['signed'], datatype=datatype,
         metadata_format=metadata_format))
 
-
   uptane.formats.ANY_SIGNABLE_UPTANE_METADATA_SCHEMA.check_match(signable)
-
-  return
 
 
 

@@ -27,15 +27,16 @@ def sign_signable(
   signable, keys_to_sign_with, datatype,
   metadata_format=tuf.conf.METADATA_FORMAT):
   """
-  Signs the given signable (e.g. an ECU manifest) with all the given keys.
+  <Purpose>
+    Signs the given signable (e.g. an ECU manifest) with all the given keys.
 
-  Wraps sign_over_metadata such that multiple signatures can be generated,
-  and places them all in the 'signatures' field of the given signable.
+    Wraps sign_over_metadata such that multiple signatures can be generated,
+    and places them all in the 'signatures' field of the given signable.
 
-  Also does some additional argument validation.
+    Also does some additional argument validation.
 
 
-  Arguments:
+  <Arguments>
 
     signable:
       An object with a 'signed' dictionary and a 'signatures' list:
@@ -45,20 +46,41 @@ def sign_signable(
       A list whose elements must conform to tuf.formats.ANYKEY_SCHEMA.
 
     datatype:
-      The type of data signable['signed'] represents. This is necessary because
-      if we're signing over ASN.1/DER, we need to convert to ASN.1/DER first,
-      and conversion to ASN.1/DER varies by type. This value doesn't matter if
-      signing is occuring over JSON.
+      The type of data signable['signed'] represents.
+      Must be in uptane.encoding.asn1_codec.SUPPORTED_ASN1_METADATA_MODULES.
+      Specifies the type of data provided in der_data, whether a Time
+      Attestation, ECU Manifest, or Vehicle Manifest.
+
+      'datatype' is used to determine the module to use for the conversion to
+      ASN.1/DER, if the metadata format is 'der'. When 'der' is the metadata
+      format, we need to convert to ASN.1/DER first, and conversion to
+      ASN.1/DER varies by type. 'datatype' doesn't matter if signing is
+      occuring over JSON.
+
+      If the metadata contained a metadata type indicator (the way that
+      DER TUF metadata does), and if we could also capture this in an ASN.1
+      specification that flexibly supports each possible metadata type (the
+      way that the Metadata specification does in TUF ASN.1), then this would
+      not be necessary....
+      # TODO: Try to find some way to add the type to the metadata and cover
+      # these requirements above.
 
     metadata_format: (optional; default tuf.conf.METADATA_FORMAT)
       'json' or 'der'. Determines what the signature will be over.
       Should generally be left to the default except when testing different
       encodings or otherwise intentionally signing a different format.
 
-  Returns:
 
-    A signable object (tuf.formats.SIGNABLE_SCHEMA), but with the signatures
-    added to its 'signatures' list.
+  <Exceptions>
+    tuf.FormatError if the provided key is not the correct format or lacks a
+    private element, or if the signing key type is not the .
+
+  <Side Effects>
+    Adds a signature to the provided signable.
+
+  <Returns>
+    None. Note that the provided object, 'signable', is modified in place.
+
 
   """
 
@@ -106,22 +128,75 @@ def sign_signable(
 def sign_over_metadata(
     key_dict, data, datatype, metadata_format=tuf.conf.METADATA_FORMAT):
   """
-  Almost exactly identical to the function simultaneously added to TUF,
-  tuf.sig.sign_over_metadata(). Requires datatype.
-  Must differ in Uptane simply because it is not possible to convert
-  Uptane-specific metadata (Time Attestations, ECU Manifests, and Vehicle
-  Manifests) to or from ASN.1/DER without knowing which of those three
-  types of metadata you're dealign with, and this conversion is required for
-  signing and verifying signatures.
+  <Purpose>
+    Given a key and data, returns a signature over that data.
 
-  Higher level function that wraps tuf.keys.create_signature, and works
-  specifically with Time Attestations, ECU Manifsts, and Vehicle Manifests that
-  will be in JSON or ASN.1/DER format.
+    Higher level function that wraps tuf.keys.create_signature, and works
+    specifically with Time Attestations, ECU Manifsts, and Vehicle Manifests
+    that will be in JSON or ASN.1/DER format.
 
-  See tuf.keys.create_signature for overall functionality and the arguments
-  key_dict and data.
+    Almost exactly identical to the function simultaneously added to TUF,
+    tuf.sig.sign_over_metadata(). Requires datatype, and operates on
+    Uptane-specific metadata (see 'datatype' argument below)
 
-  Optional argument:
+    Must differ in Uptane simply because it is not possible to convert
+    Uptane-specific metadata (Time Attestations, ECU Manifests, and Vehicle
+    Manifests) to or from ASN.1/DER without knowing which of those three
+    types of metadata you're dealign with, and this conversion is required for
+    signing and verifying signatures.
+
+    See tuf.keys.create_signature for lower level details.
+
+  <Arguments>
+    key_dict:
+      A dictionary containing the TUF keys.  An example RSA key dict has the
+      form:
+
+      {'keytype': 'rsa',
+       'keyid': 'f30a0870d026980100c0573bd557394f8c1bbd6...',
+       'keyval': {'public': '-----BEGIN RSA PUBLIC KEY----- ...',
+                  'private': '-----BEGIN RSA PRIVATE KEY----- ...'}}
+
+      The public and private keys are strings in PEM format.
+
+    data:
+      Data object used by create_signature() to generate the signature.
+      Acceptable format depends somewhat on tuf.conf.METADATA_FORMAT, or, if
+      the optional argument is provided, metadata_format.
+
+      This will be converted into a bytes object and passed down to
+      tuf.keys.create_signature().
+
+      In 'der' mode:
+        'data' is expected to be a dictionary compliant with
+        uptane.formats.ANY_SIGNABLE_UPTANE_METADATA_SCHEMA. ASN.1/DER
+        conversion requires strictly defined formats.
+
+      In 'json' mode:
+        'data' can be any data that can be processed by
+        tuf.formats.encode_canonical(data) can be signed. This function is
+        generally intended to sign metadata (tuf.formats.ANYROLE_SCHEMA), but
+        can be used more broadly.
+
+    datatype:
+      The type of data signable['signed'] represents.
+      Must be in uptane.encoding.asn1_codec.SUPPORTED_ASN1_METADATA_MODULES.
+      Specifies the type of data provided in der_data, whether a Time
+      Attestation, ECU Manifest, or Vehicle Manifest.
+
+      'datatype' is used to determine the module to use for the conversion to
+      ASN.1/DER, if the metadata format is 'der'. When 'der' is the metadata
+      format, we need to convert to ASN.1/DER first, and conversion to
+      ASN.1/DER varies by type. 'datatype' doesn't matter if signing is
+      occuring over JSON.
+
+      If the metadata contained a metadata type indicator (the way that
+      DER TUF metadata does), and if we could also capture this in an ASN.1
+      specification that flexibly supports each possible metadata type (the
+      way that the Metadata specification does in TUF ASN.1), then this would
+      not be necessary....
+      # TODO: Try to find some way to add the type to the metadata and cover
+      # these requirements above.
 
     metadata_format: (optional; default based on tuf.conf.METADATA_FORMAT)
 
@@ -135,6 +210,26 @@ def sign_over_metadata(
 
       If 'der', the data will be converted into ASN.1, encoded as DER,
       and hashed. The signature is then checked against that hash.
+
+  <Exceptions>
+    tuf.FormatError, if 'key_dict' is improperly formatted.
+
+    tuf.UnsupportedLibraryError, if an unsupported or unavailable library is
+    detected.
+
+    TypeError, if 'key_dict' contains an invalid keytype.
+
+  <Side Effects>
+    The cryptography library specified in 'tuf.conf' is called to do the actual
+    verification. When in 'der' mode, argument data is converted into ASN.1/DER
+    in order to verify it. (Argument object is unchanged.)
+
+  <Returns>
+    A signature dictionary conformant to 'tuf.format.SIGNATURE_SCHEMA'. e.g.:
+    {'keyid': 'f30a0870d026980100c0573bd557394f8c1bbd6...',
+     'method': '...',
+     'sig': '...'}.
+
   """
 
   tuf.formats.ANYKEY_SCHEMA.check_match(key_dict)
@@ -166,22 +261,69 @@ def verify_signature_over_metadata(
     key_dict, signature, data, datatype,
     metadata_format=tuf.conf.METADATA_FORMAT):
   """
-  Almost exactly identical to the function simultaneously added to TUF,
-  tuf.sig.verify_signature_over_metadata(). Requires datatype.
-  Must differ in Uptane simply because it is not possible to convert
-  Uptane-specific metadata (Time Attestations, ECU Manifests, and Vehicle
-  Manifests) to or from ASN.1/DER without knowing which of those three
-  types of metadata you're dealign with, and this conversion is required for
-  signing and verifying signatures.
+  <Purpose>
+    Determine whether the private key belonging to 'key_dict' produced
+    'signature'. tuf.keys.verify_signature() will use the public key found in
+    'key_dict', the 'method' and 'sig' objects contained in 'signature',
+    and 'data' to complete the verification.
 
-  Higher level function that wraps tuf.keys.verify_signature, and works
-  specifically with Time Attestations, ECU Manifsts, and Vehicle Manifests that
-  will be in JSON or ASN.1/DER format.
+    Higher level function that wraps tuf.keys.verify_signature, and works
+    specifically with Time Attestations, ECU Manifsts, and Vehicle Manifests
+    that will be in JSON or ASN.1/DER format.
 
-  See tuf.keys.verify_signature for overall functionality and the arguments
-  key_dict, signature, and data.
+    Almost exactly identical to the function simultaneously added to TUF,
+    tuf.sig.verify_signature_over_metadata(). Requires datatype.
+    Must differ in Uptane simply because it is not possible to convert
+    Uptane-specific metadata (Time Attestations, ECU Manifests, and Vehicle
+    Manifests) to or from ASN.1/DER without knowing which of those three
+    types of metadata you're dealign with, and this conversion is required for
+    signing and verifying signatures.
 
-  Optional argument:
+    See tuf.keys.verify_signature for lower level details.
+
+  <Arguments>
+    key_dict:
+      A dictionary containing the TUF keys and other identifying information.
+      If 'key_dict' is an RSA key, it has the form:
+
+      {'keytype': 'rsa',
+       'keyid': 'f30a0870d026980100c0573bd557394f8c1bbd6...',
+       'keyval': {'public': '-----BEGIN RSA PUBLIC KEY----- ...',
+                  'private': '-----BEGIN RSA PRIVATE KEY----- ...'}}
+
+      The public and private keys are strings in PEM format.
+
+    signature:
+      The signature dictionary produced by one of the key generation functions.
+      'signature' has the form:
+
+      {'keyid': 'f30a0870d026980100c0573bd557394f8c1bbd6...',
+       'method': 'method',
+       'sig': sig}.
+
+      Conformant to 'tuf.formats.SIGNATURE_SCHEMA'.
+
+    data:
+      Data object over which the validity of the provided signature will be
+      checked by verify_signature().
+
+      Acceptable format depends somewhat on tuf.conf.METADATA_FORMAT, or, if
+      the optional argument is provided, metadata_format.
+
+      This will be converted into a bytes object and passed down to
+      tuf.keys.verify_signature().
+
+      In 'der' mode:
+        'data' is expected to be a dictionary compliant with
+        uptane.formats.ANY_SIGNABLE_UPTANE_METADATA_SCHEMA. ASN.1/DER
+        conversion requires strictly defined formats.
+
+      In 'json' mode:
+        'data' can be any data that can be processed by
+        tuf.formats.encode_canonical(data). This function is generally intended
+        to verify signatures over Uptane metadata
+        (uptane.formats.ANY_SIGNABLE_UPTANE_METADATA_SCHEMA), but can be used
+        more broadly when in 'json' mode.
 
     metadata_format: (optional; default based on tuf.conf.METADATA_FORMAT)
 
@@ -196,6 +338,24 @@ def verify_signature_over_metadata(
 
       If 'der', the data will be converted into ASN.1, encoded as DER,
       and hashed. The signature is then checked against that hash.
+
+  <Exceptions>
+    tuf.FormatError, raised if either 'key_dict' or 'signature' are improperly
+    formatted.
+
+    tuf.UnsupportedLibraryError, if an unsupported or unavailable library is
+    detected.
+
+    tuf.UnknownMethodError.  Raised if the signing method used by
+    'signature' is not one supported.
+
+  <Side Effects>
+    The cryptography library specified in 'tuf.conf' is called to do the actual
+    verification. When in 'der' mode, argument data is converted into ASN.1/DER
+    in order to verify it. (Argument object is unchanged.)
+
+  <Returns>
+    Boolean.  True if the signature is valid, False otherwise.
   """
 
   tuf.formats.ANYKEY_SCHEMA.check_match(key_dict)

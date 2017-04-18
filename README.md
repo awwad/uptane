@@ -429,10 +429,11 @@ On the **secondary** client:
 >>> ds.update_cycle()
 ```
 
-Note, both the image and director repositories have been compromised.  The primary installs the
-*firmware.img*, however, the secondary does not.  Unfortunately, an attack of this kind,
-where all available repositories are compromised, would not be blocked in practice because both
-director and image repositories are compromised.
+Note, both the image and director repositories have been compromised. As a
+result, unfortuantely, in an attack of this kind Secondary would install this
+malicious firmware.img, which neither the Primary nor the
+Secondary have any way of knowing is malicious, since every necessary key has
+signed metadata for that image.
 
 For demonstration purposes, the secondary detects that a malicious file is installed.  The secondary
 client in the demo code prints a banner indicating that the *firmware.img* image was malicously
@@ -462,14 +463,14 @@ while in control. In this demo, these two things are done like so:
 
 In the **Image** repository window:
 ```
->>> di.revoke_and_add_new_keys_and_write_to_live()
+>>> di.revoke_compromised_keys()
 >>> di.add_target_and_write_to_live(filename='firmware.img',
         file_content='Fresh firmware image')
 ```
 
 And in the **Director** repository window:
 ```
->>> dd.revoke_and_add_new_keys_and_write_to_live()
+>>> dd.revoke_compromised_keys()
 >>> dd.add_target_and_write_to_live(filename='firmware.img',
     file_content='Fresh firmware image', vin='111', ecu_serial='22222')
 ```
@@ -499,4 +500,61 @@ run on it, being certain that specific device is secured is of course difficult
 to assure. Devices that have not been compromised in such an attack, however,
 should thereafter be protected from the use of those compromised keys by an
 attacker.
+
+
+
+### 3.7: Arbitrary Package Attack with Revoked Keys
+
+We should verify that the Primary does indeed reject metadata that's been
+signed with revoked keys.  As noted in the previous section, the Primary and
+secondaries automatically remove trust in revoked keys when they install the
+new Root metadata.
+
+Let's begin the demonstration by generating metadata that is maliciously
+signed with the keys revoked in the last section.
+
+```Python
+>>> dd.sign_with_compromised_keys_attack()
+```
+
+
+The Primary attempts to download the maliciously-signed metadata...
+
+```Python
+>>> dp.update_cycle()
+```
+
+... and detects a bad signature by displaying a DEFENDED banner.  The Primary
+does not trust the keys and signature specified in the metadata, as expected.
+If you were to inspect the cause of the download failure, you'd find the
+following exception:
+
+```
+Downloading: u'http://localhost:30401/111/metadata/timestamp.der'
+Downloaded 202 bytes out of an upper limit of 16384 bytes.
+Not decompressing http://localhost:30401/111/metadata/timestamp.der
+metadata_role: u'timestamp'
+Update failed from http://localhost:30401/111/metadata/timestamp.der.
+BadSignatureError
+Failed to update timestamp.der from all mirrors: {u'http://localhost:30401/111/metadata/timestamp.der': BadSignatureError()}
+Valid top-level metadata cannot be downloaded.  Unsafely update the Root metadata.
+```
+
+We next restore metadata to the previously trusted state, where the compromised
+keys had been revoked and where new keys were added for the Targets, Snapshot,
+and Timestamp roles.
+
+```Python
+>>> dd.undo_sign_with_compromised_keys_attack()
+```
+
+If the Primary initiates an update cycle once again, it would appear to be
+up-to-date.  The metadata that was signed by the revoked keys should not
+have been saved by the Primary.
+
+
+```Python
+# This call should indicate that the client is up-to-date.
+>>> dp.update_cycle()
+```
 

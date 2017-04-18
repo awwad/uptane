@@ -367,7 +367,7 @@ def add_target_and_write_to_live(filename, file_content):
 
 
 
-def revoke_and_add_new_keys_and_write_to_live():
+def revoke_compromised_keys():
   """
   <Purpose>
     Revoke the current Timestamp, Snapshot, and Targets keys, and add a new keys

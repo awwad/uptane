@@ -421,14 +421,26 @@ def revoke_compromised_keys():
   repo.snapshot.add_verification_key(new_snapshot_public_key)
 
   # Load the new signing keys to write metadata. The root key is unchanged,
-  # and in the demo it is already loaded.
+  # and in the demo it is already loaded. Since we only need the keyid,
+  # public keys can be used here.
+  repo.targets.unload_signing_key(old_targets_public_key)
+  repo.snapshot.unload_signing_key(old_snapshot_public_key)
+  repo.timestamp.unload_signing_key(old_timestamp_public_key)
+
+  # Make sure that the root metadata is written on the next repository write,
+  # in addition to the other metadata. This should probably happen
+  # automatically.
+  # TODO: After the TUF fork merges, see if root is automatically marked dirty
+  # when the signing keys for top-level roles are reassigned.
+  repo.mark_dirty(['root'])
+
   repo.targets.load_signing_key(new_targets_private_key)
   repo.snapshot.load_signing_key(new_snapshot_private_key)
   repo.timestamp.load_signing_key(new_timestamp_private_key)
 
-  # Write all the metadata changes to disk.  Note: write() will be writeall()
-  # in the latest version of the TUF codebase.
-  repo.write()
+  # Write all the metadata changes to disk (metadata.staging) and copy move
+  # them to the hosted metadata directory.
+  write_to_live()
 
 
 

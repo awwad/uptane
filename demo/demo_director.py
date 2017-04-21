@@ -343,21 +343,18 @@ def revoke_compromised_keys():
   new_targets_public_key = demo.import_public_key(new_targets_keyname)
   new_targets_private_key = demo.import_private_key(new_targets_keyname)
   old_targets_public_key = director_service_instance.key_dirtarg_pub
-  old_targets_private_key = director_service_instance.key_dirtarg_pri
 
   # Timestamp...
   demo.generate_key(new_timestamp_keyname)
   new_timestamp_public_key = demo.import_public_key(new_timestamp_keyname)
   new_timestamp_private_key = demo.import_private_key(new_timestamp_keyname)
   old_timestamp_public_key = director_service_instance.key_dirtime_pub
-  old_timestamp_private_key = director_service_instance.key_dirtime_pri
 
   # And Snapshot.
   demo.generate_key(new_snapshot_keyname)
   new_snapshot_public_key = demo.import_public_key(new_snapshot_keyname)
   new_snapshot_private_key = demo.import_private_key(new_snapshot_keyname)
   old_snapshot_public_key = director_service_instance.key_dirsnap_pub
-  old_snapshot_private_key = director_service_instance.key_dirsnap_pri
 
   # Set the new public and private Targets keys in the director service.
   # These keys are shared between all vehicle repositories.
@@ -383,10 +380,11 @@ def revoke_compromised_keys():
     repository.snapshot.add_verification_key(new_snapshot_public_key)
 
     # Unload the old signing keys so that the new metadata only contains
-    # signatures produced by the new signing keys.
-    repository.targets.unload_signing_key(old_targets_private_key)
-    repository.snapshot.unload_signing_key(old_snapshot_private_key)
-    repository.timestamp.unload_signing_key(old_timestamp_private_key)
+    # signatures produced by the new signing keys. Since this is based on
+    # keyid, the public key can be used.
+    repository.targets.unload_signing_key(old_targets_public_key)
+    repository.snapshot.unload_signing_key(old_snapshot_public_key)
+    repository.timestamp.unload_signing_key(old_timestamp_public_key)
 
     # Load the new signing keys to write metadata. The root key is unchanged,
     # and in the demo it is already loaded.

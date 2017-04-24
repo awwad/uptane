@@ -447,7 +447,7 @@ def update_cycle():
   # print a BANNER_COMPROMISED banner.
   image_filepath = os.path.join(client_directory, 'unverified_targets', image_fname)
 
-  with open(image_filepath, 'r') as file_object:
+  with open(image_filepath, 'rb') as file_object:
     if file_object.read() == 'evil content':
       # If every safeguard is defeated and a compromised update is delivered, a
       # real Secondary can't necessarily know it has been compromised, as every

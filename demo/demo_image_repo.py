@@ -251,7 +251,7 @@ def listen():
   global xmlrpc_service_thread
 
   if xmlrpc_service_thread is not None:
-    print('Sorry - there is already a Director service thread listening.')
+    print('Sorry: there is already a listening Image Repository service thread')
     return
 
   # Create server

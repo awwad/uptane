@@ -346,6 +346,35 @@ def undo_mitm_arbitrary_package_attack(target_filepath):
 
 
 
+def keyed_arbitrary_package_attack(target_filepath):
+  # TODO: Back up the image first.
+  if not os.path.exists(target_filepath):
+    raise uptane.Error('Unable to attack: expected given image filename, ' +
+        repr(target_filepath) + ', to exist, but it does not.')
+
+  # TODO: Check to make sure the given file exists in the repository as well.
+  # We should be attacking a file that's already in the repo.
+  # TODO: Consider adding other edge case checks (interrupted things, attack
+  # already in progress, etc.)
+
+  add_target_and_write_to_live(target_filepath, file_content='evil content')
+
+
+
+
+
+def undo_keyed_arbitrary_package_attack(target_filepath):
+  # Revoke potentially compromised keys, replacing them with new keys.
+  revoke_and_add_new_keys_and_write_to_live()
+
+  # Replace malicious target with original.
+  dd.add_target_and_write_to_live(filename=target_filepath,
+      file_content='Fresh firmware image')
+
+
+
+
+
 def add_target_and_write_to_live(filename, file_content):
   """
   High-level version of add_target_to_imagerepo() that creates the target

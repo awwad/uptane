@@ -263,11 +263,31 @@ def listen():
   # Register functions that can be called via XML-RPC, allowing users to add
   # target files to the image repository or to simulate attacks from a web
   # frontend.
-  server.register_function(add_target_to_imagerepo, 'add_target_to_supplier_repo')
+  server.register_function(add_target_to_imagerepo,
+      'add_target_to_supplier_repo')
   server.register_function(write_to_live, 'write_supplier_repo')
-  server.register_function(mitm_arbitrary_package_attack, 'mitm_arbitrary_package_attack')
+
+  # Attack 1: Arbitrary Package, no keys
+  server.register_function(mitm_arbitrary_package_attack,
+      'mitm_arbitrary_package_attack')
   server.register_function(undo_mitm_arbitrary_package_attack,
       'undo_mitm_arbitrary_package_attack')
+
+  # Attack 2:
+  # We don't bother performing the replay attack against the Image Repo;
+  # demonstration on the Director Repo is enough.
+
+  # Attack 3: Arbitrary Package, keyed
+  server.register_function(keyed_arbitrary_package_attack,
+      'keyed_arbitrary_package_attack')
+  server.register_function(undo_keyed_arbitrary_package_attack,
+      'undo_keyed_arbitrary_package_attack')
+
+  # Attack 4: Arbitrary Package, Revoked Key
+  server.register_function(sign_with_compromised_keys_attack,
+      'sign_with_compromised_keys_attack')
+  server.register_function(undo_sign_with_compromised_keys_attack,
+      'undo_sign_with_compromised_keys_attack')
 
   print('Starting Supplier Repo Services Thread: will now listen on port ' +
       str(demo.MAIN_REPO_SERVICE_PORT))
@@ -320,6 +340,8 @@ def mitm_arbitrary_package_attack(target_filepath):
 
       if os.path.exists(evil_file_in_director_repo):
         os.remove(evil_file_in_director_repo)
+
+
 
 
 

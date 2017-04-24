@@ -742,8 +742,30 @@ def listen():
 
   server.register_function(clear_vehicle_targets, 'clear_vehicle_targets')
 
-  server.register_function(mitm_arbitrary_package_attack, 'mitm_arbitrary_package_attack')
-  server.register_function(undo_mitm_arbitrary_package_attack, 'undo_mitm_arbitrary_package_attack')
+  # Attack 1: Arbitrary Package, no keys
+  server.register_function(mitm_arbitrary_package_attack,
+      'mitm_arbitrary_package_attack')
+  server.register_function(undo_mitm_arbitrary_package_attack,
+      'undo_mitm_arbitrary_package_attack')
+
+  # Attack 2: Replay, no keys
+  server.register_function(prepare_replay_attack_nokeys,
+      'prepare_replay_attack_nokeys')
+  server.register_function(replay_attack_nokeys, 'replay_attack_nokeys')
+  server.register_function(undo_replay_attack_nokeys,
+      'undo_replay_attack_nokeys')
+
+  # Attack 3: Arbitrary Package, keyed
+  server.register_function(keyed_arbitrary_package_attack,
+      'keyed_arbitrary_package_attack')
+  server.register_function(undo_keyed_arbitrary_package_attack,
+      'undo_keyed_arbitrary_package_attack')
+
+  # Attack 4: Arbitrary Package, Revoked Key
+  server.register_function(sign_with_compromised_keys_attack,
+      'sign_with_compromised_keys_attack')
+  server.register_function(undo_sign_with_compromised_keys_attack,
+      'undo_sign_with_compromised_keys_attack')
 
   print('Starting Director Services Thread: will now listen on port ' +
       str(demo.DIRECTOR_SERVER_PORT))

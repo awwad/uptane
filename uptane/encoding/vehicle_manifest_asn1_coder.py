@@ -45,13 +45,11 @@ def get_asn_signed(json_signed):
   for ecu_serial in sorted_ecu_serials:
     for manifest in json_signed['ecu_version_manifests'][ecu_serial]:
       temp_ecu_manifest = ECUVersionManifest()
-      json_signed = manifest['signed']
-      json_signatures = manifest['signatures']
       # This is the 'signed' element of the ECU Manifest,
       # and we need the full signable (including 'signatures').
       ecu_manifest_signed = ecu_manifest_asn1_coder.get_asn_signed(
           manifest['signed'])
-      # TODO: <~> RESOLVE CIRCULAR IMPORT and move.
+      # TODO: RESOLVE CIRCULAR IMPORT and move.
       # Will probably collapse the *coder.py modules into this module and
       # refactor.
       import uptane.encoding.asn1_codec as asn1_codec

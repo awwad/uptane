@@ -936,6 +936,70 @@ def restore_timestamp(vin):
 
 
 
+def prepare_replay_attack_nokeys(vin):
+  """
+  For exposure via XMLRPC to web frontend, attack script to prepare to execute a
+  rollback attack with no compromised keys against the Director.
+
+  After this is done, the Primary should update, then the replay attack function
+  should be run (replay_attack_nokeys).
+  """
+  backup_timestamp(vin=vin)
+  write_to_live(vin_to_update=vin)
+
+
+
+
+
+def replay_attack_nokeys(vin):
+  """Actually perform the rollback attack."""
+  rollback_timestamp(vin=vin)
+
+
+
+
+
+def undo_replay_attack_nokeys(vin):
+  """Undo the rollback attack."""
+  restore_timestamp(vin=vin)
+
+
+
+
+
+def keyed_arbitrary_package_attack(vin, ecu_serial, target_filepath):
+
+  # TODO: Back up the image first.
+  if not os.path.exists(target_filepath):
+    raise uptane.Error('Unable to attack: expected given image filename, ' +
+        repr(target_filepath) + ', to exist, but it does not.')
+
+  # TODO: Check to make sure the given file exists in the repository as well.
+  # We should be attacking a file that's already in the repo.
+  # TODO: Consider adding other edge case checks (interrupted things, attack
+  # already in progress, etc.)
+
+  add_target_and_write_to_live(
+      target_filepath, file_content='evil content',
+      vin=vin, ecu_serial=ecu_serial)
+
+
+
+
+
+def undo_keyed_arbitrary_package_attack(vin, ecu_serial, target_filepath):
+
+  # Revoke potentially compromised keys, replacing them with new keys.
+  revoke_and_add_new_keys_and_write_to_live()
+
+  # Replace malicious target with original.
+  dd.add_target_and_write_to_live(filename=target_filepath,
+      file_content='Fresh firmware image', vin=vin, ecu_serial=ecu_serial)
+
+
+
+
+
 def clear_vehicle_targets(vin):
   director_service_instance.vehicle_repositories[vin].targets.clear_targets()
 

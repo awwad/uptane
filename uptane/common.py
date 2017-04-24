@@ -21,6 +21,9 @@ import uptane.encoding.asn1_codec as asn1_codec
 import uptane
 import uptane.formats
 
+# Both key types below are supported, but issues may be encountered with RSA
+# if tuf.conf.METADATA_FORMAT is 'der' (rather than 'json').
+# TODO: Ensure RSA support in ASN.1/DER conversion.
 SUPPORTED_KEY_TYPES = ['ed25519', 'rsa']
 
 def sign_signable(
@@ -73,7 +76,9 @@ def sign_signable(
 
   <Exceptions>
     tuf.FormatError if the provided key is not the correct format or lacks a
-    private element, or if the signing key type is not the .
+    private element.
+
+    uptane.Error if the key type is not in the SUPPORTED_KEY_TYPES for Uptane.
 
   <Side Effects>
     Adds a signature to the provided signable.

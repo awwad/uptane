@@ -438,8 +438,8 @@ def revoke_compromised_keys():
   repo.snapshot.load_signing_key(new_snapshot_private_key)
   repo.timestamp.load_signing_key(new_timestamp_private_key)
 
-  # Write all the metadata changes to disk (metadata.staging) and copy move
-  # them to the hosted metadata directory.
+  # Write all the metadata changes to disk (metadata.staged) and copy them to
+  # the hosted metadata directory.
   write_to_live()
 
 

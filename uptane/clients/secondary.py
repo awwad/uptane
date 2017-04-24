@@ -239,12 +239,12 @@ class Secondary(object):
     # Else use standard Python dictionary format specified in uptane.formats.
 
     # Now sign with that key.
-    signed_ecu_manifest = uptane.common.sign_signable(
-        signable_ecu_manifest, [self.ecu_key])
+    uptane.common.sign_signable(
+        signable_ecu_manifest, [self.ecu_key], datatype='ecu_manifest')
     uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
-        signed_ecu_manifest)
+        signable_ecu_manifest)
 
-    return signed_ecu_manifest
+    return signable_ecu_manifest
 
 
 
@@ -264,20 +264,11 @@ class Secondary(object):
     # Assume there's only one signature.
     assert len(timeserver_attestation['signatures']) == 1
 
-    # The following if/else is duplicated in primary.py as well. Refactor.
-    if tuf.conf.METADATA_FORMAT != 'der':
-      valid = tuf.keys.verify_signature(
-          self.timeserver_public_key,
-          timeserver_attestation['signatures'][0],
-          timeserver_attestation['signed'])
-    else:
-      der_signed = asn1_codec.convert_signed_metadata_to_der(
-        timeserver_attestation, only_signed=True)
-      valid = tuf.keys.verify_signature(
-          self.timeserver_public_key,
-          timeserver_attestation['signatures'][0],
-          hashlib.sha256(der_signed).digest(),
-          is_binary_data=True)
+    valid = uptane.common.verify_signature_over_metadata(
+        self.timeserver_public_key,
+        timeserver_attestation['signatures'][0],
+        timeserver_attestation['signed'],
+        datatype='time_attestation')
 
     if not valid:
       raise tuf.BadSignatureError('Timeserver returned an invalid signature. '
@@ -497,8 +488,6 @@ class Secondary(object):
         (# TODO: Clarify, expand, or remove comment.)
     """
     tuf.formats.PATH_SCHEMA.check_match(image_fname)
-
-    print('# TODO: <~> WORKING HERE on image validation in the Secondary')
 
     full_image_fname = os.path.join(
         self.full_client_dir, 'unverified_targets', image_fname)

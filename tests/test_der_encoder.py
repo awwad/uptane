@@ -14,6 +14,7 @@ import tuf.keys
 import tuf.repository_tool as repo_tool
 import uptane
 import uptane.formats
+import uptane.common
 
 import uptane.encoding.asn1_codec as asn1_codec
 import uptane.encoding.timeserver_asn1_coder as timeserver_asn1_coder
@@ -366,9 +367,7 @@ class TestASN1(unittest.TestCase):
     self.assertTrue(tuf.keys.verify_signature(
         timeserver_key_pub,
         pydict_again['signatures'][0],
-        der_signed_hash,
-        force_non_json=True,
-        is_binary_data=True))
+        der_signed_hash))
 
 
 
@@ -505,15 +504,14 @@ def conversion_tester(signable_pydict, datatype, cls): # cls: clunky
   resigned_reverted = asn1_codec.convert_signed_der_to_dersigned_json(
       resigned_der, datatype=datatype)
   resigned_signature = resigned_reverted['signatures'][0]
-  # These names get pretty confusing. This next variable, resigned_signed_der,
-  # is the re-signed DER, but only the 'signed' element. Separating it required
-  # conversion back and forth.
-  resigned_signed_der = asn1_codec.convert_signed_metadata_to_der(
-      resigned_reverted, only_signed=True, datatype=datatype)
 
-  cls.assertTrue(tuf.keys.verify_signature(
-      test_signing_key, resigned_signature,
-      hashlib.sha256(resigned_signed_der).digest(), is_binary_data=True))
+  # Check the signature on the re-signed DER manifest:
+  cls.assertTrue(uptane.common.verify_signature_over_metadata(
+      test_signing_key,
+      resigned_signature,
+      resigned_reverted['signed'],
+      datatype=datatype,
+      metadata_format='der'))
 
   # The signatures will not match, because a new signature was made, but the
   # 'signed' elements should match when converted back.

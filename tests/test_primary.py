@@ -487,16 +487,10 @@ class TestPrimary(unittest.TestCase):
       uptane.formats.DER_DATA_SCHEMA.check_match(vehicle_manifest)
       vehicle_manifest = asn1_codec.convert_signed_der_to_dersigned_json(
           vehicle_manifest, datatype='vehicle_manifest')
-      data_to_verify = hashlib.sha256(asn1_codec.convert_signed_metadata_to_der(
-          vehicle_manifest, only_signed=True, datatype='vehicle_manifest')
-          ).digest()
-      is_binary_data = True   # for keys.verify_signature
 
     else:
       uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
           vehicle_manifest)
-      data_to_verify = vehicle_manifest['signed']
-      is_binary_data = False  # for keys.verify_signature
 
     # Test contents of vehicle manifest.
     # Make sure there is exactly one signature.
@@ -512,11 +506,11 @@ class TestPrimary(unittest.TestCase):
     # Check the signature on the vehicle manifest.
     # tuf.keys needs to know not to try encoding the data as UTF-8 if we're
     # working with DER and data_to_verify is already bytes.
-    self.assertTrue(tuf.keys.verify_signature(
+    self.assertTrue(uptane.common.verify_signature_over_metadata(
         primary_ecu_key,
         vehicle_manifest['signatures'][0], # TODO: Deal with 1-sig assumption?
-        data_to_verify,
-        is_binary_data=is_binary_data))
+        vehicle_manifest['signed'],
+        datatype='vehicle_manifest'))
 
 
 

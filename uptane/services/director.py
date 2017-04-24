@@ -187,33 +187,11 @@ class Director:
     ecu_public_key = inventory.ecu_public_keys[ecu_serial]
 
 
-
-
-    # TODO: Generalize the following code slightly and stick it somewhere in
-    # perhaps common or asn1_codec. Call it here and in the verify_... function
-    # below as well. Check for other places it should be called (probably many).
-    if tuf.conf.METADATA_FORMAT == 'der':
-      # To check the signature, we have to make sure to encode the data as it
-      # was when the signature was made. If we're using ASN.1/DER as the
-      # data format/encoding, then we convert the 'signed' portion of the data
-      # back to ASN.1/DER to check it.
-      # Further, since for ASN.1/DER, a SHA256 hash is taken of the data and
-      # *that* is what is signed, we perform that hashing as well and retrieve
-      # the raw binary digest.
-      data_to_check = asn1_codec.convert_signed_metadata_to_der(
-          signed_ecu_manifest, only_signed=True, datatype='ecu_manifest')
-      data_to_check = hashlib.sha256(data_to_check).digest()
-      is_binary_data = True
-
-    else:
-      data_to_check = signed_ecu_manifest['signed']
-      is_binary_data = False
-
-    valid = tuf.keys.verify_signature(
+    valid = uptane.common.verify_signature_over_metadata(
         ecu_public_key,
-        signed_ecu_manifest['signatures'][0], # TODO: Fix assumptions.
-        data_to_check,
-        is_binary_data=is_binary_data)
+        signed_ecu_manifest['signatures'][0], # TODO: Fix single-signature assumption
+        signed_ecu_manifest['signed'],
+        datatype='ecu_manifest')
 
     if not valid:
       log.info(
@@ -382,29 +360,11 @@ class Director:
 
     ecu_public_key = inventory.ecu_public_keys[primary_ecu_serial]
 
-    if tuf.conf.METADATA_FORMAT == 'der':
-      # To check the signature, we have to make sure to encode the data as it
-      # was when the signature was made. If we're using ASN.1/DER as the
-      # data format/encoding, then we convert the 'signed' portion of the data
-      # back to ASN.1/DER to check it.
-      # Further, since for ASN.1/DER, a SHA256 hash is taken of the data and
-      # *that* is what is signed, we perform that hashing as well and retrieve
-      # the raw binary digest.
-      data_to_check = asn1_codec.convert_signed_metadata_to_der(
-          vehicle_manifest, only_signed=True, datatype='vehicle_manifest')
-      data_to_check = hashlib.sha256(data_to_check).digest()
-      is_binary_data = True
-
-    else:
-      data_to_check = vehicle_manifest['signed']
-      is_binary_data = False
-
-
-    valid = tuf.keys.verify_signature(
+    valid = uptane.common.verify_signature_over_metadata(
         ecu_public_key,
         vehicle_manifest['signatures'][0], # TODO: Fix assumptions.
-        data_to_check,
-        is_binary_data=is_binary_data)
+        vehicle_manifest['signed'],
+        datatype='vehicle_manifest')
 
     if not valid:
       log.debug(

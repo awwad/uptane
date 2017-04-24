@@ -126,11 +126,12 @@ def test_demo_timeserver():
   signed_time = timeserver.get_signed_time([1, 2])
 
   assert len(signed_time['signatures']) == 1, 'Unexpected number of signatures.'
-  assert tuf.keys.verify_signature(
+  assert uptane.common.verify_signature_over_metadata(
       timeserver_key_pub,
       signed_time['signatures'][0],
       signed_time['signed'],
-      force_treat_as_pydict=True
+      datatype='time_attestation',
+      metadata_format='json'
       ), 'Demo Timeserver self-test fail: unable to verify signature over JSON.'
 
 
@@ -149,15 +150,13 @@ def test_demo_timeserver():
   for pydict_again in [
       asn1_codec.convert_signed_der_to_dersigned_json(der_signed_time),
       asn1_codec.convert_signed_der_to_dersigned_json(xb_der_signed_time.data)]:
-    der_signed = asn1_codec.convert_signed_metadata_to_der(
-          pydict_again, only_signed=True)
-    der_signed_hash = hashlib.sha256(der_signed).digest()
-    assert tuf.keys.verify_signature(
+
+    assert uptane.common.verify_signature_over_metadata(
         timeserver_key_pub,
         pydict_again['signatures'][0],
-        der_signed_hash,
-        is_binary_data=True,
-        force_non_json=True
+        pydict_again['signed'],
+        datatype='time_attestation',
+        metadata_format='der'
         ), 'Demo Timeserver self-test fail: unable to verify signature over DER'
 
 

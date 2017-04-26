@@ -617,7 +617,7 @@ def host():
   global repo_server_process
 
   if repo_server_process is not None:
-    print('Sorry, there is already a server process running.')
+    print('Sorry: there is already a server process running.')
     return
 
   # Prepare to host the director repo contents.
@@ -699,7 +699,7 @@ def listen():
   global director_service_thread
 
   if director_service_thread is not None:
-    print('Sorry - there is already a Director service thread listening.')
+    print('Sorry: there is already a Director service thread listening.')
     return
 
   # Create server

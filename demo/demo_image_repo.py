@@ -186,7 +186,7 @@ def host():
   global server_process
 
   if server_process is not None:
-    print('Sorry, there is already a server process running.')
+    print('Sorry: there is already a server process running.')
     return
 
   # Prepare to host the main repo contents

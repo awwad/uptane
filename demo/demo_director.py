@@ -1012,7 +1012,7 @@ def keyed_arbitrary_package_attack(vin, ecu_serial, target_filepath):
 def undo_keyed_arbitrary_package_attack(vin, ecu_serial, target_filepath):
 
   # Revoke potentially compromised keys, replacing them with new keys.
-  revoke_and_add_new_keys_and_write_to_live()
+  revoke_compromised_keys()
 
   # Replace malicious target with original.
   dd.add_target_and_write_to_live(filename=target_filepath,

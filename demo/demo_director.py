@@ -863,7 +863,7 @@ def undo_mitm_arbitrary_package_attack(vin, target_filepath):
 
 
 """
-Simulating a rollback attack can be done with instructions in README.md,
+Simulating a replay attack can be done with instructions in README.md,
 using the functions below.
 """
 
@@ -890,7 +890,7 @@ def backup_timestamp(vin):
 
 
 
-def rollback_timestamp(vin):
+def replay_timestamp(vin):
   """
   Move 'backup_timestamp.der' to 'timestamp.der', effectively rolling back
   timestamp to a previous version.  'backup_timestamp.der' must already exist
@@ -902,7 +902,7 @@ def rollback_timestamp(vin):
   >>> import demo.demo_director as dd
   >>> dd.clean_slate()
   >>> dd.backup_timestamp('111')
-  >>> dd.rollback_timestamp()
+  >>> dd.replay_timestamp()
   """
 
   timestamp_filename = 'timestamp.' + tuf.conf.METADATA_FORMAT
@@ -910,7 +910,7 @@ def rollback_timestamp(vin):
       'backup_' + timestamp_filename)
 
   if not os.path.exists(backup_timestamp_path):
-    raise Exception('Cannot rollback the Timestamp'
+    raise Exception('Cannot replay the Timestamp'
         ' file.  ' + repr(backup_timestamp_path) + ' must already exist.'
         '  It can be created by calling backup_timestamp(vin).')
 
@@ -937,7 +937,7 @@ def restore_timestamp(vin):
   >>> import demo.demo_director as dd
   >>> dd.clean_slate()
   >>> dd.backup_timestamp('111')
-  >>> dd.rollback_timestamp()
+  >>> dd.replay_timestamp()
   >>> dd.restore_timestamp()
   """
 

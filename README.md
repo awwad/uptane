@@ -19,7 +19,7 @@ implementation code, divided into these sections:
 * [3: Blocking Attacks](#3-blocking-attacks)
   * [3.1: Arbitrary Package Attack on Director Repository without Compromised Keys](#31-arbitrary-package-attack-on-director-repository-without-compromised-keys)
   * [3.2: Arbitrary Package Attack on Image Repository without Compromised Keys](#32-arbitrary-package-attack-on-image-repository-without-compromised-keys)
-  * [3.3: Rollback Attack without Compromised Keys](#33-rollback-attack-without-compromised-keys)
+  * [3.3: Replay Attack without Compromised Keys](#33-replay-attack-without-compromised-keys)
   * [3.4: Arbitrary Package Attack with a Compromised Director Key](#34-arbitrary-package-attack-with-a-compromised-director-key)
   * [3.5: Compromise Both Repositories Simultaneously to Serve Arbitrary Package](#35-compromise-both-repositories-simultaneously-to-server-arbitrary-package)
   * [3.6: Recover from Major Key Compromise](#36-recover-from-major-key-compromise)
@@ -318,11 +318,13 @@ Undo the the arbitrary package attack so that subsequent sections can be reprodu
 >>> di.undo_mitm_arbitrary_package_attack(firmware_fname)
 ```
 
-### 3.3: Rollback Attack without Compromised Keys
+### 3.3: Replay Attack without Compromised Keys
 
-We next demonstrate a rollback attack, where the client is given an older (and previously trusted)
-version of metadata.  This attack can cause secondary clients to use older firmware than they
-currently trust.  The [Deny Functionality](https://docs.google.com/document/d/1pBK--40BCg_ofww4GES0weYFB6tZRedAjUy6PJ4Rgzk/edit#heading=h.4mo91b3dvcqd) subsection of the [Design Overview](https://docs.google.com/document/d/1pBK--40BCg_ofww4GES0weYFB6tZRedAjUy6PJ4Rgzk/edit?usp=sharing) covers the rollback attack in more detail.
+We next demonstrate a replay attack, where the client is given an older (and previously trusted)
+version of metadata.  A replay attack could result in a rollback of installed
+software, causing secondary clients to use older firmware than they
+currently trust. Rollback attacks in general are described in The
+[Deny Functionality subsection of the Design Overview](https://docs.google.com/document/d/1pBK--40BCg_ofww4GES0weYFB6tZRedAjUy6PJ4Rgzk/edit#heading=h.4mo91b3dvcqd).
 
 First, switch to the **Director's window** and copy the Timestamp role's
 metadata, `timestamp.der` to a backup. This is what we'll roll back to in the
@@ -346,11 +348,11 @@ retrieving the new metadata we generated.
 >>> dp.update_cycle()
 ```
 
-Next, in the **Director's window**, we simulate the rollback attack, trying to
+Next, in the **Director's window**, we simulate the replay attack, trying to
 distribute the out-of-date metadata backed up earlier, effectively rolling back
 the timestamp file to a previous version.
 ```python
->>> dd.rollback_timestamp(vin='111')
+>>> dd.replay_timestamp(vin='111')
 ```
 
 If this old metadata is presented to the Primary, the Primary rejects it,
@@ -377,10 +379,13 @@ Finally, restore the valid, latest version of Timestamp metadata
 ### 3.4: Arbitrary Package Attack with a Compromised Director Key
 
 Thus far we have simulated a few attacks that have not depended on compromised keys.  In
-the arbitrary and rollback attacks (via a Man in the Middle), an attacker has
-simply modified the images or metadata requested by a primary or secondary client, and
-these clients have blocked the attacks because the malicious images do not match what
-is listed in signed, trusted metadata.  However, what happens if an attacker compromises a
+the previous attacks, an attacker has presented unchanged, out-of-date data
+(replay, 3.3) or simply modified the images or metadata requested by a primary
+or secondary client, without having the right key to sign new metadata.
+Consequently, these clients have blocked the attacks because the malicious
+images do not match what is listed in signed, trusted metadata.
+
+However, what happens if an attacker manages to obtain or make use of a
 repository key and signs for a malicious image?  Is the client able to block a compromise
 of just the image repository?  What about a compromise of both the image and director
 repositories?

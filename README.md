@@ -23,6 +23,7 @@ implementation code, divided into these sections:
   * [3.4: Arbitrary Package Attack with a Compromised Director Key](#34-arbitrary-package-attack-with-a-compromised-director-key)
   * [3.5: Compromise Both Repositories Simultaneously to Serve Arbitrary Package](#35-compromise-both-repositories-simultaneously-to-server-arbitrary-package)
   * [3.6: Recover from Major Key Compromise](#36-recover-from-major-key-compromise)
+  * [3.7: Arbitrary Package Attack with Revoked Keys](#37-arbitrary-package-attack-with-revoked-keys)
 
 
 # 0: Installation

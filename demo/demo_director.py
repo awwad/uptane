@@ -682,9 +682,10 @@ def register_vehicle_manifest_wrapper(
       not), so the vehicle manifest has to be extracted from the XMLRPC Binary()
       object that is signed_vehicle_manifest in this case.
 
-    - If we're using JSON, then the vehicle manifest was transfered as an
-      object that the reference implementation can already understand, and we
-      just pass the argument along to the director module.
+    - If we're using any other data format / encoding (e.g. JSON), then the
+      vehicle manifest was transfered as an object that the reference
+      implementation can already understand, and we just pass the argument
+      along to the director module.
 
   """
   if tuf.conf.METADATA_FORMAT == 'der':

@@ -426,6 +426,8 @@ us to download a file that does  does not exactly match the Image Repository met
 In 3.4, the Director repository has been compromised, but the malicious
 metadata and firmware it distributes is rejected. Compromising the Director is
 not enough to allow arbitrary package attacks against ECUs in the vehicle.
+The Director can only instruct clients to install images validated by the Image
+Repository.
 
 But what happens if, at the same time, the attacker is able to sign with an
 image-signing key for the Image Repository?

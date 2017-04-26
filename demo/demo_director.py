@@ -742,26 +742,31 @@ def listen():
 
   server.register_function(clear_vehicle_targets, 'clear_vehicle_targets')
 
-  # Attack 1: Arbitrary Package, no keys
+  # Attack 1: Arbitrary Package Attack on Director Repository without
+  # Compromised Keys.
+  # README.md section 3.1
   server.register_function(mitm_arbitrary_package_attack,
       'mitm_arbitrary_package_attack')
   server.register_function(undo_mitm_arbitrary_package_attack,
       'undo_mitm_arbitrary_package_attack')
 
-  # Attack 2: Replay, no keys
+  # Attack 2: Replay Attack without Compromised Keys
+  # README.md section 3.3
   server.register_function(prepare_replay_attack_nokeys,
       'prepare_replay_attack_nokeys')
   server.register_function(replay_attack_nokeys, 'replay_attack_nokeys')
   server.register_function(undo_replay_attack_nokeys,
       'undo_replay_attack_nokeys')
 
-  # Attack 3: Arbitrary Package, keyed
+  # Attack 3: Arbitrary Package Attack with a Compromised Director Key
+  # README.md section 3.4. Recovery in section 3.6
   server.register_function(keyed_arbitrary_package_attack,
       'keyed_arbitrary_package_attack')
   server.register_function(undo_keyed_arbitrary_package_attack,
       'undo_keyed_arbitrary_package_attack')
 
-  # Attack 4: Arbitrary Package, Revoked Key
+  # Attack 4: Arbitrary Package with Revoked Keys
+  # (README.md section 3.7)
   server.register_function(sign_with_compromised_keys_attack,
       'sign_with_compromised_keys_attack')
   server.register_function(undo_sign_with_compromised_keys_attack,

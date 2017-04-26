@@ -267,27 +267,34 @@ def listen():
       'add_target_to_supplier_repo')
   server.register_function(write_to_live, 'write_supplier_repo')
 
-  # Attack 1: Arbitrary Package, no keys
+  # Attack 1: Arbitrary Package Attack on Image Repository without
+  # Compromised Keys.
+  # README.md section 3.2
   server.register_function(mitm_arbitrary_package_attack,
       'mitm_arbitrary_package_attack')
   server.register_function(undo_mitm_arbitrary_package_attack,
       'undo_mitm_arbitrary_package_attack')
 
-  # Attack 2:
+  # Attack 2: Replay Attack without Compromised Keys
   # We don't bother performing the replay attack against the Image Repo;
   # demonstration on the Director Repo is enough.
 
-  # Attack 3: Arbitrary Package, keyed
+  # Attack 3: Arbitrary Package Attack with Compromised Image Repository Keys
+  # README.md section 3.5. Recovery in section 3.6
   server.register_function(keyed_arbitrary_package_attack,
       'keyed_arbitrary_package_attack')
   server.register_function(undo_keyed_arbitrary_package_attack,
       'undo_keyed_arbitrary_package_attack')
 
-  # Attack 4: Arbitrary Package, Revoked Key
+  # Attack 4: Arbitrary Package with Revoked Keys
+  # We don't bother performing this attack against the Image Repo;
+  # demonstration on the Director Repo should suffice. There is code linked
+  # here that should suffice, though.
   server.register_function(sign_with_compromised_keys_attack,
       'sign_with_compromised_keys_attack')
   server.register_function(undo_sign_with_compromised_keys_attack,
       'undo_sign_with_compromised_keys_attack')
+
 
   print('Starting Supplier Repo Services Thread: will now listen on port ' +
       str(demo.MAIN_REPO_SERVICE_PORT))

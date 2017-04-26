@@ -962,9 +962,16 @@ def prepare_replay_attack_nokeys(vin):
   """
   For exposure via XMLRPC to web frontend, attack script to prepare to execute a
   rollback attack with no compromised keys against the Director.
+  This attack is described in README.md, section 3.3.
 
-  After this is done, the Primary should update, then the replay attack function
-  should be run (replay_attack_nokeys).
+  1. Back up the existing, soon-to-be-outdated timestamp file, so that it can
+     be replayed in replay_attack_nokeys().
+  2. Call write_to_live to issue a new timestamp file, so that the backed-up
+     timestamp file is now outdated.
+
+  After this is done, the Primary should update so that it has seen the new
+  version of the timestamp data. Then, replay_attack_nokeys() should be run to
+  actually perform the attack.
   """
   backup_timestamp(vin=vin)
   write_to_live(vin_to_update=vin)
@@ -974,7 +981,14 @@ def prepare_replay_attack_nokeys(vin):
 
 
 def replay_attack_nokeys(vin):
-  """Actually perform the rollback attack."""
+  """
+  Actually perform the rollback attack.
+
+  This attack is described in README.md, section 3.3.
+
+  prepare_replay_attack_nokeys should be called first, and then the Primary
+  should have updated before this is called.
+  """
   rollback_timestamp(vin=vin)
 
 
@@ -982,7 +996,12 @@ def replay_attack_nokeys(vin):
 
 
 def undo_replay_attack_nokeys(vin):
-  """Undo the rollback attack."""
+  """
+  Undo the replay attack, putting the vehicle's Director repository back into
+  a normal state.
+
+  This attack is attack described in README.md, section 3.3.
+  """
   restore_timestamp(vin=vin)
 
 
@@ -990,6 +1009,13 @@ def undo_replay_attack_nokeys(vin):
 
 
 def keyed_arbitrary_package_attack(vin, ecu_serial, target_filepath):
+  """
+  Add a new, malicious target to the Director repository for the vehicle,
+  assigning it to the given ECU Serial, and signing malicious metadata with
+  the valid Director timestamp, snapshot, and targets keys.
+
+  This attack is described in README.md, section 3.4.
+  """
 
   # TODO: Back up the image first.
   if not os.path.exists(target_filepath):
@@ -1010,6 +1036,17 @@ def keyed_arbitrary_package_attack(vin, ecu_serial, target_filepath):
 
 
 def undo_keyed_arbitrary_package_attack(vin, ecu_serial, target_filepath):
+  """
+  Recover from keyed_arbitrary_package_attack.
+
+  1. Revoke existing timestamp, snapshot, and targets keys, and issue new
+     keys to replace them. This uses the root key for the Director, which
+     should be an offline key.
+  2. Replace the malicious target the attacker added with a clean version of
+     the target, as it was before the attack.
+
+  This attack recovery is described in README.md, section 3.6.
+  """
 
   # Revoke potentially compromised keys, replacing them with new keys.
   revoke_compromised_keys()
@@ -1023,6 +1060,19 @@ def undo_keyed_arbitrary_package_attack(vin, ecu_serial, target_filepath):
 
 
 def clear_vehicle_targets(vin):
+  """
+  Remove all instructions to the given vehicle from the current Director
+  metadata.
+
+  This does not execute write_to_live. After changes are complete, you should
+  call that to write new metadata.
+
+  This can be called to clear an existing instruction for an ECU so that a new
+  instruction for different firmware can be given to that ECU.
+
+  TODO: In the future, adding a target assignment to the Director for a given
+  ECU should replace any other target assignment for that ECU.
+  """
   director_service_instance.vehicle_repositories[vin].targets.clear_targets()
 
 
@@ -1053,6 +1103,13 @@ def add_target_and_write_to_live(filename, file_content, vin, ecu_serial):
 
 
 def kill_server():
+  """
+  Kills the forked process that is hosting the Director repositories via
+  Python's simple HTTP server. This does not affect the Director service
+  (which handles manifests and responds to requests from Primaries), nor does
+  it affect the metadata in the repositories or the state of the repositories
+  at all. host() can be run afterwards to begin hosting again.
+  """
 
   global repo_server_process
 

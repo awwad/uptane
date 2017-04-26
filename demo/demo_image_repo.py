@@ -369,6 +369,13 @@ def undo_mitm_arbitrary_package_attack(target_filepath):
 
 
 def keyed_arbitrary_package_attack(target_filepath):
+  """
+  Add a new, malicious target to the Image Repository and sign malicious
+  metadata with the valid Image Repository timestamp, snapshot, and targets
+  keys.
+
+  This attack is described in README.md, section 3.5.
+  """
   # TODO: Back up the image first.
   if not os.path.exists(target_filepath):
     raise uptane.Error('Unable to attack: expected given image filename, ' +
@@ -386,6 +393,17 @@ def keyed_arbitrary_package_attack(target_filepath):
 
 
 def undo_keyed_arbitrary_package_attack(target_filepath):
+  """
+  Recover from keyed_arbitrary_package_attack.
+
+  1. Revoke existing timestamp, snapshot, and targets keys, and issue new
+     keys to replace them. This uses the root key for the Image Repository,
+     which should be an offline key.
+  2. Replace the malicious target the attacker added with a clean version of
+     the target, as it was before the attack.
+
+  This attack recovery is described in README.md, section 3.6.
+  """
   # Revoke potentially compromised keys, replacing them with new keys.
   revoke_compromised_keys()
 
@@ -498,6 +516,11 @@ def revoke_compromised_keys():
 
 
 def kill_server():
+  """
+  Kills the forked process that is hosting the Image Repository via
+  Python's simple HTTP server. This does not affect anything in the repository
+  at all. host() can be run afterwards to begin hosting again.
+  """
   global server_process
   if server_process is None:
     print('No server to stop.')

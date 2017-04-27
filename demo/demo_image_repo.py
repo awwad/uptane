@@ -286,16 +286,6 @@ def listen():
   server.register_function(undo_keyed_arbitrary_package_attack,
       'undo_keyed_arbitrary_package_attack')
 
-  # Attack 4: Arbitrary Package with Revoked Keys
-  # We don't bother performing this attack against the Image Repo;
-  # demonstration on the Director Repo should suffice. There is code linked
-  # here that should suffice, though.
-  server.register_function(sign_with_compromised_keys_attack,
-      'sign_with_compromised_keys_attack')
-  server.register_function(undo_sign_with_compromised_keys_attack,
-      'undo_sign_with_compromised_keys_attack')
-
-
   print('Starting Supplier Repo Services Thread: will now listen on port ' +
       str(demo.MAIN_REPO_SERVICE_PORT))
   xmlrpc_service_thread = threading.Thread(target=server.serve_forever)

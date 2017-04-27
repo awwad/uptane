@@ -781,10 +781,13 @@ def listen():
 
 
 
+
 def mitm_arbitrary_package_attack(vin, target_filepath):
-  # Simulate an arbitrary package attack by a Man in the Middle, without
-  # compromising any keys.  Move an evil target file into place on the Director
-  # repository without updating metadata.
+  """
+  Simulate an arbitrary package attack by a Man in the Middle, without
+  compromising any keys.  Move an evil target file into place on the Director
+  repository without updating metadata.
+  """
   full_target_filepath = os.path.join(demo.DIRECTOR_REPO_DIR, vin,
       'targets', target_filepath)
 
@@ -829,9 +832,11 @@ def mitm_arbitrary_package_attack(vin, target_filepath):
 
 
 def undo_mitm_arbitrary_package_attack(vin, target_filepath):
-  # Undo the arbitrary package attack launched by
-  # mitm_arbitrary_package_attack().  Move evil target file out and normal
-  # target file back in.
+  """
+  Undo the arbitrary package attack launched by
+  mitm_arbitrary_package_attack().  Move evil target file out and normal
+  target file back in.
+  """
   full_target_filepath = os.path.join(demo.DIRECTOR_REPO_DIR, vin,
       'targets', target_filepath)
 

@@ -343,8 +343,11 @@ def mitm_arbitrary_package_attack(target_filepath):
 
 
 def undo_mitm_arbitrary_package_attack(target_filepath):
-  # Undo the arbitrary package attack simulated by mitm_arbitrary_package_attack().
-  # Move the evil target file out and normal target file back in.
+  """
+  Undo the arbitrary package attack simulated by
+  mitm_arbitrary_package_attack().
+  Move the evil target file out and normal target file back in.
+  """
   full_target_filepath = os.path.join(demo.MAIN_REPO_TARGETS_DIR, target_filepath)
 
   # TODO: NOTE THAT THIS ATTACK SCRIPT BREAKS IF THE TARGET FILE IS IN A

@@ -299,6 +299,9 @@ def mitm_arbitrary_package_attack(target_filepath):
   # Simulate an arbitrary package attack by a Man in the Middle, without
   # compromising keys.  Move evil target file into place on the image
   # repository, without updating metadata.
+  print('UNDO ATTACK: arbitrary package, no keys, on target ' +
+      repr(target_filepath))
+
   full_target_filepath = os.path.join(demo.MAIN_REPO_TARGETS_DIR, target_filepath)
 
   # TODO: NOTE THAT THIS ATTACK SCRIPT BREAKS IF THE TARGET FILE IS IN A
@@ -348,8 +351,8 @@ def undo_mitm_arbitrary_package_attack(target_filepath):
   mitm_arbitrary_package_attack().
   Move the evil target file out and normal target file back in.
   """
-  print('UNDO ATTACK: arbitrary package, no keys, on VIN ' + repr(vin) + ', '
-      'target_filepath ' + repr(target_filepath))
+  print('UNDO ATTACK: arbitrary package, no keys, on target ' +
+      repr(target_filepath))
 
   full_target_filepath = os.path.join(demo.MAIN_REPO_TARGETS_DIR, target_filepath)
 
@@ -381,9 +384,8 @@ def keyed_arbitrary_package_attack(target_filepath):
 
   This attack is described in README.md, section 3.5.
   """
-  print('ATTACK: keyed_arbitrary_package_attack with parameters '
-      ': vin ' + repr(vin) + '; ecu_serial ' + repr(ecu_serial) + '; '
-      'target_filepath ' + repr(target_filepath))
+  print('ATTACK: keyed_arbitrary_package_attack on target_filepath ' +
+      repr(target_filepath))
 
 
   # TODO: Back up the image and then restore it in the undo function instead of
@@ -426,9 +428,8 @@ def undo_keyed_arbitrary_package_attack(target_filepath):
 
   This attack recovery is described in README.md, section 3.6.
   """
-  print('UNDO ATACK: keyed arbitrary package attack with parameters '
-      ': vin ' + repr(vin) + '; ecu_serial ' + repr(ecu_serial) + '; '
-      'target_filepath ' + repr(target_filepath))
+  print('UNDO ATACK: keyed arbitrary package attack on target_filepath ' +
+      repr(target_filepath))
 
   # Revoke potentially compromised keys, replacing them with new keys.
   revoke_compromised_keys()

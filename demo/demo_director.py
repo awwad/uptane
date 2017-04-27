@@ -1105,7 +1105,7 @@ def undo_keyed_arbitrary_package_attack(vin, ecu_serial, target_filepath):
   This attack recovery is described in README.md, section 3.6.
   """
 
-  print('UNDO ATACK: keyed arbitrary package attack with parameters '
+  print('UNDO ATTACK: keyed arbitrary package attack with parameters '
       ': vin ' + repr(vin) + '; ecu_serial ' + repr(ecu_serial) + '; '
       'target_filepath ' + repr(target_filepath))
 
@@ -1113,7 +1113,7 @@ def undo_keyed_arbitrary_package_attack(vin, ecu_serial, target_filepath):
   revoke_compromised_keys()
 
   # Replace malicious target with original.
-  dd.add_target_and_write_to_live(filename=target_filepath,
+  add_target_and_write_to_live(filename=target_filepath,
       file_content='Fresh firmware image', vin=vin, ecu_serial=ecu_serial)
 
   print('COMPLETED UNDO ATTACK')

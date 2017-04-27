@@ -428,14 +428,14 @@ def undo_keyed_arbitrary_package_attack(target_filepath):
 
   This attack recovery is described in README.md, section 3.6.
   """
-  print('UNDO ATACK: keyed arbitrary package attack on target_filepath ' +
+  print('UNDO ATTACK: keyed arbitrary package attack on target_filepath ' +
       repr(target_filepath))
 
   # Revoke potentially compromised keys, replacing them with new keys.
   revoke_compromised_keys()
 
   # Replace malicious target with original.
-  dd.add_target_and_write_to_live(filename=target_filepath,
+  add_target_and_write_to_live(filename=target_filepath,
       file_content='Fresh firmware image')
 
   print('COMPLETED UNDO ATTACK')

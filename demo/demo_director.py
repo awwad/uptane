@@ -403,6 +403,8 @@ def revoke_compromised_keys():
 
 
 
+
+
 def sign_with_compromised_keys_attack():
   """
   <Purpose>
@@ -428,6 +430,8 @@ def sign_with_compromised_keys_attack():
   """
 
   global director_service_instance
+
+  print('ATTACK: arbitrary metadata, old key, all vehicles')
 
   # Start by backing up the repository before the attack occurs so that we
   # can restore it afterwards in undo_sign_with_compromised_keys_attack.
@@ -486,6 +490,10 @@ def sign_with_compromised_keys_attack():
     os.rename(os.path.join(repo_dir, 'metadata.livetemp'),
         os.path.join(repo_dir, 'metadata'))
 
+  print('COMPLETED ATTACK')
+
+
+
 
 
 def undo_sign_with_compromised_keys_attack():
@@ -539,6 +547,8 @@ def undo_sign_with_compromised_keys_attack():
     repository.targets.load_signing_key(valid_targets_private_key)
     repository.snapshot.load_signing_key(valid_snapshot_private_key)
     repository.timestamp.load_signing_key(valid_timestamp_private_key)
+
+  print('COMPLETED UNDO ATTACK')
 
 
 
@@ -788,6 +798,9 @@ def mitm_arbitrary_package_attack(vin, target_filepath):
   compromising any keys.  Move an evil target file into place on the Director
   repository without updating metadata.
   """
+  print('ATTACK: arbitrary package, no keys, on VIN ' + repr(vin) + ', '
+      'target_filepath ' + repr(target_filepath))
+
   full_target_filepath = os.path.join(demo.DIRECTOR_REPO_DIR, vin,
       'targets', target_filepath)
 
@@ -827,6 +840,8 @@ def mitm_arbitrary_package_attack(vin, target_filepath):
     file_object.write('EVIL UPDATE: ARBITRARY PACKAGE ATTACK TO BE'
         ' DELIVERED FROM MITM (no keys compromised).')
 
+  print('COMPLETED ATTACK')
+
 
 
 
@@ -837,6 +852,9 @@ def undo_mitm_arbitrary_package_attack(vin, target_filepath):
   mitm_arbitrary_package_attack().  Move evil target file out and normal
   target file back in.
   """
+  print('UNDO ATTACK: arbitrary package, no keys, on VIN ' + repr(vin) + ', '
+      'target_filepath ' + repr(target_filepath))
+
   full_target_filepath = os.path.join(demo.DIRECTOR_REPO_DIR, vin,
       'targets', target_filepath)
 
@@ -868,6 +886,7 @@ def undo_mitm_arbitrary_package_attack(vin, target_filepath):
   elif os.path.exists(image_repo_backup_full_target_filepath):
     os.remove(image_repo_backup_full_target_filepath)
 
+  print('COMPLETED UNDO ATTACK')
 
 
 
@@ -983,9 +1002,12 @@ def prepare_replay_attack_nokeys(vin):
   version of the timestamp data. Then, replay_attack_nokeys() should be run to
   actually perform the attack.
   """
+  print('PREPARE ATTACK: replay attack, no keys, on VIN ' + repr(vin))
+
   backup_timestamp(vin=vin)
   write_to_live(vin_to_update=vin)
 
+  print('COMPLETED ATTACK PREPARATION')
 
 
 
@@ -999,7 +1021,11 @@ def replay_attack_nokeys(vin):
   prepare_replay_attack_nokeys should be called first, and then the Primary
   should have updated before this is called.
   """
+  print('ATTACK: replay attack, no keys, on VIN ' + repr(vin))
+
   replay_timestamp(vin=vin)
+
+  print('COMPLETED ATTACK')
 
 
 
@@ -1012,7 +1038,11 @@ def undo_replay_attack_nokeys(vin):
 
   This attack is attack described in README.md, section 3.3.
   """
+  print('UNDO ATTACK: replay attack, no keys, on VIN ' + repr(vin))
+
   restore_timestamp(vin=vin)
+
+  print('COMPLETED UNDO ATTACK')
 
 
 
@@ -1026,9 +1056,13 @@ def keyed_arbitrary_package_attack(vin, ecu_serial, target_filepath):
 
   This attack is described in README.md, section 3.4.
   """
+  print('ATTACK: keyed_arbitrary_package_attack with parameters '
+      ': vin ' + repr(vin) + '; ecu_serial ' + repr(ecu_serial) + '; '
+      'target_filepath ' + repr(target_filepath))
 
   # TODO: Back up the image first.
   if not os.path.exists(target_filepath):
+
     raise uptane.Error('Unable to attack: expected given image filename, ' +
         repr(target_filepath) + ', to exist, but it does not.')
 
@@ -1040,6 +1074,8 @@ def keyed_arbitrary_package_attack(vin, ecu_serial, target_filepath):
   add_target_and_write_to_live(
       target_filepath, file_content='evil content',
       vin=vin, ecu_serial=ecu_serial)
+
+  print('COMPLETED ATTACK')
 
 
 
@@ -1058,12 +1094,18 @@ def undo_keyed_arbitrary_package_attack(vin, ecu_serial, target_filepath):
   This attack recovery is described in README.md, section 3.6.
   """
 
+  print('UNDO ATACK: keyed arbitrary package attack with parameters '
+      ': vin ' + repr(vin) + '; ecu_serial ' + repr(ecu_serial) + '; '
+      'target_filepath ' + repr(target_filepath))
+
   # Revoke potentially compromised keys, replacing them with new keys.
   revoke_compromised_keys()
 
   # Replace malicious target with original.
   dd.add_target_and_write_to_live(filename=target_filepath,
       file_content='Fresh firmware image', vin=vin, ecu_serial=ecu_serial)
+
+  print('COMPLETED UNDO ATTACK')
 
 
 
@@ -1083,6 +1125,7 @@ def clear_vehicle_targets(vin):
   TODO: In the future, adding a target assignment to the Director for a given
   ECU should replace any other target assignment for that ECU.
   """
+  print('CLEARING VEHICLE TARGETS for VIN ' + repr(vin))
   director_service_instance.vehicle_repositories[vin].targets.clear_targets()
 
 

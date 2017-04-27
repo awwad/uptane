@@ -1060,9 +1060,19 @@ def keyed_arbitrary_package_attack(vin, ecu_serial, target_filepath):
       ': vin ' + repr(vin) + '; ecu_serial ' + repr(ecu_serial) + '; '
       'target_filepath ' + repr(target_filepath))
 
-  # TODO: Back up the image first.
-  if not os.path.exists(target_filepath):
 
+  # TODO: Back up the image and then restore it in the undo function instead of
+  # hard-coding the contents it's changed back to in the undo function.
+  # That would require that we pick a temp file location.
+
+  # Determine the location the specified file would occupy in the repository.
+  target_full_path = os.path.join(
+      director_service_instance.vehicle_repositories[vin]._repository_directory,
+      'targets', target_filepath)
+
+  # Make sure it exists in the repository, or else abort this attack, which is
+  # written to work on an existing target only.
+  if not os.path.exists(target_full_path):
     raise uptane.Error('Unable to attack: expected given image filename, ' +
         repr(target_filepath) + ', to exist, but it does not.')
 
@@ -1071,6 +1081,7 @@ def keyed_arbitrary_package_attack(vin, ecu_serial, target_filepath):
   # TODO: Consider adding other edge case checks (interrupted things, attack
   # already in progress, etc.)
 
+  # Replace the given target with a malicious version.
   add_target_and_write_to_live(
       target_filepath, file_content='evil content',
       vin=vin, ecu_serial=ecu_serial)

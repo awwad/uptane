@@ -966,7 +966,7 @@ def restore_timestamp(vin):
 def prepare_replay_attack_nokeys(vin):
   """
   For exposure via XMLRPC to web frontend, attack script to prepare to execute a
-  rollback attack with no compromised keys against the Director.
+  replay attack with no compromised keys against the Director.
   This attack is described in README.md, section 3.3.
 
   1. Back up the existing, soon-to-be-outdated timestamp file, so that it can
@@ -987,14 +987,14 @@ def prepare_replay_attack_nokeys(vin):
 
 def replay_attack_nokeys(vin):
   """
-  Actually perform the rollback attack.
+  Actually perform the replay attack.
 
   This attack is described in README.md, section 3.3.
 
   prepare_replay_attack_nokeys should be called first, and then the Primary
   should have updated before this is called.
   """
-  rollback_timestamp(vin=vin)
+  replay_timestamp(vin=vin)
 
 
 

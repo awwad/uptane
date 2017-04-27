@@ -448,7 +448,7 @@ def update_cycle():
   image_filepath = os.path.join(client_directory, 'unverified_targets', image_fname)
 
   with open(image_filepath, 'rb') as file_object:
-    if file_object.read() == 'evil content':
+    if file_object.read() == b'evil content':
       # If every safeguard is defeated and a compromised update is delivered, a
       # real Secondary can't necessarily know it has been compromised, as every
       # check has passed. For the purposes of the demo, of course, we know when

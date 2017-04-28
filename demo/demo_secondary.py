@@ -289,9 +289,10 @@ def update_cycle():
   try:
     secondary_ecu.validate_time_attestation(time_attestation)
   except uptane.BadTimeAttestation as e:
-    print("Timeserver attestation from Primary does not check out: "
-        "This Secondary's nonce was not found. Not updating this Secondary's "
-        "time this cycle.")
+    #print("Timeserver attestation from Primary does not check out: "
+    #    "This Secondary's nonce was not found. Not updating this Secondary's "
+    #    "time this cycle.")
+    pass
   except tuf.BadSignatureError as e:
     print(RED + "Timeserver attestation from Primary did not check out. Bad "
         "signature. Not updating this Secondary's time." + ENDCOLORS)
@@ -564,7 +565,7 @@ def register_self_with_director():
     'http://' + str(demo.DIRECTOR_SERVER_HOST) + ':' +
     str(demo.DIRECTOR_SERVER_PORT))
 
-  print('Registering Secondary ECU Serial and Key with Director.')
+  #print('Registering Secondary ECU Serial and Key with Director.')
   server.register_ecu_serial(
       secondary_ecu.ecu_serial,
       uptane.common.public_key_from_canonical(secondary_ecu.ecu_key), _vin,
@@ -585,7 +586,7 @@ def register_self_with_primary():
   server = xmlrpc_client.ServerProxy(
     'http://' + str(_primary_host) + ':' + str(_primary_port))
 
-  print('Registering Secondary ECU Serial and Key with Primary.')
+  #print('Registering Secondary ECU Serial and Key with Primary.')
   server.register_new_secondary(secondary_ecu.ecu_serial)
   print(GREEN + 'Secondary has been registered with the Primary.' + ENDCOLORS)
 

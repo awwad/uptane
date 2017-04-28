@@ -69,14 +69,14 @@ file_handler.setFormatter(logging.Formatter(_FORMAT_STRING, _TIME_STRING))
 
 ## Console logging configuration:
 console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.DEBUG)
+console_handler.setLevel(logging.WARNING)
 console_handler.setFormatter(logging.Formatter(_FORMAT_STRING, _TIME_STRING))
 
 ## Logger instantiation
 logger = logging.getLogger('uptane')
 logger.addHandler(file_handler)
 logger.addHandler(console_handler)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.WARNING)
 
 # Colorful printing for the logger for now.
 RED = '\033[41m\033[30m' # black on red

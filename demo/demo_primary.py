@@ -285,7 +285,7 @@ def update_cycle():
   #if not server.system.listMethods():
   #  raise Exception('Unable to connect to server.')
 
-  print('Submitting a request for a signed time to the Timeserver.')
+  #print('Submitting a request for a signed time to the Timeserver.')
 
 
   if tuf.conf.METADATA_FORMAT == 'der': # TODO: Should check setting in Uptane.
@@ -400,7 +400,7 @@ def submit_vehicle_manifest_to_director(signed_vehicle_manifest=None):
       'http://' + str(demo.DIRECTOR_SERVER_HOST) + ':' +
       str(demo.DIRECTOR_SERVER_PORT))
 
-  print("Submitting the Primary's manifest to the Director.")
+  #print("Submitting the Primary's manifest to the Director.")
 
   server.submit_vehicle_manifest(
       primary_ecu.vin,
@@ -408,7 +408,7 @@ def submit_vehicle_manifest_to_director(signed_vehicle_manifest=None):
       signed_vehicle_manifest)
 
 
-  print(GREEN + 'Submission of Vehicle Manifest complete.' + ENDCOLORS)
+  print('Submission of Vehicle Manifest to Director complete.')
 
 
 
@@ -423,7 +423,7 @@ def register_self_with_director():
     'http://' + str(demo.DIRECTOR_SERVER_HOST) + ':' +
     str(demo.DIRECTOR_SERVER_PORT))
 
-  print('Registering Primary ECU Serial and Key with Director.')
+  #print('Registering Primary ECU Serial and Key with Director.')
   server.register_ecu_serial(
       primary_ecu.ecu_serial, primary_ecu.primary_key, _vin, True)
   print(GREEN + 'Primary has been registered with the Director.' + ENDCOLORS)
@@ -745,7 +745,7 @@ def listen():
     try:
       server = xmlrpc_server.SimpleXMLRPCServer(
           (demo.PRIMARY_SERVER_HOST, port),
-          requestHandler=RequestHandler, allow_none=True)
+          requestHandler=RequestHandler, logRequests=False, allow_none=True)
     except socket.error as e:
       print('Failed to bind Primary XMLRPC Listener to port ' + repr(port) +
           '. Trying next port.')

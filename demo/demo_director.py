@@ -403,6 +403,8 @@ def revoke_compromised_keys():
 
 
 
+
+
 def sign_with_compromised_keys_attack():
   """
   <Purpose>
@@ -428,6 +430,8 @@ def sign_with_compromised_keys_attack():
   """
 
   global director_service_instance
+
+  print('ATTACK: arbitrary metadata, old key, all vehicles')
 
   # Start by backing up the repository before the attack occurs so that we
   # can restore it afterwards in undo_sign_with_compromised_keys_attack.
@@ -486,6 +490,10 @@ def sign_with_compromised_keys_attack():
     os.rename(os.path.join(repo_dir, 'metadata.livetemp'),
         os.path.join(repo_dir, 'metadata'))
 
+  print('COMPLETED ATTACK')
+
+
+
 
 
 def undo_sign_with_compromised_keys_attack():
@@ -539,6 +547,8 @@ def undo_sign_with_compromised_keys_attack():
     repository.targets.load_signing_key(valid_targets_private_key)
     repository.snapshot.load_signing_key(valid_snapshot_private_key)
     repository.timestamp.load_signing_key(valid_timestamp_private_key)
+
+  print('COMPLETED UNDO ATTACK')
 
 
 
@@ -617,7 +627,7 @@ def host():
   global repo_server_process
 
   if repo_server_process is not None:
-    print('Sorry, there is already a server process running.')
+    print('Sorry: there is already a server process running.')
     return
 
   # Prepare to host the director repo contents.
@@ -711,7 +721,7 @@ def listen():
   global director_service_thread
 
   if director_service_thread is not None:
-    print('Sorry - there is already a Director service thread listening.')
+    print('Sorry: there is already a Director service thread listening.')
     return
 
   # Create server
@@ -753,8 +763,35 @@ def listen():
 
   server.register_function(clear_vehicle_targets, 'clear_vehicle_targets')
 
-  server.register_function(mitm_arbitrary_package_attack, 'mitm_arbitrary_package_attack')
-  server.register_function(undo_mitm_arbitrary_package_attack, 'undo_mitm_arbitrary_package_attack')
+  # Attack 1: Arbitrary Package Attack on Director Repository without
+  # Compromised Keys.
+  # README.md section 3.1
+  server.register_function(mitm_arbitrary_package_attack,
+      'mitm_arbitrary_package_attack')
+  server.register_function(undo_mitm_arbitrary_package_attack,
+      'undo_mitm_arbitrary_package_attack')
+
+  # Attack 2: Replay Attack without Compromised Keys
+  # README.md section 3.3
+  server.register_function(prepare_replay_attack_nokeys,
+      'prepare_replay_attack_nokeys')
+  server.register_function(replay_attack_nokeys, 'replay_attack_nokeys')
+  server.register_function(undo_replay_attack_nokeys,
+      'undo_replay_attack_nokeys')
+
+  # Attack 3: Arbitrary Package Attack with a Compromised Director Key
+  # README.md section 3.4. Recovery in section 3.6
+  server.register_function(keyed_arbitrary_package_attack,
+      'keyed_arbitrary_package_attack')
+  server.register_function(undo_keyed_arbitrary_package_attack,
+      'undo_keyed_arbitrary_package_attack')
+
+  # Attack 4: Arbitrary Package with Revoked Keys
+  # (README.md section 3.7)
+  server.register_function(sign_with_compromised_keys_attack,
+      'sign_with_compromised_keys_attack')
+  server.register_function(undo_sign_with_compromised_keys_attack,
+      'undo_sign_with_compromised_keys_attack')
 
   print('Starting Director Services Thread: will now listen on port ' +
       str(demo.DIRECTOR_SERVER_PORT))
@@ -765,10 +802,16 @@ def listen():
 
 
 
+
 def mitm_arbitrary_package_attack(vin, target_filepath):
-  # Simulate an arbitrary package attack by a Man in the Middle, without
-  # compromising any keys.  Move an evil target file into place on the Director
-  # repository without updating metadata.
+  """
+  Simulate an arbitrary package attack by a Man in the Middle, without
+  compromising any keys.  Move an evil target file into place on the Director
+  repository without updating metadata.
+  """
+  print('ATTACK: arbitrary package, no keys, on VIN ' + repr(vin) + ', '
+      'target_filepath ' + repr(target_filepath))
+
   full_target_filepath = os.path.join(demo.DIRECTOR_REPO_DIR, vin,
       'targets', target_filepath)
 
@@ -808,14 +851,21 @@ def mitm_arbitrary_package_attack(vin, target_filepath):
     file_object.write('EVIL UPDATE: ARBITRARY PACKAGE ATTACK TO BE'
         ' DELIVERED FROM MITM (no keys compromised).')
 
+  print('COMPLETED ATTACK')
+
 
 
 
 
 def undo_mitm_arbitrary_package_attack(vin, target_filepath):
-  # Undo the arbitrary package attack launched by
-  # mitm_arbitrary_package_attack().  Move evil target file out and normal
-  # target file back in.
+  """
+  Undo the arbitrary package attack launched by
+  mitm_arbitrary_package_attack().  Move evil target file out and normal
+  target file back in.
+  """
+  print('UNDO ATTACK: arbitrary package, no keys, on VIN ' + repr(vin) + ', '
+      'target_filepath ' + repr(target_filepath))
+
   full_target_filepath = os.path.join(demo.DIRECTOR_REPO_DIR, vin,
       'targets', target_filepath)
 
@@ -847,12 +897,13 @@ def undo_mitm_arbitrary_package_attack(vin, target_filepath):
   elif os.path.exists(image_repo_backup_full_target_filepath):
     os.remove(image_repo_backup_full_target_filepath)
 
+  print('COMPLETED UNDO ATTACK')
 
 
 
 
 """
-Simulating a rollback attack can be done with instructions in README.md,
+Simulating a replay attack can be done with instructions in README.md,
 using the functions below.
 """
 
@@ -879,7 +930,7 @@ def backup_timestamp(vin):
 
 
 
-def rollback_timestamp(vin):
+def replay_timestamp(vin):
   """
   Move 'backup_timestamp.der' to 'timestamp.der', effectively rolling back
   timestamp to a previous version.  'backup_timestamp.der' must already exist
@@ -891,7 +942,7 @@ def rollback_timestamp(vin):
   >>> import demo.demo_director as dd
   >>> dd.clean_slate()
   >>> dd.backup_timestamp('111')
-  >>> dd.rollback_timestamp()
+  >>> dd.replay_timestamp()
   """
 
   timestamp_filename = 'timestamp.' + tuf.conf.METADATA_FORMAT
@@ -899,7 +950,7 @@ def rollback_timestamp(vin):
       'backup_' + timestamp_filename)
 
   if not os.path.exists(backup_timestamp_path):
-    raise Exception('Cannot rollback the Timestamp'
+    raise Exception('Cannot replay the Timestamp'
         ' file.  ' + repr(backup_timestamp_path) + ' must already exist.'
         '  It can be created by calling backup_timestamp(vin).')
 
@@ -926,7 +977,7 @@ def restore_timestamp(vin):
   >>> import demo.demo_director as dd
   >>> dd.clean_slate()
   >>> dd.backup_timestamp('111')
-  >>> dd.rollback_timestamp()
+  >>> dd.replay_timestamp()
   >>> dd.restore_timestamp()
   """
 
@@ -947,7 +998,156 @@ def restore_timestamp(vin):
 
 
 
+def prepare_replay_attack_nokeys(vin):
+  """
+  For exposure via XMLRPC to web frontend, attack script to prepare to execute a
+  replay attack with no compromised keys against the Director.
+  This attack is described in README.md, section 3.3.
+
+  1. Back up the existing, soon-to-be-outdated timestamp file, so that it can
+     be replayed in replay_attack_nokeys().
+  2. Call write_to_live to issue a new timestamp file, so that the backed-up
+     timestamp file is now outdated.
+
+  After this is done, the Primary should update so that it has seen the new
+  version of the timestamp data. Then, replay_attack_nokeys() should be run to
+  actually perform the attack.
+  """
+  print('PREPARE ATTACK: replay attack, no keys, on VIN ' + repr(vin))
+
+  backup_timestamp(vin=vin)
+  write_to_live(vin_to_update=vin)
+
+  print('COMPLETED ATTACK PREPARATION')
+
+
+
+
+def replay_attack_nokeys(vin):
+  """
+  Actually perform the replay attack.
+
+  This attack is described in README.md, section 3.3.
+
+  prepare_replay_attack_nokeys should be called first, and then the Primary
+  should have updated before this is called.
+  """
+  print('ATTACK: replay attack, no keys, on VIN ' + repr(vin))
+
+  replay_timestamp(vin=vin)
+
+  print('COMPLETED ATTACK')
+
+
+
+
+
+def undo_replay_attack_nokeys(vin):
+  """
+  Undo the replay attack, putting the vehicle's Director repository back into
+  a normal state.
+
+  This attack is attack described in README.md, section 3.3.
+  """
+  print('UNDO ATTACK: replay attack, no keys, on VIN ' + repr(vin))
+
+  restore_timestamp(vin=vin)
+
+  print('COMPLETED UNDO ATTACK')
+
+
+
+
+
+def keyed_arbitrary_package_attack(vin, ecu_serial, target_filepath):
+  """
+  Add a new, malicious target to the Director repository for the vehicle,
+  assigning it to the given ECU Serial, and signing malicious metadata with
+  the valid Director timestamp, snapshot, and targets keys.
+
+  This attack is described in README.md, section 3.4.
+  """
+  print('ATTACK: keyed_arbitrary_package_attack with parameters '
+      ': vin ' + repr(vin) + '; ecu_serial ' + repr(ecu_serial) + '; '
+      'target_filepath ' + repr(target_filepath))
+
+
+  # TODO: Back up the image and then restore it in the undo function instead of
+  # hard-coding the contents it's changed back to in the undo function.
+  # That would require that we pick a temp file location.
+
+  # Determine the location the specified file would occupy in the repository.
+  target_full_path = os.path.join(
+      director_service_instance.vehicle_repositories[vin]._repository_directory,
+      'targets', target_filepath)
+
+  # Make sure it exists in the repository, or else abort this attack, which is
+  # written to work on an existing target only.
+  if not os.path.exists(target_full_path):
+    raise uptane.Error('Unable to attack: expected given image filename, ' +
+        repr(target_filepath) + ', to exist, but it does not.')
+
+  # TODO: Check to make sure the given file exists in the repository as well.
+  # We should be attacking a file that's already in the repo.
+  # TODO: Consider adding other edge case checks (interrupted things, attack
+  # already in progress, etc.)
+
+  # Replace the given target with a malicious version.
+  add_target_and_write_to_live(
+      target_filepath, file_content='evil content',
+      vin=vin, ecu_serial=ecu_serial)
+
+  print('COMPLETED ATTACK')
+
+
+
+
+
+def undo_keyed_arbitrary_package_attack(vin, ecu_serial, target_filepath):
+  """
+  Recover from keyed_arbitrary_package_attack.
+
+  1. Revoke existing timestamp, snapshot, and targets keys, and issue new
+     keys to replace them. This uses the root key for the Director, which
+     should be an offline key.
+  2. Replace the malicious target the attacker added with a clean version of
+     the target, as it was before the attack.
+
+  This attack recovery is described in README.md, section 3.6.
+  """
+
+  print('UNDO ATTACK: keyed arbitrary package attack with parameters '
+      ': vin ' + repr(vin) + '; ecu_serial ' + repr(ecu_serial) + '; '
+      'target_filepath ' + repr(target_filepath))
+
+  # Revoke potentially compromised keys, replacing them with new keys.
+  revoke_compromised_keys()
+
+  # Replace malicious target with original.
+  add_target_and_write_to_live(filename=target_filepath,
+      file_content='Fresh firmware image', vin=vin, ecu_serial=ecu_serial)
+
+  print('COMPLETED UNDO ATTACK')
+
+
+
+
+
 def clear_vehicle_targets(vin):
+  """
+  Remove all instructions to the given vehicle from the current Director
+  metadata.
+
+  This does not execute write_to_live. After changes are complete, you should
+  call that to write new metadata.
+
+  This can be called to clear an existing instruction for an ECU so that a new
+  instruction for different firmware can be given to that ECU.
+
+  TODO: In the future, adding a target assignment to the Director for a given
+  ECU should replace any other target assignment for that ECU.
+  """
+  print('CLEARING VEHICLE TARGETS for VIN ' + repr(vin))
   director_service_instance.vehicle_repositories[vin].targets.clear_targets()
 
 
@@ -978,6 +1178,13 @@ def add_target_and_write_to_live(filename, file_content, vin, ecu_serial):
 
 
 def kill_server():
+  """
+  Kills the forked process that is hosting the Director repositories via
+  Python's simple HTTP server. This does not affect the Director service
+  (which handles manifests and responds to requests from Primaries), nor does
+  it affect the metadata in the repositories or the state of the repositories
+  at all. host() can be run afterwards to begin hosting again.
+  """
 
   global repo_server_process
 

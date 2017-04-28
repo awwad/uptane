@@ -186,7 +186,7 @@ def host():
   global server_process
 
   if server_process is not None:
-    print('Sorry, there is already a server process running.')
+    print('Sorry: there is already a server process running.')
     return
 
   # Prepare to host the main repo contents
@@ -251,7 +251,7 @@ def listen():
   global xmlrpc_service_thread
 
   if xmlrpc_service_thread is not None:
-    print('Sorry - there is already a Director service thread listening.')
+    print('Sorry: there is already a listening Image Repository service thread')
     return
 
   # Create server
@@ -262,11 +262,28 @@ def listen():
   # Register functions that can be called via XML-RPC, allowing users to add
   # target files to the image repository or to simulate attacks from a web
   # frontend.
-  server.register_function(add_target_to_imagerepo, 'add_target_to_supplier_repo')
+  server.register_function(add_target_to_imagerepo,
+      'add_target_to_supplier_repo')
   server.register_function(write_to_live, 'write_supplier_repo')
-  server.register_function(mitm_arbitrary_package_attack, 'mitm_arbitrary_package_attack')
+
+  # Attack 1: Arbitrary Package Attack on Image Repository without
+  # Compromised Keys.
+  # README.md section 3.2
+  server.register_function(mitm_arbitrary_package_attack,
+      'mitm_arbitrary_package_attack')
   server.register_function(undo_mitm_arbitrary_package_attack,
       'undo_mitm_arbitrary_package_attack')
+
+  # Attack 2: Replay Attack without Compromised Keys
+  # We don't bother performing the replay attack against the Image Repo;
+  # demonstration on the Director Repo is enough.
+
+  # Attack 3: Arbitrary Package Attack with Compromised Image Repository Keys
+  # README.md section 3.5. Recovery in section 3.6
+  server.register_function(keyed_arbitrary_package_attack,
+      'keyed_arbitrary_package_attack')
+  server.register_function(undo_keyed_arbitrary_package_attack,
+      'undo_keyed_arbitrary_package_attack')
 
   print('Starting Supplier Repo Services Thread: will now listen on port ' +
       str(demo.MAIN_REPO_SERVICE_PORT))
@@ -281,6 +298,9 @@ def mitm_arbitrary_package_attack(target_filepath):
   # Simulate an arbitrary package attack by a Man in the Middle, without
   # compromising keys.  Move evil target file into place on the image
   # repository, without updating metadata.
+  print('ATTACK: arbitrary package, no keys, on target ' +
+      repr(target_filepath))
+
   full_target_filepath = os.path.join(demo.MAIN_REPO_TARGETS_DIR, target_filepath)
 
   # TODO: NOTE THAT THIS ATTACK SCRIPT BREAKS IF THE TARGET FILE IS IN A
@@ -322,9 +342,17 @@ def mitm_arbitrary_package_attack(target_filepath):
 
 
 
+
+
 def undo_mitm_arbitrary_package_attack(target_filepath):
-  # Undo the arbitrary package attack simulated by mitm_arbitrary_package_attack().
-  # Move the evil target file out and normal target file back in.
+  """
+  Undo the arbitrary package attack simulated by
+  mitm_arbitrary_package_attack().
+  Move the evil target file out and normal target file back in.
+  """
+  print('UNDO ATTACK: arbitrary package, no keys, on target ' +
+      repr(target_filepath))
+
   full_target_filepath = os.path.join(demo.MAIN_REPO_TARGETS_DIR, target_filepath)
 
   # TODO: NOTE THAT THIS ATTACK SCRIPT BREAKS IF THE TARGET FILE IS IN A
@@ -340,6 +368,76 @@ def undo_mitm_arbitrary_package_attack(target_filepath):
   # In the case of the Director repo, we expect there to be a file replaced,
   # so we restore the backup over it.
   os.rename(backup_target_filepath, full_target_filepath)
+
+  print('COMPLETED UNDO ATTACK')
+
+
+
+
+
+def keyed_arbitrary_package_attack(target_filepath):
+  """
+  Add a new, malicious target to the Image Repository and sign malicious
+  metadata with the valid Image Repository timestamp, snapshot, and targets
+  keys.
+
+  This attack is described in README.md, section 3.5.
+  """
+  print('ATTACK: keyed_arbitrary_package_attack on target_filepath ' +
+      repr(target_filepath))
+
+
+  # TODO: Back up the image and then restore it in the undo function instead of
+  # hard-coding the contents it's changed back to in the undo function.
+  # That would require that we pick a temp file location.
+
+  # Determine the location the specified file would occupy in the repository.
+  target_full_path = os.path.join(
+      repo._repository_directory, 'targets', target_filepath)
+
+  # Make sure it exists in the repository, or else abort this attack, which is
+  # written to work on an existing target only.
+  if not os.path.exists(target_full_path):
+    raise uptane.Error('Unable to attack: expected given image filename, ' +
+        repr(target_filepath) + ', to exist, but it does not.')
+
+  # TODO: Check to make sure the given file exists in the repository as well.
+  # We should be attacking a file that's already in the repo.
+  # TODO: Consider adding other edge case checks (interrupted things, attack
+  # already in progress, etc.)
+
+  # Replace the given target with a malicious version.
+  add_target_and_write_to_live(target_filepath, file_content='evil content')
+
+  print('COMPLETED ATTACK')
+
+
+
+
+
+def undo_keyed_arbitrary_package_attack(target_filepath):
+  """
+  Recover from keyed_arbitrary_package_attack.
+
+  1. Revoke existing timestamp, snapshot, and targets keys, and issue new
+     keys to replace them. This uses the root key for the Image Repository,
+     which should be an offline key.
+  2. Replace the malicious target the attacker added with a clean version of
+     the target, as it was before the attack.
+
+  This attack recovery is described in README.md, section 3.6.
+  """
+  print('UNDO ATTACK: keyed arbitrary package attack on target_filepath ' +
+      repr(target_filepath))
+
+  # Revoke potentially compromised keys, replacing them with new keys.
+  revoke_compromised_keys()
+
+  # Replace malicious target with original.
+  add_target_and_write_to_live(filename=target_filepath,
+      file_content='Fresh firmware image')
+
+  print('COMPLETED UNDO ATTACK')
 
 
 
@@ -446,6 +544,11 @@ def revoke_compromised_keys():
 
 
 def kill_server():
+  """
+  Kills the forked process that is hosting the Image Repository via
+  Python's simple HTTP server. This does not affect anything in the repository
+  at all. host() can be run afterwards to begin hosting again.
+  """
   global server_process
   if server_process is None:
     print('No server to stop.')

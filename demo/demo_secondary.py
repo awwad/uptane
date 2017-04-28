@@ -385,7 +385,8 @@ def update_cycle():
     # the name of a validated target for this ECU, otherwise we don't need it.
     print(RED + 'Requested and received image from Primary, but this '
         'Secondary has not validated any target info that matches the given ' +
-        'filename. Aborting "install".' + ENDCOLORS)
+        'filename. Expected: ' + repr(expected_image_fname) + '; received: ' +
+        repr(image_fname) + '; aborting "install".' + ENDCOLORS)
     # print_banner(
     #     BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG,
     #     text='Image from Primary is not listed in trusted metadata. Possible '

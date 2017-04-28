@@ -299,7 +299,7 @@ def mitm_arbitrary_package_attack(target_filepath):
   # Simulate an arbitrary package attack by a Man in the Middle, without
   # compromising keys.  Move evil target file into place on the image
   # repository, without updating metadata.
-  print('UNDO ATTACK: arbitrary package, no keys, on target ' +
+  print('ATTACK: arbitrary package, no keys, on target ' +
       repr(target_filepath))
 
   full_target_filepath = os.path.join(demo.MAIN_REPO_TARGETS_DIR, target_filepath)

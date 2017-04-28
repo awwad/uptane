@@ -268,9 +268,6 @@ def update_cycle():
   """
   """
 
-  global primary_ecu
-
-
   #
   # FIRST: TIME
   #
@@ -364,7 +361,6 @@ def update_cycle():
 
 def generate_signed_vehicle_manifest():
 
-  global primary_ecu
   global most_recent_signed_vehicle_manifest
 
   # Generate and sign a manifest indicating that this ECU has a particular

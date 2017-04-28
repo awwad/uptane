@@ -138,8 +138,6 @@ def clean_slate(use_new_keys=False):
 
 def write_to_live():
 
-  global repo
-
   # Write the metadata files out to the Image Repository's 'metadata.staged'
   repo.mark_dirty(['timestamp', 'snapshot'])
   repo.write() # will be writeall() in most recent TUF branch
@@ -171,8 +169,6 @@ def add_target_to_imagerepo(target_fname, filepath_in_repo):
       subdirectory of the repository directory.  This doesn't employ
       delegations, which would have to be done manually.
   """
-  global repo
-
   tuf.formats.RELPATH_SCHEMA.check_match(target_fname)
 
 
@@ -490,8 +486,6 @@ def revoke_compromised_keys():
   <Returns>
     None.
   """
-
-  global repo
 
   # Grab the old public keys.
   old_targets_public_key = demo.import_public_key('maintargets')

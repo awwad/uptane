@@ -53,7 +53,6 @@ _ecu_serial = '22222'
 _primary_host = demo.PRIMARY_SERVER_HOST
 _primary_port = demo.PRIMARY_SERVER_DEFAULT_PORT
 firmware_filename = 'secondary_firmware.txt'
-current_firmware_fileinfo = {}
 secondary_ecu = None
 ecu_key = None
 nonce = None
@@ -79,7 +78,6 @@ def clean_slate(
   global _primary_port
   global nonce
   global client_directory
-  global attacks_detected
 
   _vin = vin
   _ecu_serial = ecu_serial
@@ -269,8 +267,6 @@ def update_cycle():
   tuf and uptane errors if metadata or the image don't validate.
   """
 
-  global secondary_ecu
-  global current_firmware_fileinfo
   global attacks_detected
 
   # Connect to the Primary
@@ -504,7 +500,6 @@ def update_cycle():
 
 def generate_signed_ecu_manifest():
 
-  global secondary_ecu
   global most_recent_signed_ecu_manifest
   global attacks_detected
 

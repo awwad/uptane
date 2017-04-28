@@ -120,6 +120,17 @@ def clean_slate(use_new_keys=False):
   # repo.targets('role1').load_signing_key(key_role1_pri)
 
 
+  # Add some starting image files, primarily for use with the web frontend.
+  add_target_to_imagerepo('demo/images/INFO1.0.txt', 'INFO1.0.txt')
+  add_target_to_imagerepo('demo/images/BCU1.0.txt', 'BCU1.0.txt')
+  add_target_to_imagerepo('demo/images/BCU1.1.txt', 'BCU1.1.txt')
+  add_target_to_imagerepo('demo/images/TCU1.0.txt', 'TCU1.0.txt')
+  add_target_to_imagerepo('demo/images/TCU1.1.txt', 'TCU1.1.txt')
+  add_target_to_imagerepo('demo/images/TCU1.2.txt', 'TCU1.2.txt')
+  add_target_to_imagerepo('demo/images/BCU1.1.txt', 'BCU1.1.txt')
+  add_target_to_imagerepo('demo/images/BCU1.2.txt', 'BCU1.2.txt')
+
+
   write_to_live()
 
   host()

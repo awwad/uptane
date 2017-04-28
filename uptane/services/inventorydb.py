@@ -384,8 +384,6 @@ def _check_registration_is_sane(vin):
   # # in between, or there is a bug.
   # if vin in vehicle_manifests != vin in ecus_by_vin or vin in ecus_by_vin != \
   #     vin in primary_ecus_by_vin:
-  #   import pdb
-  #   pdb.set_trace()
 
   assert (vin in vehicle_manifests) == (vin in ecus_by_vin) == (
       vin in primary_ecus_by_vin), 'Programming error.'

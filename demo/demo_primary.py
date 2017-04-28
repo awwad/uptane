@@ -209,8 +209,7 @@ def create_primary_pinning_file():
   Returns the filename of the created file.
   """
 
-  pinnings = json.load(
-      open(demo.DEMO_PRIMARY_PINNING_FNAME, 'r', encoding='utf-8'))
+  pinnings = json.load(open(demo.DEMO_PRIMARY_PINNING_FNAME, 'r'))
 
   fname_to_create = os.path.join(
       demo.DEMO_DIR, 'pinned.json_primary_' + demo.get_random_string(5))
@@ -438,78 +437,6 @@ def register_self_with_director():
 #   For each of the Secondaries that this Primary is in charge of, send the
 #   Director a message registering that Secondary's ECU Serial and public key.
 #   """
-
-
-
-
-# def ATTACK_send_corrupt_manifest_to_director():
-#   """
-#   Attack: MITM w/o key modifies ECU manifest.
-#   Modify the ECU manifest without updating the signature.
-#   """
-#   # Copy the most recent signed ecu manifest.
-#   corrupt_signed_manifest = {k:v for (k,v) in most_recent_signed_ecu_manifest.items()}
-
-#   corrupt_signed_manifest['signed']['attacks_detected'] += 'Everything is great, I PROMISE!'
-#   #corrupt_signed_manifest['signed']['ecu_serial'] = 'ecu22222'
-
-#   print(YELLOW + 'ATTACK: Corrupted Manifest (bad signature):' + ENDCOLORS)
-#   print('   Modified the signed manifest as a MITM, simply changing a value:')
-#   print('   The attacks_detected field now reads ' + RED + '"Everything is great, I PROMISE!' + ENDCOLORS)
-
-#   #import xmlrpc_client # for xmlrpc_client.Fault
-
-#   try:
-#     primary_ecu.submit_ecu_manifest_to_director(corrupt_signed_manifest)
-#   except xmlrpc_client.Fault:
-#     print(GREEN + 'Director service REJECTED the fraudulent ECU manifest.' + ENDCOLORS)
-#   else:
-#     print(RED + 'Director service ACCEPTED the fraudulent ECU manifest!' + ENDCOLORS)
-#   # (The Director, in its window, should now indicate that it has received this
-#   # manifest. If signature checking for manifests is on, then the manifest is
-#   # rejected. Otherwise, it is simply accepted.)
-
-
-
-
-# def ATTACK_send_manifest_with_wrong_sig_to_director():
-#   """
-#   Attack: MITM w/o key modifies ECU manifest and signs with a different ECU's
-#   key.
-#   """
-#   # Discard the signatures and copy the signed contents of the most recent
-#   # signed ecu manifest.
-#   corrupt_manifest = {k:v for (k,v) in most_recent_signed_ecu_manifest['signed'].items()}
-
-#   corrupt_manifest['attacks_detected'] += 'Everything is great; PLEASE BELIEVE ME THIS TIME!'
-
-#   signable_corrupt_manifest = tuf.formats.make_signable(corrupt_manifest)
-#   uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
-#       signable_corrupt_manifest)
-
-#   # Attacker loads a key she may have (perhaps some other ECU's key)
-#   key2_pub = demo.import_public_key('secondary2')
-#   key2_pri = demo.import_private_key('secondary2')
-#   ecu2_key = uptane.common.canonical_key_from_pub_and_pri(key2_pub, key2_pri)
-#   keys = [ecu2_key]
-
-#   # Attacker signs the modified manifest with that other key.
-#   signed_corrupt_manifest = uptane.common.sign_signable(
-#       signable_corrupt_manifest, keys)
-#   uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
-#       signed_corrupt_manifest)
-
-#   #import xmlrpc_client # for xmlrpc_client.Fault
-
-#   try:
-#     primary_ecu.submit_ecu_manifest_to_director(signed_corrupt_manifest)
-#   except xmlrpc_client.Fault as e:
-#     print('Director service REJECTED the fraudulent ECU manifest.')
-#   else:
-#     print('Director service ACCEPTED the fraudulent ECU manifest!')
-#   # (The Director, in its window, should now indicate that it has received this
-#   # manifest. If signature checking for manifests is on, then the manifest is
-#   # rejected. Otherwise, it is simply accepted.)
 
 
 

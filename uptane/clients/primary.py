@@ -10,24 +10,27 @@
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import uptane.formats
+import os # For paths and makedirs
+import shutil # For copyfile
+import random # for nonces
+import zipfile
+import hashlib # if we're using DER encoding
+
 import tuf.formats
 import tuf.conf
-from uptane.common import sign_signable
-from demo.uptane_banners import *
+import tuf.keys
+import tuf.client.updater
+import tuf.repository_tool as rt
+
+import uptane.formats
+import uptane.common
 import uptane.services.director as director
 import uptane.services.timeserver as timeserver
 import uptane.encoding.asn1_codec as asn1_codec
 
-import os # For paths and makedirs
-import shutil # For copyfile
-import tuf.client.updater
-import tuf.repository_tool as rt
-import tuf.keys
-import random # for nonces
+from demo.uptane_banners import *
 from uptane import GREEN, RED, YELLOW, ENDCOLORS
-import zipfile
-import hashlib # if we're using DER encoding
+
 
 log = uptane.logging.getLogger('primary')
 log.addHandler(uptane.file_handler)

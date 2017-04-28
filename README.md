@@ -423,13 +423,20 @@ us to download a file that does  does not exactly match the Image Repository met
 
 
 ### 3.5: Compromise Both Repositories Simultaneously to Serve Arbitrary Package
-So the director repository now provides malicious firmware that has been signed by a compromised key.
-What happens if the image repository is also compromised?
+In 3.4, the Director repository has been compromised, but the malicious
+metadata and firmware it distributes is rejected. Compromising the Director is
+not enough to allow arbitrary package attacks against ECUs in the vehicle.
+The Director can only instruct clients to install images validated by the Image
+Repository.
+
+But what happens if, at the same time, the attacker is able to sign with an
+image-signing key for the Image Repository?
 ```python
 >>> di.add_target_and_write_to_live(filename='firmware.img', file_content='evil content')
 ```
 
-Finally, the primary and secondary are updated.
+Now, when the the Primary and Secondary update, the malicious package will
+successfully be installed!
 
 On the **primary** client:
 ```python
@@ -452,10 +459,14 @@ client in the demo code prints a banner indicating that the *firmware.img* image
 installed: A malicious update has been installed! Arbitrary package attack successful:
 this Secondary has been compromised! Image: 'new_firmware.img'
 
-To improve resilience against repository compromises, multiple keys should be used to sign for
-images.  If a repository needs to be recovered after a compromise, maintainers would have
-to restore the repositories to the last known good state, and revoke the keys that have been
-compromised.
+##### A note on the difficulty of this attack
+To improve resilience against repository compromises, the
+[Deployment Considerations document](https://docs.google.com/document/d/17wOs-T7mugwte5_Dt-KLGMsp-3_yAARejpFmrAMefSE)
+provides many recommendations. In particular, the
+[key placement recommendations](https://docs.google.com/document/d/17wOs-T7mugwte5_Dt-KLGMsp-3_yAARejpFmrAMefSE/view#heading=h.k5rokxr32wv6)
+indicate that Targets keys for the Image Repository are best kept offline; it
+should not be easy to compromise this top-level Image Repository Targets key
+and use it to sign malicious images.
 
 
 
@@ -492,7 +503,7 @@ revoke the potentially compromised Timestamp, Snapshot, and Targets keys from
 both repositories. This is the first time they have needed to be used since the
 repositories' creation at the beginning of this demo. Root keys should be
 kept offline, as discussed in
-the [Uptane Deployment Considerations document](https://docs.google.com/document/d/17wOs-T7mugwte5_Dt-KLGMsp-3_yAARejpFmrAMefSE/edit?usp=sharing)).
+the [Uptane Deployment Considerations document](https://docs.google.com/document/d/17wOs-T7mugwte5_Dt-KLGMsp-3_yAARejpFmrAMefSE/edit?usp=sharing).
 
 Any client that receives the new metadata will be able to validate the root key
 and will cease trusting the revoked keys.

@@ -706,7 +706,6 @@ def listen():
   server = xmlrpc_server.SimpleXMLRPCServer(
       (demo.DIRECTOR_SERVER_HOST, demo.DIRECTOR_SERVER_PORT),
       requestHandler=RequestHandler, allow_none=True)
-  #server.register_introspection_functions()
 
   # Register function that can be called via XML-RPC, allowing a Primary to
   # submit a vehicle version manifest.

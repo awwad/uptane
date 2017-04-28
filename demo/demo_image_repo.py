@@ -258,7 +258,6 @@ def listen():
   server = xmlrpc_server.SimpleXMLRPCServer(
       (demo.MAIN_REPO_SERVICE_HOST, demo.MAIN_REPO_SERVICE_PORT),
       requestHandler=RequestHandler, allow_none=True)
-  #server.register_introspection_functions()
 
   # Register functions that can be called via XML-RPC, allowing users to add
   # target files to the image repository or to simulate attacks from a web

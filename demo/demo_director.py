@@ -61,7 +61,7 @@ from six.moves import xmlrpc_server # for the director services interface
 
 import atexit # to kill server process on exit()
 
-KNOWN_VINS = ['111', '112', '113']
+KNOWN_VINS = ['111', '112', '113', 'democar']
 
 # Dynamic global objects
 #repo = None

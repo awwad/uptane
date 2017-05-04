@@ -12,11 +12,10 @@ import random, string # To generate random strings for Secondary directory names
 
 from six.moves import range
 
-
 # Values to plug in below as needed.
 LOCAL = 'localhost'
 REMOTE = 'repo.uptane.org'
-
+HOSTING = '0.0.0.0'
 
 METADATA_EXTENSION = '.' + tuf.conf.METADATA_FORMAT
 
@@ -27,7 +26,7 @@ DEMO_PINNING_FNAME = os.path.join(DEMO_DIR, 'pinned.json')
 DEMO_SECONDARY_PINNING_FNAME = os.path.join(DEMO_DIR, 'pinned_secondary_template.json')
 DEMO_PRIMARY_PINNING_FNAME = os.path.join(DEMO_DIR, 'pinned_primary_template.json')
 
-MAIN_REPO_HOST = LOCAL
+MAIN_REPO_HOST = HOSTING
 MAIN_REPO_PORT = 30301
 MAIN_REPO_NAME = 'mainrepo'
 MAIN_REPO_DIR = os.path.join(uptane.WORKING_DIR, MAIN_REPO_NAME)
@@ -35,23 +34,23 @@ MAIN_REPO_TARGETS_DIR = os.path.join(MAIN_REPO_DIR, 'targets')
 MAIN_REPO_ROOT_FNAME = os.path.join(
     MAIN_REPO_DIR, 'metadata', 'root' + METADATA_EXTENSION)
 
-DIRECTOR_REPO_HOST = LOCAL
+DIRECTOR_REPO_HOST = HOSTING
 DIRECTOR_REPO_PORT = 30401
 DIRECTOR_REPO_NAME = 'director'
 DIRECTOR_REPO_DIR = os.path.join(uptane.WORKING_DIR, DIRECTOR_REPO_NAME)
 
-DIRECTOR_SERVER_HOST = LOCAL
+DIRECTOR_SERVER_HOST = HOSTING
 DIRECTOR_SERVER_PORT = 30501
 
 # These two are are being added solely to provide an interface to the demo web
 # frontend.
-MAIN_REPO_SERVICE_HOST = LOCAL
+MAIN_REPO_SERVICE_HOST = HOSTING
 MAIN_REPO_SERVICE_PORT = 30309
 
-TIMESERVER_HOST = LOCAL
+TIMESERVER_HOST = HOSTING
 TIMESERVER_PORT = 30601
 
-PRIMARY_SERVER_HOST = LOCAL
+PRIMARY_SERVER_HOST = HOSTING
 PRIMARY_SERVER_DEFAULT_PORT = 30701
 PRIMARY_SERVER_AVAILABLE_PORTS = [
     30701, 30702, 30703, 30704, 30705, 30706, 30707, 30708, 30709, 30710, 30711]

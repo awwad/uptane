@@ -10,16 +10,10 @@
   metadata.
 
   Use:
-import demo.demo_director as dd
-dd.clean_slate()
+    import demo.demo_director as dd
+    dd.clean_slate()
 
-  Cleanup: (Note that this kills the metadata http hosting process, but does
-            not stop the XMLRPC-serving thread.)
-demo_director.kill_server()
-
-  Various attacks / manipulations can be performed before the server is killed.
-  Some of these are discussed in uptane_test_instructions.py.
-
+  See README.md for more details.
 
 <Demo Interfaces Provided Via XMLRPC>
 
@@ -35,9 +29,7 @@ demo_director.kill_server()
     get_last_ecu_manifest(ecu_serial)
     register_ecu_serial(ecu_serial, ecu_key, vin, is_primary=False)
 
-
 """
-
 from __future__ import print_function
 from __future__ import unicode_literals
 

@@ -455,8 +455,8 @@ def create_directory_structure_for_client(
       file for that repository to start with as the root of trust for that
       repository.
       e.g.
-        {'supplier': 'distributed_roots/mainrepo_root.json',
-         'director': 'distributed_roots/director_root.json'}
+        {'ImageRepo': 'distributed_roots/imagerepo_root.json',
+         'Director': 'distributed_roots/director_root.json'}
       Each repository listed in the pinning.json file should have a
       corresponding entry in this dict.
 

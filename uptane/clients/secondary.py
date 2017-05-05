@@ -44,7 +44,7 @@ class Secondary(object):
 
     self.updater:
       A tuf.client.updater.Updater object used to retrieve metadata and
-      target files from the Director and Supplier repositories.
+      target files from the Director and Image repositories.
 
     self.full_client_dir:
       The full path of the directory where all client data is stored for this
@@ -337,10 +337,10 @@ class Secondary(object):
         ECU for which it is intended, this ECU.
 
     Further, target info is saved for target A in
-    self.validated_targets_for_this_ecu if Director and Supplier repositories
+    self.validated_targets_for_this_ecu if Director and Image repositories
     indicate the same file info for targets A.
 
-    If, target info would not be saved for target A if Director and Supplier
+    If, target info would not be saved for target A if Director and Image
     repositories indicate different file info for target A.
 
     """

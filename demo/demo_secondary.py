@@ -409,7 +409,7 @@ def update_cycle():
   # Validate the image against the metadata.
   try:
     secondary_ecu.validate_image(image_fname)
-  except uptane.DownloadLengthMismatchError:
+  except tuf.DownloadLengthMismatchError:
     print_banner(
         BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG,
         text='Image from Primary failed to validate: length mismatch. Image: ' +

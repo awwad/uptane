@@ -6,13 +6,10 @@ Note that code for the demo web frontend is in another repository,
 
 ## Starting the Web Frontend
 The other services and the web frontend need to be in sync. I will provide
-instructions here as if none of them are running, but the important point is
-that if the Director Repo or Image Repo are restarted, you'll need to perform
-step 4 if the Director Repo is restarted, and steps 4 and 5 if the Image Repo
-is restarted. (More detailed conditionals can be written out, but in short:
-if services restart, start this list over.)
-1. Start director repo, image repo, and timeserver via console (Windows 1-3), as normal per the demo instructions in the Uptane readme.
-2. Start the web frontend: python3 web2py.py -a 'admin-password' -c server.crt -k server.key -i 127.0.0.1 -p 8000
+instructions here as if none of them are running.
+1. Start Director Repo, Image Repo, and Timeserver via console (Windows 1-3), as normal per the demo instructions in the [Uptane readme](../blob/develop/README.md).
+2. Start the web frontend:
+    `python3 web2py.py -a 'admin-password' -c server.crt -k server.key -i 127.0.0.1 -p 8000`
     - Note that this needs to be somewhere where Uptane is installed. For example, if Uptane is installed in a virtual environment, then source that virtual environment before running this command.
 3. Open the web frontend in a browser, in two instances, one in private browsing (Or you can use two different browsers.), so that you can log in as two separate users simultaneously:
     - https://localhost:8000/UPTANE/default/index
@@ -23,6 +20,10 @@ if services restart, start this list over.)
     - In my case, I can run these two commands:
     `/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --ignore-certificate-errors --app=https://localhost:8000/UPTANE/default/index/ --incognito`
     `/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --ignore-certificate-errors --app=https://localhost:8000/UPTANE/default/index/`
+
+**The following steps 4-6 are no longer necessary**, because the Director and Image
+Repo now start with these settings. If the values in the web frontend's database
+do not match these, however, follow these steps to correct them:
 4. In the web frontend for the Director Repository (Window 7):
     - Delete any existing rows (vehicles)
 5. In the web frontend for the Image Repository (Window 6):

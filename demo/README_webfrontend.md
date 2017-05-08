@@ -1,7 +1,7 @@
 # Demo Web Frontend Instructions
 
 Note that code for the demo web frontend is in another repository,
-uptane_web_app, on git.uptane.org, which is not yet shared.
+[uptane_web_app](https://github.com/uptane/uptane_web_app]).
 
 
 ## Starting the Web Frontend

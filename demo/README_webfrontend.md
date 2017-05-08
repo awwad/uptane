@@ -20,6 +20,9 @@ if services restart, start this list over.)
         - user: supplier1 / password: supplier1pass
     - Window 7: Login 2, accessing the Director Repository:
         - user: oem1 / password: oem1pass
+    - In my case, I can run these two commands:
+    `/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --ignore-certificate-errors --app=https://localhost:8000/UPTANE/default/index/ --incognito`
+    `/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --ignore-certificate-errors --app=https://localhost:8000/UPTANE/default/index/`
 4. In the web frontend for the Director Repository (Window 7):
     - Delete any existing rows (vehicles)
 5. In the web frontend for the Image Repository (Window 6):

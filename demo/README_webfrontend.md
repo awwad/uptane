@@ -26,11 +26,12 @@ if services restart, start this list over.)
     - (Make sure to have done the previous step first.)
     - Delete any existing rows (images)
     - Upload new images by filling in ECU Type, Update Version, and Update Image. The order of these doesn't matter. The filenames should match. Where the files are found doesn't matter, and neither do the contents really, but these files are included in uptane_web_app/applications/UPTANE/test_uploads/
-        - INFO / 1.0 / INFO-1.0.png
-        - BCU / 1.1 / BCU1.1.jpg
-        - TCU / 1.0 / TCU-1.0.jpg
-        - TCU / 1.1 / TCU-1.1.jpg
-        - TCU / 1.2 / TCU-1.2.jpg
+        - INFO / 1.0 / INFO1.0.txt
+        - BCU / 1.1 / BCU1.1.txt
+        - BCU / 1.2 / BCU1.2.txt
+        - TCU / 1.0 / TCU1.0.txt
+        - TCU / 1.1 / TCU1.1.txt
+        - TCU / 1.2 / TCU1.2.txt
 6. In the web frontend for the Director Repository:
     - Click Add Record and fill this in:
         - VIN: democar

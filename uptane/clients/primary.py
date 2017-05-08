@@ -460,6 +460,10 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
         # The following is code intended for a demonstration, inserted here
         # into the reference implementation as a temporary measure.
+        # This should be replaced with code that passes back a status code for
+        # each secondary after the completion of this function. Alternatively,
+        # we could restructure this into one call per Secondary.
+        # TODO: Remove this!
         print_banner(BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG,
             text='The Director has instructed us to download a file that does '
             ' does not exactly match the Image Repository metadata. '

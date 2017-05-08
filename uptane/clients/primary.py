@@ -395,8 +395,8 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     Package up the validated metadata into a zip archive for distribution.
     (Normally, we wouldn't want to include such details as packaging in the
     reference implementation, but in this case, it is the most convenient way
-    to maintain the existing interfaces with TUF and with demonstration code.)
-
+    to maintain the existing interfaces with TUF and with demonstration code.
+    Take it simply as an example.)
 
     <Exceptions>
       uptane.Error
@@ -429,7 +429,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     # This next block employs get_validated_target_info calls to determine what
     # the right fileinfo (hash, length, etc) for each target file is. This
     # begins by matching paths/patterns in pinned.json to determine which
-    # repository to connect to. Since pinned.json will generally assigns all
+    # repository to connect to. Since pinned.json will generally assign all
     # targets to a multi-repository delegation requiring consensus between the
     # two repositories, one for the Director and one for the OEM's main
     # repository, this call will retrieve metadata from both repositories and
@@ -443,9 +443,6 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     for targetinfo in directed_targets:
       target_filepath = targetinfo['filepath']
       try:
-        # targetinfos = self.get_validated_target_info(target_filepath)
-        # for repo in targetinfos:
-        #   tuf.formats.TARGETFILE_SCHEMA.check_match(targetinfos[repo])
         verified_targets.append(self.get_validated_target_info(target_filepath))
 
       except tuf.UnknownTargetError:
@@ -472,17 +469,10 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
         time.sleep(3)
         # End demo code.
 
-    # Have instead decided to have get_validated_target_info() call above return
-    # only one fileinfo, that from the Director (after validating it fully as
-    # configured in pinned.json, i.e. with the OEM Repo or whatever else is
-    # specified there, of course). Thus, we don't need to deal with a dict of
-    # fileinfos here.
-    # # Grab a filepath from each of the dicts of target file infos. (Each dict
-    # # corresponds to one file, and the filepaths in all the infos in that dict
-    # # will be the same - only the 'custom' field can differ within a given
-    # # dict).
-    # verified_target_filepaths = \
-    #     [next(six.itervalues(targ))['filepath'] for targ in verified_targets]
+    # get_validated_target_info() above returns only the Director's fileinfo,
+    # and only after validating it fully as configured in pinned.json (i.e.
+    # with the Image Repo or whatever other repository/ies specified in
+    # pinned.json).
     verified_target_filepaths = [targ['filepath'] for targ in verified_targets]
 
 
@@ -495,17 +485,6 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
     # For each target for which we have verified metadata:
     for target in verified_targets:
-
-      # No longer need this.
-      # # We work with the fileinfo from the Director repository, since the
-      # # fileinfos returned are guaranteed to be identical in all regards except
-      # # for the custom field, and the only custom field we care about is from
-      # # the Director. Grab that targetfile info.
-      # # TODO: Clean up this assertion so that an appropriate error is raised.
-      # assert self.director_repo_name in target_dict, \
-      #     'Programming error: expected target info from repository: ' + \
-      #     self.director_repo_name
-      # target = target_dict[self.director_repo_name]
 
       tuf.formats.TARGETFILE_SCHEMA.check_match(target) # redundant, defensive
 
@@ -580,13 +559,8 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
         time.sleep(3)
 
 
-        # # If this was our firmware, notify that we're not installing.
-        # if filepath.startswith('/') and filepath[1:] == firmware_filename or \
-        #   not filepath.startswith('/') and filepath == firmware_filename:
-
-        print()
-        print(YELLOW + ' While the Director and OEM provided consistent metadata'
-            ' for new firmware,')
+        print(YELLOW + ' While the Director and Image Repository provided '
+            'consistent metadata for new firmware,')
         print(' mirrors we contacted provided only untrustworthy images. ')
         print(GREEN + 'We have rejected these. Firmware not updated.\n' + ENDCOLORS)
 

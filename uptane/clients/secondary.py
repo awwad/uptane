@@ -190,8 +190,10 @@ class Secondary(object):
 
 
   def _create_nonce(self):
-    """Returns a pseudorandom number for use in protecting from replay attacks
-    from the timeserver (or an intervening party)."""
+    """
+    Returns a pseudorandom number for use in protecting from replay attacks
+    from the timeserver (or an intervening party).
+    """
     return random.randint(
         uptane.formats.NONCE_LOWER_BOUND, uptane.formats.NONCE_UPPER_BOUND)
 
@@ -422,7 +424,6 @@ class Secondary(object):
     Pick out the target file(s) with our ECU serial listed
     Fully validate the metadata for the target file(s)
     """
-    #
     tuf.formats.RELPATH_SCHEMA.check_match(metadata_archive_fname)
 
     self._expand_metadata_archive(metadata_archive_fname)
@@ -525,20 +526,6 @@ class Secondary(object):
       tuf.client.updater.hard_check_file_length(
           fobj,
           relevant_targetinfo['fileinfo']['length'])
-
-      # # Read the entire contents of 'file_object', a 'tuf.util.TempFile' file-
-      # # like object that ensures the entire file is read.
-      # observed_length = len(fobj.read())
-
-      # trusted_file_length = relevant_targetinfo['fileinfo']['length']
-
-      # if observed_length != trusted_file_length:
-      #   raise tuf.DownloadLengthMismatchError(
-      #       trusted_file_length, observed_length)
-
-      # else:
-      #   log.debug('Observed length (' + repr(observed_length) +
-      #       ') == trusted length (' + repr(trusted_file_length) + ')')
 
     # Check file hashes against trusted target info.
     with open(full_image_fname, 'rb') as fobj:

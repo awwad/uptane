@@ -125,9 +125,10 @@ class Secondary(object):
     uptane.formats.VIN_SCHEMA.check_match(vin)
     uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial)
     tuf.formats.ISO8601_DATETIME_SCHEMA.check_match(time)
-    for key in [timeserver_public_key, director_public_key]:
-      if key is not None:
-        tuf.formats.ANYKEY_SCHEMA.check_match(key)
+    tuf.formats.ANYKEY_SCHEMA.check_match(timeserver_public_key)
+    tuf.formats.ANYKEY_SCHEMA.check_match(ecu_key)
+    if director_public_key is not None:
+        tuf.formats.ANYKEY_SCHEMA.check_match(director_public_key)
 
     self.director_repo_name = director_repo_name
     self.ecu_key = ecu_key
@@ -144,6 +145,11 @@ class Secondary(object):
       raise uptane.Error('Secondary not set as partial verifying, but a director ' # TODO: Choose error class.
           'key was still provided. Full verification secondaries employ the '
           'normal TUF verifications rooted at root metadata files.')
+
+    elif self.partial_verifying and self.director_public_key is None:
+      raise uptane.Error('Secondary set as partial verifying, but a director '
+          'key was not provided. Partial verification Secondaries validate '
+          'only the ')
 
 
     # Create a TAP-4-compliant updater object. This will read pinning.json

@@ -15,6 +15,8 @@ import uptane.formats
 import uptane.common
 import uptane.encoding.asn1_codec as asn1_codec
 import tuf
+import json # for sample generation only - do not commit to develop branch
+
 PYASN1_EXISTS = False
 try:
  import pyasn1.type
@@ -77,6 +79,19 @@ def get_signed_time(nonces):
       datatype='time_attestation',
       metadata_format='json')
 
+
+  # For sample generation only - do not commit to develop branch!
+  fobj = open('sample_timeserver_attestation.json', 'wb')
+  json_attestation = json.dumps(
+      signable_time_attestation,
+      indent=1,
+      separators=(',', ': '),
+      sort_keys=True).encode('utf-8')
+  fobj.write(json_attestation)
+  fobj.close()
+  # end of sample generation
+
+
   return signable_time_attestation
 
 
@@ -104,6 +119,11 @@ def get_signed_time_der(nonces):
       signable_time_attestation,
       private_key=timeserver_key,
       resign=True)
+
+
+  # For sample generation only - do not commit to develop branch!
+  open('sample_timeserver_attestation.der', 'wb').write(der_attestation) 
+  # end of sample generation
 
 
   return der_attestation

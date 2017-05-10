@@ -1070,14 +1070,15 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
   def save_distributable_metadata_files(self):
     """
-    # TODO: Docstring.
+    Generates a zip archive of the metadata files validated by this Primary,
+    for distribution to full verifying Secondaries. The particular method of
+    distributing this metadata to Secondaries will vary greatly depending on
+    one's setup, and is left to implementers.
     """
 
     metadata_base_dir = os.path.join(self.full_client_dir, 'metadata')
 
-
-    # Save a gzipped version of all of the metadata.
-    # TODO: <~> Update this for ASN.1 / DER.
+    # Save a zipped version of all of the metadata.
     # Note that some stale metadata may be retained, but should never affect
     # security. Worth confirming.
     # What we want here, basically, is:

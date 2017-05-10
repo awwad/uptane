@@ -274,6 +274,9 @@ class Secondary(object):
     """
     To be called when the ECU Version Manifest is submitted, as that
     includes the sending of this nonce.
+
+    The most recent nonce sent (assigned here) is the nonce this Secondary
+    expects to find in the next timeserver attestation it validates.
     """
     self.last_nonce_sent = self.nonce_next
 
@@ -283,8 +286,15 @@ class Secondary(object):
 
   def change_nonce(self):
     """
-    To be called only when a timeserver attestation is validated, when we
-    know this nonce has been used.
+    This should generally be called only by validate_time_attestation.
+
+    To be called only when this Secondary has validated a timeserver
+    attestation that lists the current nonce, when we know that nonce has been
+    used. Rolls over to a new nonce.
+
+    The result in self.nonce_next is the nonce that should be used in any
+    future message to the Primary. Once it has been sent to the Primary,
+    set_nonce_as_sent should be called.
     """
     self.nonce_next = self._create_nonce()
 
@@ -363,8 +373,9 @@ class Secondary(object):
 
   def validate_time_attestation(self, timeserver_attestation):
     """
-    Given a timeserver attestation, validate it and ensure that the nonce we
-    expect it to contain is included.
+    Given a timeserver attestation, validate it (checking that the signature is
+    valid and from the expected key) and ensure that the nonce we expect the
+    attestation to contain is included.
 
     If validation is successful, switch to a new nonce for next time.
     """
@@ -493,7 +504,7 @@ class Secondary(object):
   def get_validated_target_info(self, target_filepath):
     """
     COPIED EXACTLY, MINUS COMMENTS, from primary.py.
-    # TODO: <~> Refactor later.
+    # TODO: Refactor later.
     Throws tuf.UnknownTargetError if unable to find/validate a target.
     """
     tuf.formats.RELPATH_SCHEMA.check_match(target_filepath)
@@ -540,6 +551,17 @@ class Secondary(object):
 
   def _expand_metadata_archive(self, metadata_archive_fname):
     """
+    Given the filename of an archive of metadata files validated and zipped by
+    primary.py, unzip it into the contained metadata files, to be used as a
+    local repository and validated by this Secondary.
+
+    Note that attacks are possible against zip files. The particulars of the
+    distribution of these metadata files from Primary to Secondary will vary
+    greatly based on one's implementation and setup, so this is offered for
+    instruction. The mechanism employed in particular should not obviate the
+    protections provided by Uptane and TUF. It should time out rather than be
+    susceptible to slow retrieval, and not introduce vulnerabilities in the
+    face of a malicious Primary.
     """
     tuf.formats.RELPATH_SCHEMA.check_match(metadata_archive_fname)
     if not os.path.exists(metadata_archive_fname):
@@ -556,14 +578,13 @@ class Secondary(object):
 
   def validate_image(self, image_fname):
     """
-
     Determines if the image with filename provided matches the expected file
     properties, based on the metadata we have previously validated (with
     fully_validate_metadata, stored in self.validated_targets_for_this_ecu). If
     this method completes without raising an exception, the image file is
     valid.
 
-    Arguments:
+    <Arguments>
 
       image_fname
         This is the filename of the image file to validate. It is expected
@@ -571,11 +592,10 @@ class Secondary(object):
         leading '/' character). It should, therefore, not include any
         directory names except what is required to specify it within the
         target namespace.
-        This file is expected to exist in the client directory, in a
-        subdirectory called 'unverified_targets'.
+        This file is expected to exist in the client directory
+        (self.full_client_dir), in a subdirectory called 'unverified_targets'.
 
-
-    Exceptions:
+    <Exceptions>
 
       uptane.Error
         if the given filename does not match a filepath in the list of
@@ -593,9 +613,13 @@ class Secondary(object):
         info
 
       tuf.FormatError
-        if arguments somewhere down the line do not match expectations
-        or if the given image_fname is not a path.
-        (# TODO: Clarify, expand, or remove comment.)
+        if the given image_fname is not a path.
+
+    <Returns>
+      None.
+
+    <Side-Effects>
+      None.
     """
     tuf.formats.PATH_SCHEMA.check_match(image_fname)
 

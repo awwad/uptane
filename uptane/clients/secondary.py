@@ -52,7 +52,32 @@ log.setLevel(uptane.logging.DEBUG)
 class Secondary(object):
 
   """
-  Fields:
+  <Purpose>
+    This class contains the necessary code to perform Uptane validation of
+    images and metadata. An implementation of Uptane should use code like this
+    to perform full validation of images and metadata.
+
+  <Fields>
+
+    self.vin
+      A unique identifier for the vehicle that contains this Secondary ECU.
+      In this reference implementation, this conforms to
+      uptane.formats.VIN_SCHEMA. There is no need to use the vehicle's VIN in
+      particular; we simply need a unique identifier for the vehicle, known
+      to the Director.
+
+    self.ecu_serial
+      A unique identifier for this Secondary ECU. In this reference
+      implementation, this conforms to uptane.formats.ECU_SERIAL_SCHEMA.
+      (In other implementations, the important point is that this should be
+      unique.) The Director should be aware of this identifier.
+
+    self.ecu_key:
+      The signing key for this Secondary ECU. This key will be used to sign
+      ECU Manifests that will then be sent along to the Primary (and
+      subsequently to the Director). The Director should be aware of the
+      corresponding public key, so that it can validate these ECU Manifests.
+      Conforms to tuf.formats.ANYKEY_SCHEMA.
 
     self.updater:
       A tuf.client.updater.Updater object used to retrieve metadata and
@@ -60,27 +85,41 @@ class Secondary(object):
 
     self.full_client_dir:
       The full path of the directory where all client data is stored for this
-      secondary.
+      secondary. This includes verified and unverified metadata and images and
+      any temp files. Conforms to tuf.formats.PATH_SCHEMA.
+
+    self.director_repo_name
+      The name of the Director repository (e.g. 'director'), as listed in the
+      map (or pinning) file (pinned.json). This value must appear in that file.
+      Used to distinguish between the Image Repository and the Director
+      Repository. Conforms to tuf.formats.REPOSITORY_NAME_SCHEMA.
 
     self.timeserver_public_key:
-      The key we expect the timeserver to use.
+      The public key of the Timeserver, which will be used to validate signed
+      time attestations from the Timeserver.
+      Conforms to tuf.formats.ANYKEY_SCHEMA.
 
     self.partial_verifying:
-      True if this instance is a partial verifier, False if it employs full
-      metadata verification.
+      False if this client is to employ full metadata verification (the default)
+      with all checks included in the Uptane Implementation Specification,
+      else True if this instance is a partial verifier.
+      A Partial Verification Secondary is programmed with the Director's
+      Targets role public key and will only validate that signature on that
+      file, leaving it susceptible to some attacks if the Director key
+      is compromised or has to change.
 
     self.director_public_key
       If this is a partial verification secondary, we store the key that we
       expect the Director to use here. Full verification clients should have
-      None in this field.
-
-    self.ecu_key:
-      The signing key this ECU will use to sign manifests.
+      None in this field. If provided, this conforms to
+      tuf.formats.ANYKEY_SCHEMA.
 
     self.firmware_fileinfo:
-        The image the ecu is currently using, identified by filename in the
-        repo, hash of the file, and file size. This is an object matching
-        tuf.formats.TARGETFILE_SCHEMA
+      The target file info for the image this Secondary ECU is currently using
+      (has currently "installed"). This is generally filename, hash, and
+      length. See tuf.formats.TARGETFILE_SCHEMA, which contains
+      tuf.formats.FILEINFO_SCHEMA. This info is provided in ECU Manifests
+      generated for the Director's consumption.
 
     self.nonce_next
       Next nonce the ECU will send to the Timeserver (via the Primary).
@@ -130,6 +169,54 @@ class Secondary(object):
     firmware_fileinfo=None,
     director_public_key=None,
     partial_verifying=False):
+
+    """
+    <Purpose>
+      Constructor for class Secondary
+
+    <Arguments>
+
+      full_client_dir       See class docstring above.
+
+      director_repo_name    See class docstring above.
+
+      vin                   See class docstring above.
+
+      ecu_serial            See class docstring above.
+
+      ecu_key               See class docstring above.
+
+      timeserver_public_key See class docstring above.
+
+      director_public_key   See class docstring above. (optional)
+
+      partial_verifying     See class docstring above. (optional)
+
+      time
+        An initial time to set the Secondary's "clock" to, conforming to
+        tuf.formats.ISO8601_DATETIME_SCHEMA.
+
+      firmware_fileinfo (optional)
+        See class docstring above. As provided here, this is the initial
+        value, which will be provided in ECU Manifests generated for the
+        Director's consumption until the firmware is updated.
+
+
+    <Exceptions>
+
+      tuf.FormatError
+        if the arguments are not correctly formatted
+
+      uptane.Error
+        if arguments partial_verifying and director_public_key are inconsistent
+          (partial_verifying True requires a director_public_key, and
+           partial_verifying False requires no director_public_key)
+        if director_repo_name is not a known repository based on the
+        map/pinning file (pinned.json)
+
+    <Side Effects>
+      None.
+    """
 
     # Check arguments:
     tuf.formats.PATH_SCHEMA.check_match(full_client_dir)

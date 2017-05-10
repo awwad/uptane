@@ -1,7 +1,7 @@
 """
 demo_image_repo.py
 
-Demonstration code handling an OEM repository.
+Demonstration code handling an Image repository.
 
 Use:
 
@@ -19,7 +19,7 @@ di.kill_server()
 <Demo Interface Provided Via XMLRPC>
 
   XMLRPC interface presented TO THE DEMO WEBSITE:
-    add_target_to_supplier_repo(target_filepath, filepath_in_repo)  <--- add to staged supplier repository
+    add_target_to_image_repo(target_filepath, filepath_in_repo)  <--- add to staged image repository
     write_image_repo() <--- move staged to live / add newly added targets to live repo
 
 
@@ -252,7 +252,7 @@ def listen():
   This is exclusively for the use of the demo website frontend.
 
   Listens on IMAGE_REPO_SERVICE_PORT for xml-rpc calls to functions:
-    - add_target_to_supplier_repo
+    - add_target_to_image_repo
     - write_image_repo
 
   Note that you must also run host() in order to serve the metadata files via
@@ -274,7 +274,7 @@ def listen():
   # target files to the image repository or to simulate attacks from a web
   # frontend.
   server.register_function(add_target_to_imagerepo,
-      'add_target_to_supplier_repo')
+      'add_target_to_image_repo')
   server.register_function(write_to_live, 'write_image_repo')
 
   # Attack 1: Arbitrary Package Attack on Image Repository without
@@ -296,7 +296,7 @@ def listen():
   server.register_function(undo_keyed_arbitrary_package_attack,
       'undo_keyed_arbitrary_package_attack')
 
-  print('Starting Supplier Repo Services Thread: will now listen on port ' +
+  print('Starting Image Repo Services Thread: will now listen on port ' +
       str(demo.IMAGE_REPO_SERVICE_PORT))
   xmlrpc_service_thread = threading.Thread(target=server.serve_forever)
   xmlrpc_service_thread.setDaemon(True)

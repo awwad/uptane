@@ -377,7 +377,9 @@ class Director:
       log.info(
           'Key used to sign Vehicle Manifest has a different keyid from that '
           'listed in the inventory DB. Expect signature validation to fail, '
-          'unless the key is the same but the keyid differently hashed.')
+          'unless the key is the same but the keyid differently hashed. '
+          'Expected keyid: ' + repr(ecu_public_key['keyid']) + '; keyid used '
+          'in signature: ' + repr(keyid_used_in_signature))
 
 
     if tuf.conf.METADATA_FORMAT == 'der':

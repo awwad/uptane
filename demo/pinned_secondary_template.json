@@ -1,7 +1,7 @@
 {
   "repositories": {
-    "mainrepo": {
-      "mirrors": ["file:///<full_client_dir>/unverified/mainrepo"]
+    "imagerepo": {
+      "mirrors": ["file:///<full_client_dir>/unverified/imagerepo"]
     },
     "director": {
       "mirrors": ["file:///<full_client_dir>/unverified/director"]
@@ -10,7 +10,7 @@
   "delegations": [
     {
       "paths": ["*"],
-      "repositories": ["mainrepo", "director"]
+      "repositories": ["imagerepo", "director"]
     }
   ]
 }

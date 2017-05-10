@@ -20,7 +20,7 @@ di.kill_server()
 
   XMLRPC interface presented TO THE DEMO WEBSITE:
     add_target_to_supplier_repo(target_filepath, filepath_in_repo)  <--- add to staged supplier repository
-    write_supplier_repo() <--- move staged to live / add newly added targets to live repo
+    write_image_repo() <--- move staged to live / add newly added targets to live repo
 
 
 """
@@ -54,22 +54,22 @@ def clean_slate(use_new_keys=False):
 
   # Create target files: file1.txt and infotainment_firmware.txt
 
-  if os.path.exists(demo.MAIN_REPO_TARGETS_DIR):
-    shutil.rmtree(demo.MAIN_REPO_TARGETS_DIR)
+  if os.path.exists(demo.IMAGE_REPO_TARGETS_DIR):
+    shutil.rmtree(demo.IMAGE_REPO_TARGETS_DIR)
 
-  os.makedirs(demo.MAIN_REPO_TARGETS_DIR)
+  os.makedirs(demo.IMAGE_REPO_TARGETS_DIR)
 
-  fobj = open(os.path.join(demo.MAIN_REPO_TARGETS_DIR, 'file1.txt'), 'w')
+  fobj = open(os.path.join(demo.IMAGE_REPO_TARGETS_DIR, 'file1.txt'), 'w')
   fobj.write('Contents of file1.txt')
   fobj.close()
-  fobj = open(os.path.join(demo.MAIN_REPO_TARGETS_DIR, 'infotainment_firmware.txt'), 'w')
+  fobj = open(os.path.join(demo.IMAGE_REPO_TARGETS_DIR, 'infotainment_firmware.txt'), 'w')
   fobj.write('Contents of infotainment_firmware.txt')
   fobj.close()
 
 
   # Create repo at './repomain'
 
-  repo = rt.create_new_repository(demo.MAIN_REPO_NAME)
+  repo = rt.create_new_repository(demo.IMAGE_REPO_NAME)
 
 
   # Create keys and/or load keys into memory.
@@ -105,17 +105,18 @@ def clean_slate(use_new_keys=False):
   repo.targets.load_signing_key(key_targets_pri)
 
 
-  # Perform delegation from mainrepo's targets role to mainrepo's role1 role.
+  # Perform delegation from Image Repo's targets role to Image Repo's role1
+  # role.
 
   # TODO: <~> Re-enable delegations below. Currently, ASN1 conversion fails
   # when there are delegations. This is, of course, untenable, but for now, it
   # is more important to experiment with ASN1 than to have a sample delegation.
   # Delegate to a new Supplier.
   # repo.targets.delegate('role1', [key_role1_pub],
-  #     [os.path.join(demo.MAIN_REPO_NAME, 'targets/file1.txt'),
-  #      os.path.join(demo.MAIN_REPO_NAME, 'targets/infotainment_firmware.txt')],
+  #     [os.path.join(demo.IMAGE_REPO_NAME, 'targets/file1.txt'),
+  #      os.path.join(demo.IMAGE_REPO_NAME, 'targets/infotainment_firmware.txt')],
   #     threshold=1, backtrack=True,
-  #     restricted_paths=[os.path.join(demo.MAIN_REPO_TARGETS_DIR, '*')])
+  #     restricted_paths=[os.path.join(demo.IMAGE_REPO_TARGETS_DIR, '*')])
   # Add delegated role keys to repo
   # repo.targets('role1').load_signing_key(key_role1_pri)
 
@@ -143,18 +144,18 @@ def write_to_live():
 
   global repo
 
-  # Write the metadata files out to mainrepo's 'metadata.staged'
+  # Write the metadata files out to the Image Repository's 'metadata.staged'
   repo.mark_dirty(['timestamp', 'snapshot'])
   repo.write() # will be writeall() in most recent TUF branch
 
   # Move staged metadata (from the write above) to live metadata directory.
 
-  if os.path.exists(os.path.join(demo.MAIN_REPO_DIR, 'metadata')):
-    shutil.rmtree(os.path.join(demo.MAIN_REPO_DIR, 'metadata'))
+  if os.path.exists(os.path.join(demo.IMAGE_REPO_DIR, 'metadata')):
+    shutil.rmtree(os.path.join(demo.IMAGE_REPO_DIR, 'metadata'))
 
   shutil.copytree(
-      os.path.join(demo.MAIN_REPO_DIR, 'metadata.staged'),
-      os.path.join(demo.MAIN_REPO_DIR, 'metadata'))
+      os.path.join(demo.IMAGE_REPO_DIR, 'metadata.staged'),
+      os.path.join(demo.IMAGE_REPO_DIR, 'metadata'))
 
 
 
@@ -201,24 +202,24 @@ def host():
 
   # Prepare to host the main repo contents
 
-  os.chdir(demo.MAIN_REPO_DIR)
+  os.chdir(demo.IMAGE_REPO_DIR)
 
   command = []
   if sys.version_info.major < 3:  # Python 2 compatibility
-    command = ['python', '-m', 'SimpleHTTPServer', str(demo.MAIN_REPO_PORT)]
+    command = ['python', '-m', 'SimpleHTTPServer', str(demo.IMAGE_REPO_PORT)]
   else:
-    command = ['python3', '-m', 'http.server', str(demo.MAIN_REPO_PORT)]
+    command = ['python3', '-m', 'http.server', str(demo.IMAGE_REPO_PORT)]
 
 
-  # Begin hosting mainrepo.
+  # Begin hosting Image Repository.
 
   server_process = subprocess.Popen(command, stderr=subprocess.PIPE)
 
   os.chdir(uptane.WORKING_DIR)
 
   print('Main Repo server process started, with pid ' + str(server_process.pid))
-  print('Main Repo serving on port: ' + str(demo.MAIN_REPO_PORT))
-  url = demo.MAIN_REPO_HOST + ':' + str(demo.MAIN_REPO_PORT) + '/'
+  print('Main Repo serving on port: ' + str(demo.IMAGE_REPO_PORT))
+  url = demo.IMAGE_REPO_HOST + ':' + str(demo.IMAGE_REPO_PORT) + '/'
   print('Main Repo URL is: ' + url)
 
   # Kill server process after calling exit().
@@ -250,9 +251,9 @@ def listen():
   """
   This is exclusively for the use of the demo website frontend.
 
-  Listens on MAIN_REPO_SERVICE_PORT for xml-rpc calls to functions:
+  Listens on IMAGE_REPO_SERVICE_PORT for xml-rpc calls to functions:
     - add_target_to_supplier_repo
-    - write_supplier_repo
+    - write_image_repo
 
   Note that you must also run host() in order to serve the metadata files via
   http.
@@ -266,7 +267,7 @@ def listen():
 
   # Create server
   server = xmlrpc_server.SimpleXMLRPCServer(
-      (demo.MAIN_REPO_SERVICE_HOST, demo.MAIN_REPO_SERVICE_PORT),
+      (demo.IMAGE_REPO_SERVICE_HOST, demo.IMAGE_REPO_SERVICE_PORT),
       requestHandler=RequestHandler, allow_none=True)
 
   # Register functions that can be called via XML-RPC, allowing users to add
@@ -274,7 +275,7 @@ def listen():
   # frontend.
   server.register_function(add_target_to_imagerepo,
       'add_target_to_supplier_repo')
-  server.register_function(write_to_live, 'write_supplier_repo')
+  server.register_function(write_to_live, 'write_image_repo')
 
   # Attack 1: Arbitrary Package Attack on Image Repository without
   # Compromised Keys.
@@ -296,7 +297,7 @@ def listen():
       'undo_keyed_arbitrary_package_attack')
 
   print('Starting Supplier Repo Services Thread: will now listen on port ' +
-      str(demo.MAIN_REPO_SERVICE_PORT))
+      str(demo.IMAGE_REPO_SERVICE_PORT))
   xmlrpc_service_thread = threading.Thread(target=server.serve_forever)
   xmlrpc_service_thread.setDaemon(True)
   xmlrpc_service_thread.start()
@@ -311,11 +312,11 @@ def mitm_arbitrary_package_attack(target_filepath):
   print('ATTACK: arbitrary package, no keys, on target ' +
       repr(target_filepath))
 
-  full_target_filepath = os.path.join(demo.MAIN_REPO_TARGETS_DIR, target_filepath)
+  full_target_filepath = os.path.join(demo.IMAGE_REPO_TARGETS_DIR, target_filepath)
 
   # TODO: NOTE THAT THIS ATTACK SCRIPT BREAKS IF THE TARGET FILE IS IN A
   # SUBDIRECTORY IN THE REPOSITORY.
-  backup_target_filepath = os.path.join(demo.MAIN_REPO_TARGETS_DIR,
+  backup_target_filepath = os.path.join(demo.IMAGE_REPO_TARGETS_DIR,
       'backup_' + target_filepath)
 
 
@@ -363,11 +364,11 @@ def undo_mitm_arbitrary_package_attack(target_filepath):
   print('UNDO ATTACK: arbitrary package, no keys, on target ' +
       repr(target_filepath))
 
-  full_target_filepath = os.path.join(demo.MAIN_REPO_TARGETS_DIR, target_filepath)
+  full_target_filepath = os.path.join(demo.IMAGE_REPO_TARGETS_DIR, target_filepath)
 
   # TODO: NOTE THAT THIS ATTACK SCRIPT BREAKS IF THE TARGET FILE IS IN A
   # SUBDIRECTORY IN THE REPOSITORY.
-  backup_target_filepath = os.path.join(demo.MAIN_REPO_TARGETS_DIR,
+  backup_target_filepath = os.path.join(demo.IMAGE_REPO_TARGETS_DIR,
       'backup_' + target_filepath)
 
   if not os.path.exists(full_target_filepath) or not os.path.exists(backup_target_filepath):

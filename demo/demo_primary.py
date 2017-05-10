@@ -129,7 +129,7 @@ def clean_slate(
   try:
     uptane.common.create_directory_structure_for_client(
         client_directory, create_primary_pinning_file(),
-        {demo.MAIN_REPO_NAME: demo.MAIN_REPO_ROOT_FNAME,
+        {demo.IMAGE_REPO_NAME: demo.IMAGE_REPO_ROOT_FNAME,
         demo.DIRECTOR_REPO_NAME: os.path.join(demo.DIRECTOR_REPO_DIR, vin,
         'metadata', 'root' + demo.METADATA_EXTENSION)})
   except IOError:
@@ -310,20 +310,19 @@ def update_cycle():
   # SECOND: DOWNLOAD METADATA AND IMAGES
   #
 
-  # Starting with just the root.json files for the director and mainrepo, and
+  # Starting with just the root.json files for the Director and Image Repos, and
   # pinned.json, the client will now use TUF to connect to each repository and
   # download/update top-level metadata. This call updates metadata from both
   # repositories.
   # upd.refresh()
   print(GREEN + '\n')
-  print(' Now updating top-level metadata from the Director and OEM Repositories'
-      '\n    (timestamp, snapshot, root, targets)')
-  print('\n' + ENDCOLORS)
+  print(' Now updating top-level metadata from the Director and Image '
+      'Repositories\n    (timestamp, snapshot, root, targets)\n' + ENDCOLORS)
 
 
 
   # This will update the Primary's metadata and download images from the
-  # Director and OEM Repositories, and create a mapping of assignments from
+  # Director and Image Repositories, and create a mapping of assignments from
   # each Secondary ECU to its Director-intended target.
   try:
     primary_ecu.primary_update_cycle()

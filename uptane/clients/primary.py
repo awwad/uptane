@@ -65,7 +65,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
     updater:
       A tuf.client.updater.Updater object used to retrieve metadata and
-      target files from the Director and Supplier repositories.
+      target files from the Director and Image Repositories.
 
     full_client_dir:
       The absolute directory where all client data is stored for the Primary.
@@ -296,15 +296,15 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
       Returns trustworthy target information for the given target file
       (specified by its file path), from the Director, validated against the
-      OEM Repository (or whichever repositories are required per the
+      Image Repository (or whichever repositories are required per the
       pinned.json file).
 
       The returned information has been cleared according to the trust
       requirements of the pinning file (pinned.json) that this client is
       equipped with. Assuming typical pinned.json configuration for Uptane,
       this means that there is a multi-repository delegation to [the Director
-      Repository plus the OEM Repository]. The target file info received within
-      this method is that from all repositories in the multi-repository
+      Repository plus the Image Repository]. The target file info received
+      within this method is that from all repositories in the multi-repository
       delegation, and each is guaranteed to be identical to the others in all
       respects (e.g. crytographic hash and length) except for the "custom"
       metadata field, since the Director includes an additional piece of
@@ -322,8 +322,8 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
       tuf.UnknownTargetError
         if a given filepath is not listed by the consensus of Director and
-        Supplier (or through whichever trusted path is specified by this
-        client's pinned.json file.) If info is returned, it will match
+        Image Repository (or through whichever trusted path is specified by
+        this client's pinned.json file.) If info is returned, it will match
         tuf.formats.TARGETFILE_SCHEMA and will have been validated by all
         required parties.
 
@@ -342,7 +342,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     #   'Director': {
     #     filepath: 'django/django.1.9.3.tgz',
     #     fileinfo: {hashes: ..., length: ..., custom: {'ecu_serial': 'ECU1010101'} } },
-    #   'OEMRepo': {
+    #   'ImageRepo': {
     #     filepath: 'django/django.1.9.3.tgz',
     #     fileinfo: {hashes: ..., length: ... } } }
     # }
@@ -384,7 +384,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
   def primary_update_cycle(self):
     """
     Download fresh metadata and images for this vehicle, as instructed by the
-    Director and validated by the OEM Repository.
+    Director and validated by the Image Repository.
 
     Begin by obtaining trustworthy target file metadata from the repositories,
     then instruct TUF to download matching files.
@@ -411,7 +411,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
     # Get the list of targets the director expects us to download and update to.
     # Note that at this line, this target info is not yet validated with the
-    # supplier repo: that is done a few lines down.
+    # Image Repository: that is done a few lines down.
     directed_targets = self.get_target_list_from_director()
 
     if not directed_targets:
@@ -423,20 +423,20 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
           repr([targ['filepath'] for targ in directed_targets]))
 
 
-    log.debug('Retrieving validated image file metadata from Director and OEM '
-      'Repositories.')
+    log.debug('Retrieving validated image file metadata from Image and '
+        'Director Repositories.')
 
     # This next block employs get_validated_target_info calls to determine what
     # the right fileinfo (hash, length, etc) for each target file is. This
     # begins by matching paths/patterns in pinned.json to determine which
     # repository to connect to. Since pinned.json will generally assigns all
     # targets to a multi-repository delegation requiring consensus between the
-    # two repositories, one for the Director and one for the OEM's main
-    # repository, this call will retrieve metadata from both repositories and
-    # compare it to each other, and only return fileinfo if it can be retrieved
-    # from both repositories and is identical (the metadata in the "custom"
-    # fileinfo field need not match, and should not, since the Director will
-    # include ECU IDs in this field, and the mainrepo cannot.
+    # two repositories, one for the Director and one for the Image Repository,
+    # this call will retrieve metadata from both repositories and compare it to
+    # each other, and only return fileinfo if it can be retrieved from both
+    # repositories and is identical (the metadata in the "custom" fileinfo
+    # field need not match, and should not, since the Director will include
+    # ECU IDs in this field, and the Image Repository cannot.
 
     # This will contain a list of tuf.formats.TARGETFILE_SCHEMA objects.
     verified_targets = []
@@ -451,11 +451,11 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
       except tuf.UnknownTargetError:
         log.warning(RED + 'Director has instructed us to download a target (' +
             target_filepath + ') that is not validated by the combination of '
-            'Director + OEM repositories. That update IS BEING SKIPPED. It may '
-            'be that files have changed in the last few moments on the '
+            'Image + Director Repositories. That update IS BEING SKIPPED. It '
+            'may be that files have changed in the last few moments on the '
             'repositories. Try again, but if this happens often, you may be '
             'connecting to an untrustworthy Director, or there may be an '
-            'untrustworthy Supplier, or the Director and OEM '
+            'untrustworthy Image Repository, or the Director and Image '
             'Repository may be out of sync.' + ENDCOLORS)
 
         # The following is code intended for a demonstration, inserted here
@@ -468,24 +468,23 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
         time.sleep(3)
         # End demo code.
 
-    # Have instead decided to have get_validated_target_info() call above return
-    # only one fileinfo, that from the Director (after validating it fully as
-    # configured in pinned.json, i.e. with the OEM Repo or whatever else is
-    # specified there, of course). Thus, we don't need to deal with a dict of
-    # fileinfos here.
     # # Grab a filepath from each of the dicts of target file infos. (Each dict
     # # corresponds to one file, and the filepaths in all the infos in that dict
     # # will be the same - only the 'custom' field can differ within a given
     # # dict).
     # verified_target_filepaths = \
     #     [next(six.itervalues(targ))['filepath'] for targ in verified_targets]
+    # get_validated_target_info() above returns only the Director's fileinfo,
+    # and only after validating it fully as configured in pinned.json (i.e.
+    # with the Image Repo or whatever other repository/ies specified in
+    # pinned.json).
     verified_target_filepaths = [targ['filepath'] for targ in verified_targets]
 
 
 
 
     log.info('Metadata for the following Targets has been validated by both '
-        'the Director and the OEM repository. They will now be downloaded:' +
+        'the Director and the Image repository. They will now be downloaded:' +
         repr(verified_target_filepaths))
 
 
@@ -547,15 +546,15 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
       # Download each target.
       # Now that we have fileinfo for all targets listed by both the Director and
-      # the Supplier (mainrepo) -- which should include file2.txt in this test --
+      # the Image Repository -- which should include file2.txt in this test --
       # we can download the target files and only keep each if it matches the
       # verified fileinfo. This call will try every mirror on every repository
       # within the appropriate delegation in pinned.json until one of them works.
-      # In this case, both the Director and OEM Repo are hosting the
+      # In this case, both the Director and Image Repo are hosting the
       # file, just for my convenience in setup. If you remove the file from the
-      # Director before calling this, it will still work (assuming OEM still
-      # has it). (The second argument here is just where to put the files.)
-      # This should include file2.txt.
+      # Director before calling this, it will still work (assuming Image Repo
+      # still has it). (The second argument here is just where to put the
+      # files.)
       try:
         self.updater.download_target(target, full_targets_directory)
 
@@ -581,8 +580,8 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
         #   not filepath.startswith('/') and filepath == firmware_filename:
 
         print()
-        print(YELLOW + ' While the Director and OEM provided consistent metadata'
-            ' for new firmware,')
+        print(YELLOW + ' While the Director and Image Repository provided '
+            'consistent metadata for new firmware,')
         print(' mirrors we contacted provided only untrustworthy images. ')
         print(GREEN + 'We have rejected these. Firmware not updated.\n' + ENDCOLORS)
 

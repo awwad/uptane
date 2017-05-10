@@ -120,7 +120,7 @@ def clean_slate(
   # repositories.
   uptane.common.create_directory_structure_for_client(
       client_directory, create_secondary_pinning_file(),
-      {demo.MAIN_REPO_NAME: demo.MAIN_REPO_ROOT_FNAME,
+      {demo.IMAGE_REPO_NAME: demo.IMAGE_REPO_ROOT_FNAME,
       demo.DIRECTOR_REPO_NAME: os.path.join(demo.DIRECTOR_REPO_DIR, vin,
       'metadata', 'root' + demo.METADATA_EXTENSION)})
 
@@ -456,7 +456,7 @@ def update_cycle():
       # a compromise has been delivered, and we'll flash a Compromised screen
       # to indicate a successful attack. We know this has happened because the
       # demo should include 'evil content' in the file.  This requires,
-      # generally, a compromise of both Supplier and Director keys.
+      # generally, a compromise of both Image Repo and Director keys.
       print_banner(BANNER_COMPROMISED, color=WHITE+RED_BG,
           text='A malicious update has been installed! Arbitrary package attack '
           'successful: this Secondary has been compromised! Image: ' +
@@ -483,10 +483,8 @@ def update_cycle():
   print_banner(
       BANNER_UPDATED, color=WHITE+GREEN_BG,
       text='Installed firmware received from Primary that was fully '
-      'validated by the Director and OEM Repo. Image: ' + repr(image_fname),
+      'validated by the Director and Image Repo. Image: ' + repr(image_fname),
       sound=WON)
-  #print(GREEN + 'Installed firmware received from Primary that was fully '
-  #    'validated by the Director and OEM Repo.' + ENDCOLORS)
 
   if expected_target_info['filepath'].endswith('.txt'):
     print('The contents of the newly-installed firmware with filename ' +

@@ -46,7 +46,7 @@ import os # For paths and symlink
 import shutil # For copying directory trees
 import sys, subprocess, time # For hosting
 import tuf.repository_tool as rt
-import demo.demo_image_repo as demo_image_repo # for the main repo directory /:
+import demo.demo_image_repo as demo_image_repo # for the Image repo directory /:
 from uptane import GREEN, RED, YELLOW, ENDCOLORS
 
 from six.moves import xmlrpc_server # for the director services interface
@@ -119,12 +119,12 @@ def clean_slate(use_new_keys=False):
 
   # Add a first target file, for use by every ECU in every vehicle in that the
   # Director starts off with. (Currently 3)
-  # This copies the file to each repository's targets directory from the
-  # main repository.
+  # This copies the file to each vehicle repository's targets directory from
+  # the Image Repository.
   for vin in inventory.ecus_by_vin:
     for ecu in inventory.ecus_by_vin[vin]:
       add_target_to_director(
-          os.path.join(demo.MAIN_REPO_TARGETS_DIR, 'infotainment_firmware.txt'),
+          os.path.join(demo.IMAGE_REPO_TARGETS_DIR, 'infotainment_firmware.txt'),
           'infotainment_firmware.txt',
           vin,
           ecu)
@@ -812,9 +812,9 @@ def mitm_arbitrary_package_attack(vin, target_filepath):
   backup_target_filepath = os.path.join(demo.DIRECTOR_REPO_DIR, vin,
       'targets', 'backup_' + target_filepath)
 
-  image_repo_full_target_filepath = os.path.join(demo.MAIN_REPO_TARGETS_DIR,
+  image_repo_full_target_filepath = os.path.join(demo.IMAGE_REPO_TARGETS_DIR,
       target_filepath)
-  image_repo_backup_full_target_filepath = os.path.join(demo.MAIN_REPO_TARGETS_DIR,
+  image_repo_backup_full_target_filepath = os.path.join(demo.IMAGE_REPO_TARGETS_DIR,
       'backup_' + target_filepath)
 
 
@@ -866,8 +866,8 @@ def undo_mitm_arbitrary_package_attack(vin, target_filepath):
   backup_full_target_filepath = os.path.join(demo.DIRECTOR_REPO_DIR, vin,
       'targets', 'backup_' + target_filepath)
 
-  image_repo_full_target_filepath = os.path.join(demo.MAIN_REPO_TARGETS_DIR, target_filepath)
-  image_repo_backup_full_target_filepath = os.path.join(demo.MAIN_REPO_TARGETS_DIR,
+  image_repo_full_target_filepath = os.path.join(demo.IMAGE_REPO_TARGETS_DIR, target_filepath)
+  image_repo_backup_full_target_filepath = os.path.join(demo.IMAGE_REPO_TARGETS_DIR,
       'backup_' + target_filepath)
 
   if not os.path.exists(backup_full_target_filepath) or not os.path.exists(full_target_filepath):

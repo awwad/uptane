@@ -256,6 +256,10 @@ class Secondary(object):
     # each repository.
     self.updater = tuf.client.updater.Updater('updater')
 
+    if director_repo_name not in self.updater.pinned_metadata['repositories']:
+      raise uptane.Error('Given name for the Director repository is not a '
+          'known repository, according to the pinned metadata from pinned.json')
+
     # We load the given time twice for simplicity in later code.
     self.all_valid_timeserver_times = [time, time]
 

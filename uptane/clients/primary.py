@@ -3,9 +3,18 @@
   primary.py
 
 <Purpose>
-  An Uptane client modeling the behavior of a Primary ECU to distribute updates
-  to Secondaries, collect ECU manifests, generate timeserver requests, etc.
+  Provides core functionality for Uptane Primary ECU clients:
+  - Obtains and performs full verification of metadata and images, employing
+    TUF (The Update Framework)
+  - Prepares metadata and images for distribution to Secondaries
+  - Receives ECU Manifests and holds them for the next Vehicle Manifest
+  - Generates Vehicle Manifests
+  - Receives nonces from Secondaries; maintains and cycles a list of nonces
+    for use in requests for signed time from the Timeserver
 
+  A detailed explanation of the role of the Primary in Uptane is available in
+  the "Design Overview" and "Implementation Specification" documents, links to
+  which are maintained at uptane.github.io
 """
 from __future__ import print_function
 from __future__ import unicode_literals

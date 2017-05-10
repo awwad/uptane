@@ -3,10 +3,20 @@
   secondary.py
 
 <Purpose>
-  A module providing functionality for an Uptane Secondary ECU client
-  performing full metadata verification, as would be performed during ECU boot.
-  Also includes some partial verification functionality.
+  Provides core functionality for Uptane Secondary ECU clients:
+  - Given an archive of metadata and an image file, performs full verification
+    of both, employing TUF (The Update Framework), determining if this
+    Secondary ECU has been instructed to install the image by the Director and
+    if the image is also valid per the Image Repository.
+  - Generates ECU Manifests describing the state of the Secondary for Director
+    perusal
+  - Generates nonces for time requests from the Timeserver, and validates
+    signed times provided by the Timeserver, maintaining trustworthy times.
+    Rotates nonces after they have appeared in Timeserver responses.
 
+  A detailed explanation of the role of the Secondary in Uptane is available in
+  the "Design Overview" and "Implementation Specification" documents, links to
+  which are maintained at uptane.github.io
 """
 from __future__ import print_function
 from __future__ import unicode_literals

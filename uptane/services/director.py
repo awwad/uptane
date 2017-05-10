@@ -6,7 +6,7 @@
   A core module that provides needed functionality for an Uptane-compliant
   Director. This CAN remain largely unchanged in real use. It is upon this that
   a full director is built to OEM specifications. A sample of such a Director
-  is in demo_director_svc.py.
+  is in demo/demo_director.py.
 
   Fundamentally, this code translates lists of vehicle software assignments
   (roughly mapping ECU IDs to targets) into signed metadata suitable for sending

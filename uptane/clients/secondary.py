@@ -20,23 +20,25 @@
 """
 from __future__ import print_function
 from __future__ import unicode_literals
-from io import open
-
-import uptane
-import uptane.formats
-import uptane.common
-import uptane.encoding.asn1_codec as asn1_codec
-import hashlib
-
-import tuf.client.updater
-import tuf.formats
-import tuf.keys
-import tuf.repository_tool as rt
+from io import open # TODO: Determine if this should be here.
 
 import os # For paths and makedirs
 import shutil # For copyfile
 import random # for nonces
 import zipfile # to expand the metadata archive retrieved from the Primary
+import hashlib
+
+import tuf.formats
+import tuf.keys
+import tuf.client.updater
+import tuf.repository_tool as rt
+
+import uptane
+import uptane.formats
+import uptane.common
+import uptane.encoding.asn1_codec as asn1_codec
+
+
 from uptane import GREEN, RED, YELLOW, ENDCOLORS
 
 

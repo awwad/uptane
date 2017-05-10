@@ -37,8 +37,11 @@ import uptane.services.director as director
 import uptane.services.timeserver as timeserver
 import uptane.encoding.asn1_codec as asn1_codec
 
-from demo.uptane_banners import *
 from uptane import GREEN, RED, YELLOW, ENDCOLORS
+
+# The following import is a temporary measure to facilitate demonstration.
+# It does not ultimately belong here in the reference implementation.
+from demo.uptane_banners import *
 
 
 log = uptane.logging.getLogger('primary')

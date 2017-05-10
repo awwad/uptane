@@ -317,6 +317,14 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
 
   def refresh_toplevel_metadata_from_repositories(self):
+    """
+    Refreshes client's metadata for the top-level roles:
+      root, targets, snapshot, and timestamp
+
+    See tuf.client.updater.Updater.refresh() for details, or the
+    Uptane Implementation Specification, section 8.3.2 (Full Verification of
+    Metadata).
+    """
     self.updater.refresh()
 
 
@@ -324,6 +332,11 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
 
   def get_target_list_from_director(self):
+    """
+    This method extracts the Director's instructions from the targets role in
+    the Director repository's metadata. These must still be validated against
+    the Image Repository in further calls.
+    """
     # TODO: This will have to be changed (along with the functions that depend
     # on this function's output) once multi-role delegations can yield multiple
     # targetfile_info objects. (Currently, we only yield more than one at the
@@ -380,6 +393,13 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
         will be raised by the updater.target() call here if we are unable to
         validate reliable target info for the target file specified (if the
         repositories do not agree, or we could not reach them, or so on).
+
+      uptane.Error
+        if the Director targets file has not provided information about the
+        given target_filepath, but target_filepath has nevertheless been
+        validated. This could happen if the map/pinning file for some reason
+        incorrectly set to not require metadata from the Director.
+
     """
     tuf.formats.RELPATH_SCHEMA.check_match(target_filepath)
 

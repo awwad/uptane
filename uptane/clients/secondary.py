@@ -121,7 +121,7 @@ class Secondary(object):
   def __init__(
     self,
     full_client_dir,
-    director_repo_name, # e.g. 'director'; value must appear in pinning file
+    director_repo_name,
     vin,
     ecu_serial,
     ecu_key,
@@ -551,6 +551,4 @@ class Secondary(object):
     # validated and we can return.
     log.debug('Delivered target file has been fully validated: ' +
         repr(full_image_fname))
-
-
 

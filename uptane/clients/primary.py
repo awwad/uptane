@@ -91,17 +91,6 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
       This is a list of all ECU Serials belonging to Secondaries of this
       Primary.
 
-      # # TODO: <~> This next field makes assumptions that are not in the Uptane
-      # #           specification, to handle some Sam code. Remove the assumption
-      # #           at some point. (The Primary config enum is outside the spec.)
-      # This is a dictionary with an entry for every Secondary that this Primary
-      # communicates with.
-      # The dictionary maps ecu_serial to that ECU's number in the enumeration
-      # in the Primary's config file, for communication purposes.
-      # e.g. {
-      #     'ecuserial1234': 0,
-      #     'ecuserial5678': 1}
-
     assigned_targets:
       A dict mapping ECU Serial to the target file info that the Director has
       instructed that ECU to install.
@@ -277,16 +266,6 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
 
   def get_target_list_from_director(self):
-    # TODO: <~> SHOULD FIX FOR PRODUCTION! Note that this assumes that the
-    # Director is conveying information directly in its "targets" role.
-    # This is not something we can assume - Director repo structure is not
-    # required to be that flat. We could pull all targets from all roles and
-    # then retrieve all Director-validated target info (that step to ensure
-    # that we're not including targets listed by roles that haven't been
-    # delegated control over those filepaths).
-    # For the time being, the design here requires that the Director role
-    # structure have no delegations in it.
-
     # TODO: This will have to be changed (along with the functions that depend
     # on this function's output) once multi-role delegations can yield multiple
     # targetfile_info objects. (Currently, we only yield more than one at the
@@ -502,17 +481,6 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
     # For each target for which we have verified metadata:
     for target in verified_targets:
-
-      # No longer need this.
-      # # We work with the fileinfo from the Director repository, since the
-      # # fileinfos returned are guaranteed to be identical in all regards except
-      # # for the custom field, and the only custom field we care about is from
-      # # the Director. Grab that targetfile info.
-      # # TODO: Clean up this assertion so that an appropriate error is raised.
-      # assert self.director_repo_name in target_dict, \
-      #     'Programming error: expected target info from repository: ' + \
-      #     self.director_repo_name
-      # target = target_dict[self.director_repo_name]
 
       tuf.formats.TARGETFILE_SCHEMA.check_match(target) # redundant, defensive
 
@@ -765,7 +733,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
 
 
-  def generate_signed_vehicle_manifest(self):#, use_json=False):
+  def generate_signed_vehicle_manifest(self):
     """
     Put ECU manifests into a vehicle manifest and sign it.
     Support multiple manifests from the same ECU.
@@ -814,16 +782,6 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     self.ecu_manifests = dict()
 
     return signable_vehicle_manifest
-
-    # if use_json:
-    #   return signed_vehicle_manifest
-
-    # # TODO: Once the ber encoder functions are done, do this:
-    # original_signed_vehicle_manifest = signed_vehicle_manifest
-    # ber_signed_vehicle_manifest = ber_encoder.ber_encode_signable_object(
-    #     signed_vehicle_manifest)
-
-    # return ber_signed_vehicle_manifest
 
 
 
@@ -1107,10 +1065,9 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
 def enforce_jail(fname, expected_containing_dir):
   """
-  DO NOT ASSUME THAT THIS TEMPORARY FUNCTION IS SECURE.
+  DO NOT ASSUME THAT THIS FUNCTION IS SECURE.
   """
   # Make sure it's in the expected directory.
-  #print('provided arguments: ' + repr(fname) + ' and ' + repr(expected_containing_dir))
   abs_fname = os.path.abspath(os.path.join(expected_containing_dir, fname))
   if not abs_fname.startswith(os.path.abspath(expected_containing_dir)):
     raise ValueError('Expected a filename in directory ' +

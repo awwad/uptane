@@ -3,9 +3,18 @@
   primary.py
 
 <Purpose>
-  An Uptane client modeling the behavior of a Primary ECU to distribute updates
-  to Secondaries, collect ECU manifests, generate timeserver requests, etc.
+  Provides core functionality for Uptane Primary ECU clients:
+  - Obtains and performs full verification of metadata and images, employing
+    TUF (The Update Framework)
+  - Prepares metadata and images for distribution to Secondaries
+  - Receives ECU Manifests and holds them for the next Vehicle Manifest
+  - Generates Vehicle Manifests
+  - Receives nonces from Secondaries; maintains and cycles a list of nonces
+    for use in requests for signed time from the Timeserver
 
+  A detailed explanation of the role of the Primary in Uptane is available in
+  the "Design Overview" and "Implementation Specification" documents, links to
+  which are maintained at uptane.github.io
 """
 from __future__ import print_function
 from __future__ import unicode_literals
@@ -28,8 +37,11 @@ import uptane.services.director as director
 import uptane.services.timeserver as timeserver
 import uptane.encoding.asn1_codec as asn1_codec
 
-from demo.uptane_banners import *
 from uptane import GREEN, RED, YELLOW, ENDCOLORS
+
+# The following import is a temporary measure to facilitate demonstration.
+# It does not ultimately belong here in the reference implementation.
+from demo.uptane_banners import *
 
 
 log = uptane.logging.getLogger('primary')
@@ -41,107 +53,122 @@ log.setLevel(uptane.logging.DEBUG)
 
 class Primary(object): # Consider inheriting from Secondary and refactoring.
   """
-  Fields:
+  <Purpose>
+    This class contains the necessary code to perform Uptane validation of
+    images and metadata, and core functionality supporting distribution of
+    metadata and images to Secondary ECUs, combining ECU Manifests into a
+    Vehicle Manifest and signing it, combining tokens for a Timeserver request,
+    validating the response, etc.
 
-    vin:
-      Vehicle identification, whether "VIN" or some other unique identifier.
-      Compliant with uptane.formats.VIN_SCHEMA
+  <Fields>
 
-    ecu_serial:
-      The identification string for this Primary ECU.
-      Compliant with uptane.formats.ECU_SERIAL_SCHEMA
+    self.vin
+      A unique identifier for the vehicle that contains this Secondary ECU.
+      In this reference implementation, this conforms to
+      uptane.formats.VIN_SCHEMA. There is no need to use the vehicle's VIN in
+      particular; we simply need a unique identifier for the vehicle, known
+      to the Director.
 
-    primary_key:
-      The signing key that the Primary ECU will use to sign the Vehicle Version
-      Manifest before sending it to the Primary.
+    self.ecu_serial
+      A unique identifier for this Primary ECU. In this reference
+      implementation, this conforms to uptane.formats.ECU_SERIAL_SCHEMA.
+      (In other implementations, the important point is that this should be
+      unique.) The Director should be aware of this identifier.
 
-    ecu_manifests:
+    self.primary_key
+      The signing key for this Secondary ECU. This key will be used to sign
+      Vehicle Manifests that will then be sent to the Director). The Director
+      should be aware of the corresponding public key, so that it can validate
+      these Vehicle Manifests. Conforms to tuf.formats.ANYKEY_SCHEMA.
+
+    self.updater
+      A tuf.client.updater.Updater object used to retrieve metadata and
+      target files from the Director and Supplier repositories.
+
+    self.full_client_dir
+      The full path of the directory where all client data is stored for this
+      Primary. This includes verified and unverified metadata and images and
+      any temp files. Conforms to tuf.formats.PATH_SCHEMA.
+
+    self.director_repo_name
+      The name of the Director repository (e.g. 'director'), as listed in the
+      map (or pinning) file (pinned.json). This value must appear in that file.
+      Used to distinguish between the Image Repository and the Director
+      Repository. Conforms to tuf.formats.REPOSITORY_NAME_SCHEMA.
+
+    self.timeserver_public_key:
+      The public key matching the private key that we expect the timeserver to
+      use when signing attestations. Validation is against this key.
+
+    self.ecu_manifests
       A dictionary containing the manifests provided by all ECUs. Will include
       all manifests sent by all ECUs. The Primary does not verify signatures on
       ECU manifests according to the Implementation Specification.
       Compromised ECUs may send bogus ECU manifests, so we simply send all
       manifests to the Director, who will sort through and discern what is
       going on.
+      This is emptied every time the Primary produces a Vehicle Manifest
+      (which will have included all of them). An implementer may wish to
+      consider keeping these around until there is some likelihood that the
+      Director has received them, as doing otherwise could deprive the
+      Director of some historical and error/attack data. (Future ECU Manifests
+      will provide current information, but useful diagnostic information may
+      be lost.)
 
-    updater:
-      A tuf.client.updater.Updater object used to retrieve metadata and
-      target files from the Director and Image Repositories.
-
-    full_client_dir:
-      The absolute directory where all client data is stored for the Primary.
-      e.g. /Users/s/w/uptane/temp_primaryclient
-
-    timeserver_public_key:
-      The public key matching the private key that we expect the timeserver to
-      use when signing attestations. Validation is against this key.
-
-    my_secondaries:
+    self.my_secondaries:
       This is a list of all ECU Serials belonging to Secondaries of this
       Primary.
 
-      # # TODO: <~> This next field makes assumptions that are not in the Uptane
-      # #           specification, to handle some Sam code. Remove the assumption
-      # #           at some point. (The Primary config enum is outside the spec.)
-      # This is a dictionary with an entry for every Secondary that this Primary
-      # communicates with.
-      # The dictionary maps ecu_serial to that ECU's number in the enumeration
-      # in the Primary's config file, for communication purposes.
-      # e.g. {
-      #     'ecuserial1234': 0,
-      #     'ecuserial5678': 1}
-
-    assigned_targets:
+    self.assigned_targets:
       A dict mapping ECU Serial to the target file info that the Director has
       instructed that ECU to install.
 
-    nonces_to_send:
+    self.nonces_to_send:
       The list of nonces sent to us from Secondaries and not yet sent to the
       Timeserver.
 
-    nonces_sent:
+    self.nonces_sent:
       The list of nonces sent to the Timeserver by our Secondaries, which we
       have already sent to the Timeserver. Will be checked against the
       Timeserver's response.
 
-    all_valid_timeserver_attestations:
+    self.all_valid_timeserver_attestations:
       A list of all attestations received from Timeservers that have been
       validated by validate_time_attestation.
       Items are appended to the end.
 
-    all_valid_timeserver_times:
+    self.all_valid_timeserver_times:
       A list of all times extracted from all Timeserver attestations that have
       been validated by validate_time_attestation.
       Items are appended to the end.
 
-    distributable_full_metadata_archive_fname:
+    self.distributable_full_metadata_archive_fname:
       The filename at which the full metadata archive is stored after each
       update cycle. Path is relative to uptane.WORKING_DIR. This is atomically
       moved into place (renamed) after it has been fully written, to avoid
       race conditions.
 
-    distributable_partial_metadata_fname:
+    self.distributable_partial_metadata_fname:
       The filename at which the Director's targets metadata file is stored after
       each update cycle, once it is safe to use. This is atomically moved into
       place (renamed) after it has been fully written, to avoid race conditions.
 
 
-  Methods, as called: ("self" arguments excluded):
+  Methods organized by purpose: ("self" arguments excluded)
 
-    __init__(...)
-
-    refresh_toplevel_metadata_from_repositories()
-
-    Methods for OEM/Supplier Primary code to use:
+    High-level Methods for OEM/Supplier Primary code to use:
+      __init__()
       primary_update_cycle()
       generate_signed_vehicle_manifest()
       get_nonces_to_send_and_rotate()
       save_distributable_metadata_files()
+      validate_time_attestation(timeserver_attestation)
 
-    Retrieval and validation of metadata and data from central services:
+    Lower-level methods called by primary_update_cycle() to perform retrieval
+    and validation of metadata and data from central services:
       refresh_toplevel_metadata_from_repositories()
       get_target_list_from_director()
       get_validated_target_info()
-      validate_time_attestation(timeserver_attestation)
 
     Components of the interface available to a Secondary client:
       register_ecu_manifest(vin, ecu_serial, nonce, signed_ecu_manifest)
@@ -181,8 +208,6 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
     And so on, with ECUs requesting images and metadata and registering ECU
     manifests (and providing nonces thereby).
-
-
   """
 
   def __init__(
@@ -197,7 +222,41 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     my_secondaries=[]):
 
     """
-    See class docstring.
+    <Purpose>
+      Constructor for class Primary
+
+    <Arguments>
+
+      full_client_dir       See class docstring above.
+
+      director_repo_name    See class docstring above.
+
+      vin                   See class docstring above.
+
+      ecu_serial            See class docstring above.
+
+      primary_key           See class docstring above.
+
+      timeserver_public_key See class docstring above.
+
+      my_secondaries        See class docstring above. (optional)
+
+      time
+        An initial time to set the Primary's "clock" to, conforming to
+        tuf.formats.ISO8601_DATETIME_SCHEMA.
+
+
+    <Exceptions>
+
+      tuf.FormatError
+        if the arguments are not correctly formatted
+
+      uptane.Error
+        if director_repo_name is not a known repository based on the
+        map/pinning file (pinned.json)
+
+    <Side Effects>
+      None.
     """
 
     # Check arguments:
@@ -258,6 +317,14 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
 
   def refresh_toplevel_metadata_from_repositories(self):
+    """
+    Refreshes client's metadata for the top-level roles:
+      root, targets, snapshot, and timestamp
+
+    See tuf.client.updater.Updater.refresh() for details, or the
+    Uptane Implementation Specification, section 8.3.2 (Full Verification of
+    Metadata).
+    """
     self.updater.refresh()
 
 
@@ -265,16 +332,11 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
 
   def get_target_list_from_director(self):
-    # TODO: <~> SHOULD FIX FOR PRODUCTION! Note that this assumes that the
-    # Director is conveying information directly in its "targets" role.
-    # This is not something we can assume - Director repo structure is not
-    # required to be that flat. We could pull all targets from all roles and
-    # then retrieve all Director-validated target info (that step to ensure
-    # that we're not including targets listed by roles that haven't been
-    # delegated control over those filepaths).
-    # For the time being, the design here requires that the Director role
-    # structure have no delegations in it.
-
+    """
+    This method extracts the Director's instructions from the targets role in
+    the Director repository's metadata. These must still be validated against
+    the Image Repository in further calls.
+    """
     # TODO: This will have to be changed (along with the functions that depend
     # on this function's output) once multi-role delegations can yield multiple
     # targetfile_info objects. (Currently, we only yield more than one at the
@@ -331,6 +393,13 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
         will be raised by the updater.target() call here if we are unable to
         validate reliable target info for the target file specified (if the
         repositories do not agree, or we could not reach them, or so on).
+
+      uptane.Error
+        if the Director targets file has not provided information about the
+        given target_filepath, but target_filepath has nevertheless been
+        validated. This could happen if the map/pinning file for some reason
+        incorrectly set to not require metadata from the Director.
+
     """
     tuf.formats.RELPATH_SCHEMA.check_match(target_filepath)
 
@@ -364,8 +433,8 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
       # repos couldn't provide validated target file info, we'd have caught an
       # error earlier instead.
 
-      raise tuf.Error('Unexpected behavior: did not receive target info from '
-          'Director repository (' + repr(self.director_repo_name) + ') for '
+      raise uptane.Error('Unexpected behavior: did not receive target info from'
+          ' Director repository (' + repr(self.director_repo_name) + ') for '
           'a target (' + repr(target_filepath) + '). Is pinned.json configured '
           'to allow some targets to validate without Director approval, or is'
           'the wrong repository specified as the Director repository in the '
@@ -490,17 +559,6 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
     # For each target for which we have verified metadata:
     for target in verified_targets:
-
-      # No longer need this.
-      # # We work with the fileinfo from the Director repository, since the
-      # # fileinfos returned are guaranteed to be identical in all regards except
-      # # for the custom field, and the only custom field we care about is from
-      # # the Director. Grab that targetfile info.
-      # # TODO: Clean up this assertion so that an appropriate error is raised.
-      # assert self.director_repo_name in target_dict, \
-      #     'Programming error: expected target info from repository: ' + \
-      #     self.director_repo_name
-      # target = target_dict[self.director_repo_name]
 
       tuf.formats.TARGETFILE_SCHEMA.check_match(target) # redundant, defensive
 
@@ -753,7 +811,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
 
 
-  def generate_signed_vehicle_manifest(self):#, use_json=False):
+  def generate_signed_vehicle_manifest(self):
     """
     Put ECU manifests into a vehicle manifest and sign it.
     Support multiple manifests from the same ECU.
@@ -802,16 +860,6 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     self.ecu_manifests = dict()
 
     return signable_vehicle_manifest
-
-    # if use_json:
-    #   return signed_vehicle_manifest
-
-    # # TODO: Once the ber encoder functions are done, do this:
-    # original_signed_vehicle_manifest = signed_vehicle_manifest
-    # ber_signed_vehicle_manifest = ber_encoder.ber_encode_signable_object(
-    #     signed_vehicle_manifest)
-
-    # return ber_signed_vehicle_manifest
 
 
 
@@ -1022,14 +1070,15 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
   def save_distributable_metadata_files(self):
     """
-    # TODO: Docstring.
+    Generates a zip archive of the metadata files validated by this Primary,
+    for distribution to full verifying Secondaries. The particular method of
+    distributing this metadata to Secondaries will vary greatly depending on
+    one's setup, and is left to implementers.
     """
 
     metadata_base_dir = os.path.join(self.full_client_dir, 'metadata')
 
-
-    # Save a gzipped version of all of the metadata.
-    # TODO: <~> Update this for ASN.1 / DER.
+    # Save a zipped version of all of the metadata.
     # Note that some stale metadata may be retained, but should never affect
     # security. Worth confirming.
     # What we want here, basically, is:
@@ -1095,10 +1144,9 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
 def enforce_jail(fname, expected_containing_dir):
   """
-  DO NOT ASSUME THAT THIS TEMPORARY FUNCTION IS SECURE.
+  DO NOT ASSUME THAT THIS FUNCTION IS SECURE.
   """
   # Make sure it's in the expected directory.
-  #print('provided arguments: ' + repr(fname) + ' and ' + repr(expected_containing_dir))
   abs_fname = os.path.abspath(os.path.join(expected_containing_dir, fname))
   if not abs_fname.startswith(os.path.abspath(expected_containing_dir)):
     raise ValueError('Expected a filename in directory ' +

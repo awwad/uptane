@@ -1,17 +1,13 @@
 """
 demo_image_repo.py
 
-Demonstration code handling an Image repository.
+Demonstration code handling an Image Repository.
 
-Use:
+  Use:
+    import demo.demo_image_repo as di
+    di.clean_slate()
 
-import demo.demo_image_repo as di
-di.clean_slate()
-di.write_to_live()
-di.host()
-
-# Later:
-di.kill_server()
+  See README.md for more details.
 
 
 

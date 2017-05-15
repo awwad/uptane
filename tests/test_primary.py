@@ -58,14 +58,20 @@ nonce = 5
 vin = '000'
 primary_ecu_serial = '00000'
 
-# Initialize these in setUpModule below.
-primary_ecu_key = None
-key_timeserver_pub = None
-key_timeserver_pri = None
-clock = None
-process_timeserver = None
-process_director = None
-process_oemrepo = None
+# Load the private key for this Primary ECU.
+primary_ecu_key = uptane.common.canonical_key_from_pub_and_pri(
+    demo.import_public_key('primary'), demo.import_private_key('primary'))
+
+# Generate a trusted initial time for the Primary.
+clock = tuf.formats.unix_timestamp_to_datetime(int(time.time()))
+clock = clock.isoformat() + 'Z'
+tuf.formats.ISO8601_DATETIME_SCHEMA.check_match(clock)
+
+# Load the public timeserver key.
+key_timeserver_pub = demo.import_public_key('timeserver')
+key_timeserver_pri = demo.import_private_key('timeserver')
+
+
 
 
 
@@ -81,41 +87,8 @@ def destroy_temp_dir():
 def setUpModule():
   """
   This is run once for the full module, before all tests.
-  It prepares some globals, including a single Primary ECU client instance.
-  When finished, it will also start up an OEM Repository Server,
-  Director Server, and Time Server. Currently, it requires them to be already
-  running.
   """
-  global primary_ecu_key
-  global key_timeserver_pub
-  global key_timeserver_pri
-  global clock
-
   destroy_temp_dir()
-
-  # Load the private key for this Primary ECU.
-  key_pub = demo.import_public_key('primary')
-  key_pri = demo.import_private_key('primary')
-  primary_ecu_key = uptane.common.canonical_key_from_pub_and_pri(
-      key_pub, key_pri)
-
-  # Load the public timeserver key.
-  key_timeserver_pub = demo.import_public_key('timeserver')
-  key_timeserver_pri = demo.import_private_key('timeserver')
-
-  # Generate a trusted initial time for the Primary.
-  clock = tuf.formats.unix_timestamp_to_datetime(int(time.time()))
-  clock = clock.isoformat() + 'Z'
-  tuf.formats.ISO8601_DATETIME_SCHEMA.check_match(clock)
-
-  # Currently in development.
-
-  # Start the timeserver, director, and oem repo for this test,
-  # using subprocesses, and saving those processes as:
-  #process_timeserver
-  #process_director
-  #process_oemrepo
-  # to be stopped in tearDownModule below.
 
 
 

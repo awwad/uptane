@@ -12,11 +12,7 @@
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import uptane
-import uptane.formats
-import uptane.clients.primary as primary
-import uptane.common
-import uptane.encoding.asn1_codec as asn1_codec
+import uptane # Import before TUF modules; may change tuf.conf values.
 
 from six.moves.urllib.error import URLError
 
@@ -31,6 +27,10 @@ import time
 import copy
 import shutil
 import hashlib
+import uptane.formats
+import uptane.clients.primary as primary
+import uptane.common
+import uptane.encoding.asn1_codec as asn1_codec
 
 # For temporary convenience:
 import demo # for generate_key, import_public_key, import_private_key

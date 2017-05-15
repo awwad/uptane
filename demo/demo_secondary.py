@@ -27,7 +27,7 @@ from __future__ import unicode_literals
 from io import open
 
 import demo
-import uptane
+import uptane # Import before TUF modules; may change tuf.conf values.
 import uptane.common # for canonical key construction and signing
 import uptane.clients.secondary as secondary
 from uptane import GREEN, RED, YELLOW, ENDCOLORS

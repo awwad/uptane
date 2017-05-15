@@ -5,6 +5,7 @@ the future.
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import uptane # Import before TUF modules; may change tuf.conf values.
 import tuf
 import tuf.formats
 import json
@@ -18,7 +19,6 @@ import hashlib
 # signature-related functions into a new module (sig or something) that
 # imports asn1_codec.
 import uptane.encoding.asn1_codec as asn1_codec
-import uptane
 import uptane.formats
 
 # Both key types below are supported, but issues may be encountered with RSA

@@ -3,7 +3,7 @@ __init__.py for the Uptane demo package
 """
 from __future__ import unicode_literals
 
-import uptane
+import uptane # Import before TUF modules; may change tuf.conf values.
 import os
 import tuf.formats
 import tuf.repository_tool as rt

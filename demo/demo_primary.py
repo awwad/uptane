@@ -20,7 +20,7 @@ from __future__ import unicode_literals
 from io import open
 
 import demo
-import uptane
+import uptane # Import before TUF modules; may change tuf.conf values.
 import uptane.common # for canonical key construction and signing
 import uptane.clients.primary as primary
 import uptane.encoding.asn1_codec as asn1_codec

@@ -115,7 +115,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 from io import open
 
-import uptane
+import uptane # Import before TUF modules; may change tuf.conf values. 
 import uptane.formats
 import tuf
 

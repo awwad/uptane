@@ -9,10 +9,10 @@
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import uptane # Import before TUF modules; may change tuf.conf values.
 import tuf.formats
 import tuf.keys
 import tuf.repository_tool as repo_tool
-import uptane
 import uptane.formats
 import uptane.common
 

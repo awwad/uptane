@@ -442,16 +442,17 @@ class TestPrimary(unittest.TestCase):
 
     vehicle_manifest = primary_instance.generate_signed_vehicle_manifest()
 
-    # Test format of vehicle manifest. If using DER, convert back to Python
-    # dictionary.
+    # If the vehicle manifest is in DER format, check its format and then
+    # convert back to JSON so that we can inspect it further.
     if tuf.conf.METADATA_FORMAT == 'der':
       uptane.formats.DER_DATA_SCHEMA.check_match(vehicle_manifest)
       vehicle_manifest = asn1_codec.convert_signed_der_to_dersigned_json(
           vehicle_manifest, datatype='vehicle_manifest')
 
-    else:
-      uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
-          vehicle_manifest)
+    # Now it's not in DER format, whether or not it started that way.
+    # Check its format and inspect it.
+    uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
+        vehicle_manifest)
 
     # Test contents of vehicle manifest.
     # Make sure there is exactly one signature.

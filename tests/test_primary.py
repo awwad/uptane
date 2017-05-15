@@ -14,22 +14,23 @@ from __future__ import unicode_literals
 
 import uptane # Import before TUF modules; may change tuf.conf values.
 
-from six.moves.urllib.error import URLError
-
-import tuf
-import tuf.formats
-import tuf.client.updater # to test one of the fields in the Primary object
-import tuf.keys # to validate a signature
-
 import unittest
 import os.path
 import time
 import copy
 import shutil
 import hashlib
+
+from six.moves.urllib.error import URLError
+
+import tuf
+import tuf.formats
+import tuf.conf
+import tuf.client.updater # to test one of the fields in the Primary object
+
 import uptane.formats
 import uptane.clients.primary as primary
-import uptane.common
+import uptane.common # verify sigs, create client dir structure, convert key
 import uptane.encoding.asn1_codec as asn1_codec
 
 # For temporary convenience:
@@ -155,42 +156,11 @@ class TestPrimary(unittest.TestCase):
         'director': TEST_DIRECTOR_ROOT_FNAME})
 
 
+    # TODO: Test with invalid pinning file
+    # TODO: Test with pinning file lacking a Director repo.
+
     # Now try creating a Primary with a series of bad arguments, expecting
     # errors.
-
-    # Invalid Pinning File
-    # TODO: Can't test this this way anymore. The pinning file is assumed to
-    # already exist in the appropriate directory now, where the updater object
-    # initialization will find it. This test now needs to edit or replace the
-    # pinning file in its expected location.
-    # with self.assertRaises(tuf.FormatError):
-    #   p = primary.Primary(
-    #       full_client_dir=TEMP_CLIENT_DIR,
-    #       pinning_filename=TEST_OEM_ROOT_FNAME, # INVALID: WRONG TYPE OF FILE
-    #       director_repo_name=demo.DIRECTOR_REPO_NAME,
-    #       vin=vin,
-    #       ecu_serial=primary_ecu_serial,
-    #       fname_root_from_mainrepo=TEST_OEM_ROOT_FNAME,
-    #       fname_root_from_directorrepo=TEST_DIRECTOR_ROOT_FNAME,
-    #       primary_key=primary_ecu_key,
-    #       time=clock,
-    #       timeserver_public_key=key_timeserver_pub)
-
-    # Director repo not specified in pinning file
-    # TODO: Same comment as above: need to edit the pinning file on disk for
-    # this test to work.
-    # with self.assertRaises(uptane.Error):
-    #   p = primary.Primary(
-    #       full_client_dir=TEMP_CLIENT_DIR,
-    #       pinning_filename=TEST_PINNING_FNAME,
-    #       director_repo_name='this_is_not_the_name_of_any_repository', # TODO: Should probably be a new exception class, uptane.UnknownRepository or something
-    #       vin=vin,
-    #       ecu_serial=primary_ecu_serial,
-    #       fname_root_from_mainrepo=TEST_OEM_ROOT_FNAME,
-    #       fname_root_from_directorrepo=TEST_DIRECTOR_ROOT_FNAME,
-    #       primary_key=primary_ecu_key,
-    #       time=clock,
-    #       timeserver_public_key=key_timeserver_pub)
 
     # TODO: Add test for my_secondaries argument.
 
@@ -292,8 +262,6 @@ class TestPrimary(unittest.TestCase):
 
   def test_05_register_new_secondary(self):
 
-    global primary_instance
-
     self.assertEqual([], primary_instance.my_secondaries)
 
     primary_instance.register_new_secondary('1352')
@@ -306,8 +274,6 @@ class TestPrimary(unittest.TestCase):
 
   def test_10_register_ecu_manifest(self):
 
-    global primary_instance
-
     primary_instance.register_new_secondary('ecu11111')
 
     # TODO: Test providing bad data.
@@ -318,7 +284,6 @@ class TestPrimary(unittest.TestCase):
     # Make sure we're starting with no nonces sent or to send.
     self.assertEqual([], primary_instance.nonces_to_send)
     self.assertEqual([], primary_instance.nonces_sent)
-    #self.assertNotIn(nonce, primary_instance.nonces_to_send)
 
     sample_ecu_manifest = {
         "signatures": [{
@@ -389,8 +354,6 @@ class TestPrimary(unittest.TestCase):
 
   def test_15_get_nonces_to_send_and_rotate(self):
 
-    global primary_instance
-
     self.assertIn(nonce, primary_instance.nonces_to_send)
 
     # Cycle nonces and make sure the return value is as expected from the
@@ -407,8 +370,6 @@ class TestPrimary(unittest.TestCase):
 
 
   def test_20_validate_time_attestation(self):
-
-    global primary_instance
 
     # Try a valid time attestation first, signed by an expected timeserver key,
     # with an expected nonce (previously "received" from a Secondary)
@@ -433,7 +394,7 @@ class TestPrimary(unittest.TestCase):
       # Fail to re-sign the DER, so that the signature is over JSON instead,
       # which results in a bad signature.
       time_attestation__badsig = asn1_codec.convert_signed_metadata_to_der(
-          original_time_attestation, resign=False)
+          original_time_attestation, resign=False, datatype='time_attestation')
 
     else: # 'json' format
       # Rewrite the first 9 digits of the signature ('sig') to something
@@ -478,20 +439,19 @@ class TestPrimary(unittest.TestCase):
 
   def test_25_generate_signed_vehicle_manifest(self):
 
-    global primary_instance
-
     vehicle_manifest = primary_instance.generate_signed_vehicle_manifest()
 
-    # Test format of vehicle manifest. If using DER, convert back to Python
-    # dictionary.
+    # If the vehicle manifest is in DER format, check its format and then
+    # convert back to JSON so that we can inspect it further.
     if tuf.conf.METADATA_FORMAT == 'der':
       uptane.formats.DER_DATA_SCHEMA.check_match(vehicle_manifest)
       vehicle_manifest = asn1_codec.convert_signed_der_to_dersigned_json(
           vehicle_manifest, datatype='vehicle_manifest')
 
-    else:
-      uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
-          vehicle_manifest)
+    # Now it's not in DER format, whether or not it started that way.
+    # Check its format and inspect it.
+    uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
+        vehicle_manifest)
 
     # Test contents of vehicle manifest.
     # Make sure there is exactly one signature.
@@ -505,8 +465,6 @@ class TestPrimary(unittest.TestCase):
 
 
     # Check the signature on the vehicle manifest.
-    # tuf.keys needs to know not to try encoding the data as UTF-8 if we're
-    # working with DER and data_to_verify is already bytes.
     self.assertTrue(uptane.common.verify_signature_over_metadata(
         primary_ecu_key,
         vehicle_manifest['signatures'][0], # TODO: Deal with 1-sig assumption?

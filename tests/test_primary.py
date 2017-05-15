@@ -14,19 +14,21 @@ from __future__ import unicode_literals
 
 import uptane # Import before TUF modules; may change tuf.conf values.
 
-from six.moves.urllib.error import URLError
-
-import tuf
-import tuf.formats
-import tuf.client.updater # to test one of the fields in the Primary object
-import tuf.keys # to validate a signature
-
 import unittest
 import os.path
 import time
 import copy
 import shutil
 import hashlib
+
+from six.moves.urllib.error import URLError
+
+import tuf
+import tuf.formats
+import tuf.conf
+import tuf.client.updater # to test one of the fields in the Primary object
+import tuf.keys # to validate a signature
+
 import uptane.formats
 import uptane.clients.primary as primary
 import uptane.common

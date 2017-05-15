@@ -294,8 +294,6 @@ class TestPrimary(unittest.TestCase):
 
   def test_05_register_new_secondary(self):
 
-    global primary_instance
-
     self.assertEqual([], primary_instance.my_secondaries)
 
     primary_instance.register_new_secondary('1352')
@@ -307,8 +305,6 @@ class TestPrimary(unittest.TestCase):
 
 
   def test_10_register_ecu_manifest(self):
-
-    global primary_instance
 
     primary_instance.register_new_secondary('ecu11111')
 
@@ -391,8 +387,6 @@ class TestPrimary(unittest.TestCase):
 
   def test_15_get_nonces_to_send_and_rotate(self):
 
-    global primary_instance
-
     self.assertIn(nonce, primary_instance.nonces_to_send)
 
     # Cycle nonces and make sure the return value is as expected from the
@@ -409,8 +403,6 @@ class TestPrimary(unittest.TestCase):
 
 
   def test_20_validate_time_attestation(self):
-
-    global primary_instance
 
     # Try a valid time attestation first, signed by an expected timeserver key,
     # with an expected nonce (previously "received" from a Secondary)
@@ -479,8 +471,6 @@ class TestPrimary(unittest.TestCase):
 
 
   def test_25_generate_signed_vehicle_manifest(self):
-
-    global primary_instance
 
     vehicle_manifest = primary_instance.generate_signed_vehicle_manifest()
 

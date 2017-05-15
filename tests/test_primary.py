@@ -38,11 +38,12 @@ import demo # for generate_key, import_public_key, import_private_key
 
 TEST_DATA_DIR = os.path.join(uptane.WORKING_DIR, 'tests', 'test_data')
 TEST_DIRECTOR_METADATA_DIR = os.path.join(TEST_DATA_DIR, 'director_metadata')
-TEST_OEM_METADATA_DIR = os.path.join(TEST_DATA_DIR, 'oem_metadata')
+TEST_IMAGE_REPO_METADATA_DIR = os.path.join(
+    TEST_DATA_DIR, 'image_repo_metadata')
 TEST_DIRECTOR_ROOT_FNAME = os.path.join(
     TEST_DIRECTOR_METADATA_DIR, 'root.' + tuf.conf.METADATA_FORMAT)
-TEST_OEM_ROOT_FNAME = os.path.join(
-    TEST_OEM_METADATA_DIR, 'root.' + tuf.conf.METADATA_FORMAT)
+TEST_IMAGE_REPO_ROOT_FNAME = os.path.join(
+    TEST_IMAGE_REPO_METADATA_DIR, 'root.' + tuf.conf.METADATA_FORMAT)
 TEST_PINNING_FNAME = os.path.join(TEST_DATA_DIR, 'pinned.json')
 TEMP_CLIENT_DIR = os.path.join(TEST_DATA_DIR, 'temp_test_primary')
 
@@ -150,7 +151,7 @@ class TestPrimary(unittest.TestCase):
     uptane.common.create_directory_structure_for_client(
         TEMP_CLIENT_DIR,
         TEST_PINNING_FNAME,
-        {'mainrepo': TEST_OEM_ROOT_FNAME,
+        {'imagerepo': TEST_IMAGE_REPO_ROOT_FNAME,
         'director': TEST_DIRECTOR_ROOT_FNAME})
 
 
@@ -260,7 +261,7 @@ class TestPrimary(unittest.TestCase):
     # file from the repositories.
     # Save the result for future tests, to save time and code.
     # TODO: Stick TEST_PINNING_FNAME in the right place.
-    # Stick TEST_OEM_ROOT_FNAME and TEST_DIRECTOR_ROOT_FNAME in the right place.
+    # Stick TEST_IMAGE_REPO_ROOT_FNAME and TEST_DIRECTOR_ROOT_FNAME in the right place.
     primary_instance = primary.Primary(
         full_client_dir=TEMP_CLIENT_DIR,
         director_repo_name=demo.DIRECTOR_REPO_NAME,
@@ -528,7 +529,7 @@ class TestPrimary(unittest.TestCase):
         sorted(os.listdir(TEST_DIRECTOR_METADATA_DIR)))
     self.assertEqual(
         ['root.der', 'root.json'],
-        sorted(os.listdir(TEST_OEM_METADATA_DIR)))
+        sorted(os.listdir(TEST_IMAGE_REPO_METADATA_DIR)))
 
     try:
       primary_instance.refresh_toplevel_metadata_from_repositories()
@@ -540,7 +541,7 @@ class TestPrimary(unittest.TestCase):
       # Check the resulting top-level metadata files in the client directory.
       # Expect root, snapshot, targets, and timestamp for both director and
       # image repo.
-      for repo in ['director', 'mainrepo']:
+      for repo in ['director', 'imagerepo']:
         self.assertEqual(
             ['root.' + tuf.conf.METADATA_FORMAT,
             'snapshot.' + tuf.conf.METADATA_FORMAT,

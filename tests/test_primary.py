@@ -157,42 +157,11 @@ class TestPrimary(unittest.TestCase):
         'director': TEST_DIRECTOR_ROOT_FNAME})
 
 
+    # TODO: Test with invalid pinning file
+    # TODO: Test with pinning file lacking a Director repo.
+
     # Now try creating a Primary with a series of bad arguments, expecting
     # errors.
-
-    # Invalid Pinning File
-    # TODO: Can't test this this way anymore. The pinning file is assumed to
-    # already exist in the appropriate directory now, where the updater object
-    # initialization will find it. This test now needs to edit or replace the
-    # pinning file in its expected location.
-    # with self.assertRaises(tuf.FormatError):
-    #   p = primary.Primary(
-    #       full_client_dir=TEMP_CLIENT_DIR,
-    #       pinning_filename=TEST_OEM_ROOT_FNAME, # INVALID: WRONG TYPE OF FILE
-    #       director_repo_name=demo.DIRECTOR_REPO_NAME,
-    #       vin=vin,
-    #       ecu_serial=primary_ecu_serial,
-    #       fname_root_from_mainrepo=TEST_OEM_ROOT_FNAME,
-    #       fname_root_from_directorrepo=TEST_DIRECTOR_ROOT_FNAME,
-    #       primary_key=primary_ecu_key,
-    #       time=clock,
-    #       timeserver_public_key=key_timeserver_pub)
-
-    # Director repo not specified in pinning file
-    # TODO: Same comment as above: need to edit the pinning file on disk for
-    # this test to work.
-    # with self.assertRaises(uptane.Error):
-    #   p = primary.Primary(
-    #       full_client_dir=TEMP_CLIENT_DIR,
-    #       pinning_filename=TEST_PINNING_FNAME,
-    #       director_repo_name='this_is_not_the_name_of_any_repository', # TODO: Should probably be a new exception class, uptane.UnknownRepository or something
-    #       vin=vin,
-    #       ecu_serial=primary_ecu_serial,
-    #       fname_root_from_mainrepo=TEST_OEM_ROOT_FNAME,
-    #       fname_root_from_directorrepo=TEST_DIRECTOR_ROOT_FNAME,
-    #       primary_key=primary_ecu_key,
-    #       time=clock,
-    #       timeserver_public_key=key_timeserver_pub)
 
     # TODO: Add test for my_secondaries argument.
 
@@ -316,7 +285,6 @@ class TestPrimary(unittest.TestCase):
     # Make sure we're starting with no nonces sent or to send.
     self.assertEqual([], primary_instance.nonces_to_send)
     self.assertEqual([], primary_instance.nonces_sent)
-    #self.assertNotIn(nonce, primary_instance.nonces_to_send)
 
     sample_ecu_manifest = {
         "signatures": [{

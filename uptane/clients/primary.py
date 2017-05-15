@@ -19,6 +19,8 @@
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import uptane # Import before TUF modules; may change tuf.conf values.
+
 import os # For paths and makedirs
 import shutil # For copyfile
 import random # for nonces

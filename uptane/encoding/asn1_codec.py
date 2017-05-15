@@ -17,6 +17,7 @@
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import uptane # Import before TUF modules; may change tuf.conf values. 
 import tuf
 import tuf.conf
 import tuf.formats

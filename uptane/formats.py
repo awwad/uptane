@@ -9,6 +9,8 @@
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import uptane # Import before TUF modules; may change tuf.conf values.
+
 # We will have a superset of formats in TUF
 from tuf.formats import *
 import tuf.schema as SCHEMA

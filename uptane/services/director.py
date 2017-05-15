@@ -30,7 +30,7 @@
 """
 from __future__ import unicode_literals
 
-import uptane
+import uptane # Import before TUF modules; may change tuf.conf values.
 import uptane.formats
 import uptane.common
 import uptane.services.inventorydb as inventory

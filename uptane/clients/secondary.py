@@ -22,6 +22,8 @@ from __future__ import print_function
 from __future__ import unicode_literals
 from io import open # TODO: Determine if this should be here.
 
+import uptane # Import before TUF modules; may change tuf.conf values.
+
 import os # For paths and makedirs
 import shutil # For copyfile
 import random # for nonces
@@ -33,7 +35,6 @@ import tuf.keys
 import tuf.client.updater
 import tuf.repository_tool as rt
 
-import uptane
 import uptane.formats
 import uptane.common
 import uptane.encoding.asn1_codec as asn1_codec

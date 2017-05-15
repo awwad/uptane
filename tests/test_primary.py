@@ -427,7 +427,7 @@ class TestPrimary(unittest.TestCase):
       # Fail to re-sign the DER, so that the signature is over JSON instead,
       # which results in a bad signature.
       time_attestation__badsig = asn1_codec.convert_signed_metadata_to_der(
-          original_time_attestation, resign=False)
+          original_time_attestation, resign=False, datatype='time_attestation')
 
     else: # 'json' format
       # Rewrite the first 9 digits of the signature ('sig') to something

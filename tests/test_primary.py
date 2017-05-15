@@ -27,11 +27,10 @@ import tuf
 import tuf.formats
 import tuf.conf
 import tuf.client.updater # to test one of the fields in the Primary object
-import tuf.keys # to validate a signature
 
 import uptane.formats
 import uptane.clients.primary as primary
-import uptane.common
+import uptane.common # verify sigs, create client dir structure, convert key
 import uptane.encoding.asn1_codec as asn1_codec
 
 # For temporary convenience:
@@ -466,8 +465,6 @@ class TestPrimary(unittest.TestCase):
 
 
     # Check the signature on the vehicle manifest.
-    # tuf.keys needs to know not to try encoding the data as UTF-8 if we're
-    # working with DER and data_to_verify is already bytes.
     self.assertTrue(uptane.common.verify_signature_over_metadata(
         primary_ecu_key,
         vehicle_manifest['signatures'][0], # TODO: Deal with 1-sig assumption?

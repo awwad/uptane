@@ -1,0 +1,19 @@
+{
+ "signatures": [
+  {
+   "keyid": "630cf584f392430b2119a4395e39624e86f5e5c5374507a789be5cf35bf090d6",
+   "method": "ed25519",
+   "sig": "21284c2881646077333037d5ffe008715696a7063f7a4c1e9a83208584e63a702116986f8caa2d2e9e7bccfddee3053d56a2951a1483a63e9cf523747c3a7605"
+  }
+ ],
+ "signed": {
+  "_type": "Targets",
+  "delegations": {
+   "keys": {},
+   "roles": []
+  },
+  "expires": "2037-05-16T17:52:20Z",
+  "targets": {},
+  "version": 1
+ }
+}

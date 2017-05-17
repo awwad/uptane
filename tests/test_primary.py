@@ -52,7 +52,7 @@ TEMP_CLIENT_DIR = os.path.join(TEST_DATA_DIR, 'temp_test_primary')
 # non-damaging tests so as to avoid creating objects all over again.
 primary_instance = None
 
-# Changing some of these values would require producing new signed sample data
+# Changing some of these values would require producing new signed test data
 # from the Timeserver or a Secondary.
 nonce = 5
 vin = '000'
@@ -61,7 +61,7 @@ primary_ecu_serial = '00000'
 # Initialize these in setUpModule below.
 primary_ecu_key = None
 key_timeserver_pub = None
-key_timeserver_pri = None
+key_timeserver_pri = None # simplifies use of test data (re-sign)
 clock = None
 process_timeserver = None
 process_director = None

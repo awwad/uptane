@@ -8,7 +8,10 @@ python:
 #    TOXENV=py27
 
 install:
-    - pip install tox
+    - pip install tox coveralls
 
 script:
     tox
+
+after_success:
+    - coveralls

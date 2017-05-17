@@ -825,7 +825,9 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
     else:
       raise uptane.Error('Unable to convert time attestation as configured. '
-          'Unexpected format setting: ' + repr(tuf.conf.METADATA_FORMAT))
+          'The settings supported for timeserver attestations are "json" and '
+          '"der", but the value of tuf.conf.METADATA_FORMAT is: ' +
+          repr(tuf.conf.METADATA_FORMAT))
 
 
 

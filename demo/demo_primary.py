@@ -687,11 +687,13 @@ def get_time_attestation_for_ecu(ecu_serial):
     #     repr(ecu_serial) + ') does not appear in the mapping of ECU Serials '
     #     'to CAN IDs. Sending time attestation back.')
 
-    print('Distributing time attestation to ECU ' + repr(ecu_serial))
+    attestation = primary_ecu.get_last_timeserver_attestation()
+
     # If we're using ASN.1/DER, then the attestation is binary data we're about
     # to transmit via XMLRPC, so we should wrap it appropriately:
-    attestation = xmlrpc_client.Binary(
-        primary_ecu.get_last_timeserver_attestation())
+    if tuf.conf.METADATA_FORMAT == 'der':
+      attestation = xmlrpc_client.Binary(attestation)
+
     return attestation
 
 

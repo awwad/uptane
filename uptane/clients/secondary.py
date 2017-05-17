@@ -380,6 +380,12 @@ class Secondary(object):
 
     If validation is successful, switch to a new nonce for next time.
     """
+    # If we're using ASN.1/DER format, convert the attestation into something
+    # comprehensible (JSON-compatible dictionary) instead.
+    if tuf.conf.METADATA_FORMAT == 'der':
+      timeserver_attestation = asn1_codec.convert_signed_der_to_dersigned_json(
+          timeserver_attestation)
+
     # Check format.
     uptane.formats.SIGNABLE_TIMESERVER_ATTESTATION_SCHEMA.check_match(
         timeserver_attestation)

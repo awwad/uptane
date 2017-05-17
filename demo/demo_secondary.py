@@ -279,6 +279,13 @@ def update_cycle():
 
   # Download the time attestation from the Primary.
   time_attestation = pserver.get_last_timeserver_attestation()
+  if tuf.conf.METADATA_FORMAT == 'der':
+    # Binary data transfered via XMLRPC has to be wrapped in an xmlrpc Binary
+    # object. The data itself is contained in attribute 'data'.
+    # When running the demo using ASN.1/DER mode, metadata is in binary, and
+    # so this xmlrpc Binary object is used and the data should be extracted
+    # from it like so:
+    time_attestation = time_attestation.data
 
   # Download the metadata from the Primary in the form of an archive. This
   # returns the binary data that we need to write to file.

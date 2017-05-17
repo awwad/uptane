@@ -806,8 +806,26 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     if not self.all_valid_timeserver_attestations:
       return None
 
+    most_recent_attestation = self.all_valid_timeserver_attestations[-1]
+
+    # We've been storing the time attestation as a simple JSON-compatible
+    # dictionary. If the format of transfered metadata is expected to be
+    # ASN.1/DER, we convert the time attestation back to DER and return it in
+    # that form.
+    if tuf.conf.METADATA_FORMAT == 'der':
+      converted_attestation = asn1_codec.convert_signed_metadata_to_der(
+          most_recent_attestation, datatype='time_attestation')
+      uptane.formats.DER_DATA_SCHEMA.check_match(converted_attestation)
+      return converted_attestation
+
+    elif tuf.conf.METADATA_FORMAT == 'json':
+      uptane.formats.SIGNABLE_TIMESERVER_ATTESTATION_SCHEMA.check_match(
+          most_recent_attestation)
+      return most_recent_attestation
+
     else:
-      return self.all_valid_timeserver_attestations[-1]
+      raise uptane.Error('Unable to convert time attestation as configured. '
+          'Unexpected format setting: ' + repr(tuf.conf.METADATA_FORMAT))
 
 
 

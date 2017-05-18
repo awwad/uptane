@@ -1,7 +1,12 @@
-# Uptane
-Reference Implementation and demonstration code for [Uptane](https://uptane.org).
+# [Uptane](https://uptane.github.io)
 
-Please note that extensive documentation on design can be found in the following documents:
+Reference Implementation and demonstration code
+
+[![Build Status](https://travis-ci.org/uptane/uptane.png)](https://travis-ci.org/uptane/uptane) [![Coverage Status](https://coveralls.io/repos/uptane/uptane/badge.svg)](https://coveralls.io/r/uptane/uptane)
+
+--------------------------------
+
+Extensive documentation on design can be found in the following documents:
 
 * [Design Overview](https://docs.google.com/document/d/1pBK--40BCg_ofww4GES0weYFB6tZRedAjUy6PJ4Rgzk/edit?usp=sharing)
 * [Implementation Specification](https://docs.google.com/document/d/1wjg3hl0iDLNh7jIRaHl3IXhwm0ssOtDje5NemyTBcaw/edit?usp=sharing)

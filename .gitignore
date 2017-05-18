@@ -1,6 +1,5 @@
 *~
 .DS_Store
-*.json.gz
 _old_*
 v3/*
 v2/*

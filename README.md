@@ -1,4 +1,4 @@
-# [Uptane](https://uptane.github.io)
+# [Uptane](https://uptane.github.io): Securing Software Updates for Automobiles
 
 Reference Implementation and demonstration code
 

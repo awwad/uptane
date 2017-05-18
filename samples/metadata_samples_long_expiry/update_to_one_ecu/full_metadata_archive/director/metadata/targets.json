@@ -1,0 +1,30 @@
+{
+ "signatures": [
+  {
+   "keyid": "630cf584f392430b2119a4395e39624e86f5e5c5374507a789be5cf35bf090d6",
+   "method": "ed25519",
+   "sig": "f4961605552c1dc6954f10f847e1cf4a9229c31ef0d51b14c16c91ce25786c539443c7afa76dfa64402dee410a7e3af0010d608fa8a65eae981a29798026a20f"
+  }
+ ],
+ "signed": {
+  "_type": "Targets",
+  "delegations": {
+   "keys": {},
+   "roles": []
+  },
+  "expires": "2037-05-16T17:52:20Z",
+  "targets": {
+   "/TCU1.1.txt": {
+    "custom": {
+     "ecu_serial": "TCUdemocar"
+    },
+    "hashes": {
+     "sha256": "56d7cd56a85e34e40d005e1f79c0e95d6937d5528ac0b301dbe68d57e03a5c21",
+     "sha512": "94d7419b8606103f363aa17feb875575a978df8e88038ea284ff88d90e534eaa7218040384b19992cc7866f5eca803e1654c9ccdf3b250d6198b3c4731216db4"
+    },
+    "length": 17
+   }
+  },
+  "version": 2
+ }
+}

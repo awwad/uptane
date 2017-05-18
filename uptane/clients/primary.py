@@ -865,6 +865,10 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
           signable_vehicle_manifest, private_key=self.primary_key,
           resign=True, datatype='vehicle_manifest')
 
+      # For sample generation only - do not commit to develop branch!
+      open('sample_vehicle_manifest.der', 'wb').write(signable_vehicle_manifest)
+      # end of sample generation
+
     else:
       # If we're not using ASN.1, sign the Python dictionary in a JSON encoding.
       uptane.common.sign_signable(
@@ -875,6 +879,15 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
       uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
           signable_vehicle_manifest)
 
+      # For sample generation only - do not commit to develop branch!
+      import json
+      json_vehicle_manifest = json.dumps(
+          signable_vehicle_manifest,
+          indent=1,
+          separators=(',', ': '),
+          sort_keys=True).encode('utf-8')
+      open('sample_vehicle_manifest.json', 'wb').write(json_vehicle_manifest)
+      # end of sample generation
 
     # Now that the ECU manifests have been incorporated into a vehicle manifest,
     # discard the ECU manifests.

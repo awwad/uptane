@@ -356,6 +356,11 @@ class Secondary(object):
           signable_ecu_manifest, resign=True,
           private_key=self.ecu_key, datatype='ecu_manifest')
       # TODO: Consider verification of output here.
+
+      # For sample generation only - do not commit to develop branch!
+      open('sample_ecu_manifest.der', 'wb').write(der_signed_ecu_manifest)
+      # end of sample generation
+
       return der_signed_ecu_manifest
 
     # Else use standard Python dictionary format specified in uptane.formats.
@@ -365,6 +370,16 @@ class Secondary(object):
         signable_ecu_manifest, [self.ecu_key], datatype='ecu_manifest')
     uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
         signable_ecu_manifest)
+
+    # For sample generation only - do not commit to develop branch!
+    import json
+    json_ecu_manifest = json.dumps(
+        signable_ecu_manifest,
+        indent=1,
+        separators=(',', ': '),
+        sort_keys=True).encode('utf-8')
+    open('sample_ecu_manifest.json', 'wb').write(json_ecu_manifest)
+    # end of sample generation
 
     return signable_ecu_manifest
 

@@ -1,8 +1,0 @@
-Relevant metadata for the file:
-
-Signatures for Primary and Secondary: 90d2a06c7a6c2a6a93a9f5771eb2e5ce0c93dd580bebc2080d10894623cfd6eaedf4df84891d5aa37ace3ae3736a698e082e12c300dfe5aee92ea33a8f461f02
-
-Primary digest hexstring: e8a9b7e87cba370aab1f100d64065ef6a5e95bee4decb582489319cce8565b0a
-
-Primary hash function: sha256
-

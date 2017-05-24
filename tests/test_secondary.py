@@ -116,6 +116,15 @@ def setUpModule():
   clock = clock.isoformat() + 'Z'
   tuf.formats.ISO8601_DATETIME_SCHEMA.check_match(clock)
 
+  # Set up a client directory for the Secondary, containing the
+  # initial root.json and root.der (both, for good measure) metadata files
+  # so that the client can validate further metadata it obtains.
+  uptane.common.create_directory_structure_for_client(
+      TEMP_CLIENT_DIR,
+      TEST_PINNING_FNAME,
+      {'imagerepo': TEST_IMAGE_REPO_ROOT_FNAME,
+      'director': TEST_DIRECTOR_ROOT_FNAME})
+
 
 
 
@@ -154,13 +163,6 @@ class TestSecondary(unittest.TestCase):
 
     global secondary_instance
 
-
-    # Set up a client directory first.
-    uptane.common.create_directory_structure_for_client(
-        TEMP_CLIENT_DIR,
-        TEST_PINNING_FNAME,
-        {'imagerepo': TEST_IMAGE_REPO_ROOT_FNAME,
-        'director': TEST_DIRECTOR_ROOT_FNAME})
 
 
     # TODO: Test with invalid pinning file

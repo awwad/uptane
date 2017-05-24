@@ -141,9 +141,16 @@ class TestSecondary(unittest.TestCase):
 
   def test_01_init(self):
     """
-    Note that this doesn't test the root files provided, as those aren't used
-    at all in the initialization; for that, we'll have to test the update cycle.
+    Tests uptane.clients.secondary.Secondary::__init__()
+    Note that this doesn't test the root files provided to the constructor, as
+    those aren't used at all in the initialization; those will be tested by
+    attempting an update in the test for process_metadata below.
     """
+    # Initialization should be done here, in the test of __init__, not earlier,
+    # and we will use the clients set up here in further testing (rather than
+    # creating a new client/clients in every single test).
+    # Consequently, this variable is stuck being set here, and so is stuck
+    # as a global.
 
     global secondary_instance
 
@@ -279,9 +286,9 @@ class TestSecondary(unittest.TestCase):
 
     print(TEMP_CLIENT_DIR)
 
-    # Try creating a Secondary, expecting it to work. Initializes a Secondary
-    # ECU, making a client directory and copying the root file from the
-    # repositories. Save the result for future tests, to save time and code.
+    # Try initializing a Secondary, expecting it to work.
+    # Save the result for future tests as a module variable (global keyword
+    # used above), to save time and code.
     # TODO: Stick TEST_PINNING_FNAME in the right place.
     # Stick TEST_IMAGE_REPO_ROOT_FNAME and TEST_DIRECTOR_ROOT_FNAME in the right place.
     secondary_instance = secondary.Secondary(
@@ -345,6 +352,11 @@ class TestSecondary(unittest.TestCase):
 
 
   def test_10_nonce_rotation(self):
+    """
+    Tests two uptane.clients.secondary.Secondary methods:
+      - change_nonce()
+      - set_nonce_as_sent()
+    """
 
     old_nonce = secondary_instance.nonce_next
 
@@ -363,6 +375,9 @@ class TestSecondary(unittest.TestCase):
 
 
   def test_20_validate_time_attestation(self):
+    """
+    Tests uptane.clients.secondary.Secondary::validate_time_attestation()
+    """
 
     # Try a valid time attestation first, signed by an expected timeserver key,
     # with an expected nonce (previously "received" from a Secondary)
@@ -435,6 +450,9 @@ class TestSecondary(unittest.TestCase):
 
 
   def test_25_generate_signed_ecu_manifest(self):
+    """
+    Tests uptane.clients.secondary.Secondary::generate_signed_ecu_manifest()
+    """
 
     ecu_manifest = secondary_instance.generate_signed_ecu_manifest()
 
@@ -473,9 +491,16 @@ class TestSecondary(unittest.TestCase):
 
 
   def test_40_process_metadata(self):
+    """
+    Tests uptane.clients.secondary.Secondary::process_metadata()
+    """
 
+    # --- Test this test module's setup (defensive)
     # Check that in the fresh temp directory for this test Secondary client,
     # there aren't any metadata files except root.json yet.
+    # First, check the source directories, from which the temp dir is copied.
+    # This first part is testing this test module, since this setup was done
+    # above in setUpModule(), to maintain test integrity over time.
     self.assertEqual(
         ['root.der', 'root.json'],
         sorted(os.listdir(TEST_DIRECTOR_METADATA_DIR)))
@@ -497,6 +522,9 @@ class TestSecondary(unittest.TestCase):
 
     # Copy the sample archive into place in the client directory.
     shutil.copy(sample_archive_fname, archive_fname)
+
+
+    # --- Perform the test
 
     # Process this sample metadata.
     secondary_instance.process_metadata(archive_fname)

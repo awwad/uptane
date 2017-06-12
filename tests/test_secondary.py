@@ -44,19 +44,23 @@ TEST_IMAGE_REPO_ROOT_FNAME = os.path.join(
 TEST_PINNING_FNAME = os.path.join(TEST_DATA_DIR, 'pinned.json')
 TEMP_CLIENT_DIR_1 = os.path.join(TEST_DATA_DIR, 'temp_test_secondary1')
 TEMP_CLIENT_DIR_2 = os.path.join(TEST_DATA_DIR, 'temp_test_secondary2')
+TEMP_CLIENT_DIR_3 = os.path.join(TEST_DATA_DIR, 'temp_test_secondary3')
 
 # I'll initialize these in the __init__ test, and use this for the simple
 # non-damaging tests so as to avoid creating objects all over again.
-secondary_instance_1 = None # for an unknown ECU in vehicle '000'
-secondary_instance_2 = None # for ECU 'TCUdemocar' in vehicle 'democar'
+secondary_instance_1 = None # for ECU 'TCUdemocar' in vehicle 'democar'
+secondary_instance_2 = None # for an unknown ECU in vehicle '000'
+secondary_instance_3 = None # for an unknown ECU in vehicle '000'
 
-# Changing some of these values would require producing new signed test data
-# from the Timeserver or a Secondary.
+# Changing these values would require producing new signed test data from the
+# Timeserver (in the case of nonce) or a Secondary (in the case of the others).
 nonce = 5
 vin1 = 'democar'
-vin2 = '000'
+vin2 = 'democar'
+vin3 = '000'
 ecu_serial1 = 'TCUdemocar'
 ecu_serial2 = '00000'
+ecu_serial3 = '00000'
 
 # Initialize these in setUpModule below.
 secondary_ecu_key = None
@@ -74,14 +78,21 @@ factory_firmware_fileinfo = {
             'sha256': '6b9f987226610bfed08b824c93bf8b2f59521fce9a2adef80c495f363c1c9c44'},
         'length': 37}}
 
+expected_updated_fileinfo = {
+    'filepath': '/TCU1.1.txt',
+    'fileinfo': {
+        'custom': {'ecu_serial': 'TCUdemocar'},
+        'hashes': {
+            'sha512': '94d7419b8606103f363aa17feb875575a978df8e88038ea284ff88d90e534eaa7218040384b19992cc7866f5eca803e1654c9ccdf3b250d6198b3c4731216db4',
+            'sha256': '56d7cd56a85e34e40d005e1f79c0e95d6937d5528ac0b301dbe68d57e03a5c21'},
+        'length': 17}}
 
 
 def destroy_temp_dir():
-  # Clean up anything that may currently exist in the temp test directory.
-  if os.path.exists(TEMP_CLIENT_DIR_1):
-    shutil.rmtree(TEMP_CLIENT_DIR_1)
-  if os.path.exists(TEMP_CLIENT_DIR_2):
-    shutil.rmtree(TEMP_CLIENT_DIR_2)
+  # Clean up anything that may currently exist in the temp test directories.
+  for client_dir in [TEMP_CLIENT_DIR_1, TEMP_CLIENT_DIR_2, TEMP_CLIENT_DIR_3]:
+    if os.path.exists(client_dir):
+      shutil.rmtree(client_dir)
 
 
 
@@ -124,19 +135,20 @@ def setUpModule():
   # Set up client directories for the two Secondaries, containing the
   # initial root.json and root.der (both, for good measure) metadata files
   # so that the clients can validate further metadata they obtain.
-  uptane.common.create_directory_structure_for_client(
-      TEMP_CLIENT_DIR_1,
-      TEST_PINNING_FNAME,
-      {'imagerepo': TEST_IMAGE_REPO_ROOT_FNAME,
-      'director': TEST_DIRECTOR_ROOT_FNAME})
-
-  uptane.common.create_directory_structure_for_client(
-      TEMP_CLIENT_DIR_2,
-      TEST_PINNING_FNAME,
-      {'imagerepo': TEST_IMAGE_REPO_ROOT_FNAME,
-      'director': TEST_DIRECTOR_ROOT_FNAME})
-
-
+  # NOTE that running multiple clients in the same Python process does not
+  # work normally in the reference implementation, as the value of
+  # tuf.conf.repository_directories is client-specific, and it is set during
+  # uptane.common.create_directory_structure_for_client, and used when a
+  # client is created (initialization of a Secondary in our case)
+  # We're going to cheat in this test module for the purpose of testing
+  # and update tuf.conf.repository_directories before each Secondary is
+  # created,  to refer to the client we're creating.
+  for client_dir in [TEMP_CLIENT_DIR_1, TEMP_CLIENT_DIR_2, TEMP_CLIENT_DIR_3]:
+    uptane.common.create_directory_structure_for_client(
+        client_dir,
+        TEST_PINNING_FNAME,
+        {'imagerepo': TEST_IMAGE_REPO_ROOT_FNAME,
+        'director': TEST_DIRECTOR_ROOT_FNAME})
 
 
 
@@ -155,7 +167,7 @@ class TestSecondary(unittest.TestCase):
   "unittest"-style test class for the Secondary module in the reference
   implementation
 
-  Please note that these tests are NOT entirely independent of each other.
+  Note that these tests are NOT entirely independent of each other.
   Several of them build on the results of previous tests. This is an unusual
   pattern but saves code and works at least for now.
   """
@@ -174,6 +186,7 @@ class TestSecondary(unittest.TestCase):
     # as globals.
     global secondary_instance_1
     global secondary_instance_2
+    global secondary_instance_3
 
     # TODO: Test with invalid pinning file
     # TODO: Test with pinning file lacking a Director repo.
@@ -297,11 +310,21 @@ class TestSecondary(unittest.TestCase):
 
 
 
-    # Try initializing a Secondary, expecting it to work.
-    # Save the result for future tests as a module variable (global keyword
+    # Try initializing three Secondaries, expecting the three calls to work.
+    # Save the instances for future tests as module variables (global keyword
     # used above), to save time and code.
     # TODO: Stick TEST_PINNING_FNAME in the right place.
     # Stick TEST_IMAGE_REPO_ROOT_FNAME and TEST_DIRECTOR_ROOT_FNAME in the right place.
+
+    # Recall that, as mentioned in a comment in the SetUpModule method, running
+    # multiple reference implementation updater clients simultaneously in the
+    # same Python process is not supported, and we're going to engage in the
+    # hack of swapping tuf.conf.repository_directories back and forth to make
+    # it work for these tests.
+
+    # Create a first Secondary.
+    # This one will update normally.
+    tuf.conf.repository_directory = TEMP_CLIENT_DIR_1
     secondary_instance_1 = secondary.Secondary(
         full_client_dir=TEMP_CLIENT_DIR_1,
         director_repo_name=demo.DIRECTOR_REPO_NAME,
@@ -314,14 +337,29 @@ class TestSecondary(unittest.TestCase):
         director_public_key=None,
         partial_verifying=False)
 
-    # Create a second Secondary, which will process a set of metadata lacking
-    # adequate Director metadata to update it, unlike the first Secondary,
-    # which be provided with all necessary metadata.
+    # Create a second Secondary.
+    # This one will retrieve Director metadata that includes no updates for it.
+    tuf.conf.repository_directory = TEMP_CLIENT_DIR_2
     secondary_instance_2 = secondary.Secondary(
         full_client_dir=TEMP_CLIENT_DIR_2,
         director_repo_name=demo.DIRECTOR_REPO_NAME,
         vin=vin2,
         ecu_serial=ecu_serial2,
+        ecu_key=secondary_ecu_key,
+        time=clock,
+        timeserver_public_key=key_timeserver_pub,
+        firmware_fileinfo=factory_firmware_fileinfo,
+        director_public_key=None,
+        partial_verifying=False)
+
+    # Create a third Secondary.
+    # This one will be unable to retrieve any Director metadata at all.
+    tuf.conf.repository_directory = TEMP_CLIENT_DIR_3
+    secondary_instance_3 = secondary.Secondary(
+        full_client_dir=TEMP_CLIENT_DIR_3,
+        director_repo_name=demo.DIRECTOR_REPO_NAME,
+        vin=vin3,
+        ecu_serial=ecu_serial3,
         ecu_key=secondary_ecu_key,
         time=clock,
         timeserver_public_key=key_timeserver_pub,
@@ -335,7 +373,8 @@ class TestSecondary(unittest.TestCase):
     # loop because the global references have to be assigned.)
     for client_dir, instance, vin, ecu_serial in [
         (TEMP_CLIENT_DIR_1, secondary_instance_1, vin1, ecu_serial1),
-        (TEMP_CLIENT_DIR_2, secondary_instance_2, vin2, ecu_serial2)]:
+        (TEMP_CLIENT_DIR_2, secondary_instance_2, vin2, ecu_serial2),
+        (TEMP_CLIENT_DIR_3, secondary_instance_3, vin3, ecu_serial3)]:
 
       # Check the fields initialized in the instance to make sure they're correct.
 
@@ -368,6 +407,10 @@ class TestSecondary(unittest.TestCase):
 
       image_repo_mirror = ['file://' + client_dir + '/unverified/imagerepo']
       director_mirror = ['file://' + client_dir + '/unverified/director']
+      if vin == '000':
+        # Simulate unavailable Director repo for the third Secondary
+        director_mirror[0] += '/nonexistent_directory'
+
       repository_urls = instance.updater.pinned_metadata['repositories']
       repository_urls['imagerepo']['mirrors'] = image_repo_mirror
       repository_urls['director']['mirrors'] = director_mirror
@@ -388,7 +431,6 @@ class TestSecondary(unittest.TestCase):
       - change_nonce()
       - set_nonce_as_sent()
     """
-
     old_nonce = secondary_instance_1.nonce_next
 
     secondary_instance_1.change_nonce()
@@ -525,31 +567,36 @@ class TestSecondary(unittest.TestCase):
   def test_40_process_metadata(self):
     """
     Tests uptane.clients.secondary.Secondary::process_metadata()
-    Tests this against a client for which Director metadata is provided,
-    client 1 (vin 'democar'). Client 2 (vin '000') doesn't have Director
-    metadata provided it and will be tested in the next method.
+
+    Tests three clients:
+     - secondary_instance_1: an update is provided in Director metadata
+     - secondary_instance_2: no update is provided in Director metadata
+     - secondary_instance_3: no Director metadata can be retrieved
     """
 
     # --- Test this test module's setup (defensive)
-    # Check that in the fresh temp directory for this test Secondary client,
-    # there aren't any metadata files except root.(json or der) yet.
     # First, check the source directories, from which the temp dir is copied.
     # This first part is testing this test module, since this setup was done
     # above in setUpModule(), to maintain test integrity over time.
-    self.assertEqual(
-        ['root.der', 'root.json'],
-        sorted(os.listdir(TEST_DIRECTOR_METADATA_DIR)))
-    self.assertEqual(
-        ['root.der', 'root.json'],
-        sorted(os.listdir(TEST_IMAGE_REPO_METADATA_DIR)))
-    # Check that the correct root metadata file was transferred to the client
-    # directory when the directory was created by the
-    # create_directory_structure_for_client() call in setUpModule above.
-    self.assertEqual(
-        ['root.' + tuf.conf.METADATA_FORMAT],
-        sorted(os.listdir(os.path.join(
-            TEMP_CLIENT_DIR_1, 'metadata', 'director', 'current'))))
+    # We should see only root.(json or der).
+    for data_directory in [
+        TEST_DIRECTOR_METADATA_DIR, TEST_IMAGE_REPO_METADATA_DIR]:
 
+      self.assertEqual(
+          ['root.der', 'root.json'],
+          sorted(os.listdir(data_directory)))
+
+    # Next, check that the clients' metadata directories have the same
+    # properties -- that the correct root metadata file was transferred to the
+    # client directories when the directories were created by the
+    # create_directory_structure_for_client() calls in setUpModule above, and
+    # only the root metadata file.
+    for client_dir in [TEMP_CLIENT_DIR_1, TEMP_CLIENT_DIR_2, TEMP_CLIENT_DIR_3]:
+      for repo in ['director', 'imagerepo']:
+        self.assertEqual(
+            ['root.' + tuf.conf.METADATA_FORMAT],
+            sorted(os.listdir(os.path.join(
+                client_dir, 'metadata', repo, 'current'))))
 
     # --- Set up this test
 
@@ -558,83 +605,89 @@ class TestSecondary(unittest.TestCase):
         uptane.WORKING_DIR, 'samples', 'metadata_samples_long_expiry',
         'update_to_one_ecu', 'full_metadata_archive.zip')
 
-    # Location in the client directory to which we'll copy the archive.
-    archive_fname = os.path.join(TEMP_CLIENT_DIR_1, 'full_metadata_archive.zip')
-
     assert os.path.exists(sample_archive_fname), 'Cannot test ' \
         'process_metadata; unable to find expected sample metadata archive' + \
         ' at ' + repr(sample_archive_fname)
 
-    # Copy the sample archive into place in the client directory.
-    shutil.copy(sample_archive_fname, archive_fname)
+
+    # Continue set-up followed by the test, per client.
+    for client_dir, instance in [
+        (TEMP_CLIENT_DIR_1, secondary_instance_1),
+        (TEMP_CLIENT_DIR_2, secondary_instance_2),
+        (TEMP_CLIENT_DIR_3, secondary_instance_3)]:
+
+      # Make sure TUF uses the right client directory.
+      # Hack to allow multiple clients to run in the same Python process.
+      # See comments in SetUpModule() method.
+      tuf.conf.repository_directory = client_dir
+
+      # Location in the client directory to which we'll copy the archive.
+      archive_fname = os.path.join(client_dir, 'full_metadata_archive.zip')
+
+      # Copy the sample archive into place in the client directory.
+      shutil.copy(sample_archive_fname, archive_fname)
 
 
-    # --- Perform the test
+      # --- Perform the test
 
-    # Process this sample metadata.
-    secondary_instance_1.process_metadata(archive_fname)
+      # Process this sample metadata.
 
-    # Now, either some element of the metadata could not be validated, or
-    # this Secondary ECU has not been assigned an update, or the field
-    # validated_targets_for_this_ecu is now populated with the validated
-    # target that this ECU has been instructed to install.
-    print(secondary_instance_1.validated_targets_for_this_ecu)
+      if instance is secondary_instance_3:
+        # Expect the update to fail for the third Secondary client.
+        with self.assertRaises(tuf.NoWorkingMirrorError):
+          instance.process_metadata(archive_fname)
+        continue
 
-    # TODO: Check value in validated_targets_for_this_ecu
+      else:
+        instance.process_metadata(archive_fname)
 
-    # TODO: Make sure the archive was expanded
-
-    # Check the resulting top-level metadata files in the client directory.
-    # Expect root, snapshot, targets, and timestamp for both director and
-    # image repo.
-    for repo in ['director', 'imagerepo']:
-      print('Checking downloaded metadata from ' + repr(repo))
-      print('TEMP_CLIENT_DIR_1: ' + repr(TEMP_CLIENT_DIR_1))
-      self.assertEqual(
-          ['root.' + tuf.conf.METADATA_FORMAT,
-          'snapshot.' + tuf.conf.METADATA_FORMAT,
-          'targets.' + tuf.conf.METADATA_FORMAT,
-          'timestamp.' + tuf.conf.METADATA_FORMAT],
-          sorted(os.listdir(os.path.join(TEMP_CLIENT_DIR_1, 'metadata', repo,
-          'current'))))
+      # Make sure the archive of unverified metadata was expanded
+      for repo in ['director', 'imagerepo']:
+        for role in ['root', 'snapshot', 'targets', 'timestamp']:
+          self.assertTrue(os.path.exists(client_dir + '/unverified/' + repo +
+              '/metadata/' + role + '.' + tuf.conf.METADATA_FORMAT))
 
 
+    # Verify the results of the test, which are different for the three clients.
 
+    # First: Check the top-level metadata files in the client directories.
 
+    # For clients 1 and 2, we expect root, snapshot, targets, and timestamp for
+    # both director and image repo.
+    for client_dir in [TEMP_CLIENT_DIR_1, TEMP_CLIENT_DIR_2]:
+      for repo in ['director', 'imagerepo']:
+        print('Checking client ' + client_dir + ' downloaded metadata from ' +
+            repr(repo))
+        self.assertEqual([
+            'root.' + tuf.conf.METADATA_FORMAT,
+            'snapshot.' + tuf.conf.METADATA_FORMAT,
+            'targets.' + tuf.conf.METADATA_FORMAT,
+            'timestamp.' + tuf.conf.METADATA_FORMAT],
+            sorted(os.listdir(os.path.join(client_dir, 'metadata', repo,
+            'current'))))
 
-  def test_41_process_metadata_2(self):
-    """
-    Tests uptane.clients.secondary.Secondary::process_metadata()
-    Tests this against a client for which Director metadata is not provided,
-    client 1 (vin '000'). See also the previous method,
-    test_40_process_metadata.
-    """
-
-    # --- Test this test module's setup (defensive)
-    # Check that the correct root metadata file was transferred to the client
-    # directory when the directory was created by the
-    # create_directory_structure_for_client() call in setUpModule above.
+    # For client 3, we are certain that Director metadata will have failed to
+    # update. Image Repository metadata may or may not have updated before the
+    # Director repository update failure, so we don't check that. Client 3
+    # started with root metadata for the Director repository, so that is all
+    # we expect to find.
+    print('Checking client 3 downloaded metadata from Director Repository')
     self.assertEqual(
         ['root.' + tuf.conf.METADATA_FORMAT],
-        sorted(os.listdir(os.path.join(
-            TEMP_CLIENT_DIR_2, 'metadata', 'director', 'current'))))
+        sorted(os.listdir(os.path.join(TEMP_CLIENT_DIR_3, 'metadata',
+        'director', 'current'))))
 
 
+    # Second: Check targets each Secondary client has been instructed to
+    # install (and has in turn validated).
+    # Client 1 should have validated expected_updated_fileinfo.
+    self.assertEqual(
+        expected_updated_fileinfo,
+        secondary_instance_1.validated_targets_for_this_ecu[0])
 
-    # Note that client 2 has VIN '000', which is not a VIN the Director from
-    # the sample data has a repository for, so if we run the process_metadata
-    # test below on client 2, we'll find no Director metadata has been
-    # obtained. We'll still be left with just the Root metadata file we started
-    # with (no other roles).
-
-
-
-    # TODO: COMPLETE THIS.
-    pass
-
-
-
-
+    # Clients 2 and 3 should have no validated targets.
+    self.assertFalse(secondary_instance_2.validated_targets_for_this_ecu)
+    self.assertFalse(secondary_instance_3.validated_targets_for_this_ecu)
 
 
 

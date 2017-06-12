@@ -694,12 +694,24 @@ class TestSecondary(unittest.TestCase):
 
 
   def test_50_validate_image(self):
-    # TODO: Test this method.
-    pass
 
+    image_fname = 'TCU1.1.txt'
+    sample_image_location = 'demo/images/'
+    client_unverified_targets_dir = TEMP_CLIENT_DIR_1 + '/unverified_targets'
 
+    if os.path.exists(client_unverified_targets_dir):
+      shutil.rmtree(client_unverified_targets_dir)
+    os.mkdir(client_unverified_targets_dir)
 
+    shutil.copy(
+        sample_image_location + image_fname, client_unverified_targets_dir)
 
+    secondary_instance_1.validate_image(image_fname)
+
+    with self.assertRaises(uptane.Error):
+      secondary_instance_2.validate_image(image_fname)
+    with self.assertRaises(uptane.Error):
+      secondary_instance_3.validate_image(image_fname)
 
 
 

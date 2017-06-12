@@ -43,32 +43,21 @@ TEST_DIRECTOR_ROOT_FNAME = os.path.join(
 TEST_IMAGE_REPO_ROOT_FNAME = os.path.join(
     TEST_IMAGE_REPO_METADATA_DIR, 'root.' + tuf.conf.METADATA_FORMAT)
 TEST_PINNING_FNAME = os.path.join(TEST_DATA_DIR, 'pinned.json')
-TEMP_CLIENT_DIR_1 = os.path.join(TEST_DATA_DIR, 'temp_test_secondary1')
-TEMP_CLIENT_DIR_2 = os.path.join(TEST_DATA_DIR, 'temp_test_secondary2')
-TEMP_CLIENT_DIR_3 = os.path.join(TEST_DATA_DIR, 'temp_test_secondary3')
+
+TEMP_CLIENT_DIRS = [
+    os.path.join(TEST_DATA_DIR, 'temp_test_secondary0'),
+    os.path.join(TEST_DATA_DIR, 'temp_test_secondary1'),
+    os.path.join(TEST_DATA_DIR, 'temp_test_secondary2')]
 
 # I'll initialize these in the __init__ test, and use this for the simple
 # non-damaging tests so as to avoid creating objects all over again.
-secondary_instance_1 = None # for ECU 'TCUdemocar' in vehicle 'democar'
-secondary_instance_2 = None # for an unknown ECU in vehicle '000'
-secondary_instance_3 = None # for an unknown ECU in vehicle '000'
+secondary_instances = [None, None, None]
 
 # Changing these values would require producing new signed test data from the
 # Timeserver (in the case of nonce) or a Secondary (in the case of the others).
 nonce = 5
-vin1 = 'democar'
-vin2 = 'democar'
-vin3 = '000'
-ecu_serial1 = 'TCUdemocar'
-ecu_serial2 = '00000'
-ecu_serial3 = '00000'
-
-# Initialize these in setUpModule below.
-secondary_ecu_key = None
-key_timeserver_pub = None
-key_timeserver_pri = None # simplifies use of test data (re-sign)
-key_directortargets_pub = None
-clock = None
+vins = ['democar', 'democar', '000']
+ecu_serials = ['TCUdemocar', '00000', '00000']
 
 # Set starting firmware fileinfo (that this ECU had coming from the factory)
 # It will serve as the initial firmware state for the Secondary clients.
@@ -92,7 +81,7 @@ expected_updated_fileinfo = {
 
 def destroy_temp_dir():
   # Clean up anything that may currently exist in the temp test directories.
-  for client_dir in [TEMP_CLIENT_DIR_1, TEMP_CLIENT_DIR_2, TEMP_CLIENT_DIR_3]:
+  for client_dir in [TEMP_CLIENT_DIRS[0], TEMP_CLIENT_DIRS[1], TEMP_CLIENT_DIRS[2]]:
     if os.path.exists(client_dir):
       shutil.rmtree(client_dir)
 
@@ -181,14 +170,6 @@ class TestSecondary(unittest.TestCase):
     those aren't used at all in the initialization; those will be tested by
     attempting an update in the test for process_metadata below.
     """
-    # Initialization should be done here, in the test of __init__, not earlier,
-    # and we will use the clients set up here in further testing (rather than
-    # creating a new client/clients in every single test).
-    # Consequently, these variables are stuck being set here, and so are stuck
-    # as globals.
-    global secondary_instance_1
-    global secondary_instance_2
-    global secondary_instance_3
 
     # TODO: Test with invalid pinning file
     # TODO: Test with pinning file lacking a Director repo.
@@ -201,8 +182,8 @@ class TestSecondary(unittest.TestCase):
       secondary.Secondary(
           full_client_dir=42,
           director_repo_name=demo.DIRECTOR_REPO_NAME,
-          vin=vin1,
-          ecu_serial=ecu_serial1,
+          vin=vins[0],
+          ecu_serial=ecu_serials[0],
           ecu_key=secondary_ecu_key,
           time=clock,
           timeserver_public_key=key_timeserver_pub,
@@ -220,8 +201,8 @@ class TestSecondary(unittest.TestCase):
       secondary.Secondary(
           full_client_dir=TEMP_CLIENT_DIR_1,
           director_repo_name=42,
-          vin=vin1,
-          ecu_serial=ecu_serial1,
+          vin=vins[0],
+          ecu_serial=ecu_serials[0],
           ecu_key=secondary_ecu_key,
           time=clock,
           timeserver_public_key=key_timeserver_pub,
@@ -234,8 +215,8 @@ class TestSecondary(unittest.TestCase):
       secondary.Secondary(
           full_client_dir=TEMP_CLIENT_DIR_1,
           director_repo_name='string_that_is_not_a_known_repo_name',
-          vin=vin1,
-          ecu_serial=ecu_serial1,
+          vin=vins[0],
+          ecu_serial=ecu_serials[0],
           ecu_key=secondary_ecu_key,
           time=clock,
           timeserver_public_key=key_timeserver_pub,
@@ -246,13 +227,13 @@ class TestSecondary(unittest.TestCase):
     # Invalid VIN:
     with self.assertRaises(tuf.FormatError):
       s = secondary.Secondary(
-          full_client_dir=TEMP_CLIENT_DIR_1,
+          full_client_dir=TEMP_CLIENT_DIRS[0],
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=5,
-          ecu_serial=ecu_serial1,
           ecu_key=secondary_ecu_key,
           time=clock,
           timeserver_public_key=key_timeserver_pub,
+          ecu_serial=ecu_serials[0],
           firmware_fileinfo=factory_firmware_fileinfo,
           director_public_key=None,
           partial_verifying=False)
@@ -260,9 +241,9 @@ class TestSecondary(unittest.TestCase):
     # Invalid ECU Serial
     with self.assertRaises(tuf.FormatError):
       s = secondary.Secondary(
-          full_client_dir=TEMP_CLIENT_DIR_1,
+          full_client_dir=TEMP_CLIENT_DIRS[0],
           director_repo_name=demo.DIRECTOR_REPO_NAME,
-          vin=vin1,
+          vin=vins[0],
           ecu_serial=500,
           ecu_key=secondary_ecu_key,
           time=clock,
@@ -273,10 +254,10 @@ class TestSecondary(unittest.TestCase):
 
     # Invalid ECU Key
       s = secondary.Secondary(
-          full_client_dir=TEMP_CLIENT_DIR_1,
+          full_client_dir=TEMP_CLIENT_DIRS[0],
           director_repo_name=demo.DIRECTOR_REPO_NAME,
-          vin=vin1,
-          ecu_serial=ecu_serial1,
+          vin=vins[0],
+          ecu_serial=ecu_serials[0],
           ecu_key={''},
           time=clock,
           timeserver_public_key=key_timeserver_pub,
@@ -287,11 +268,11 @@ class TestSecondary(unittest.TestCase):
     # Invalid time:
     with self.assertRaises(tuf.FormatError):
       s = secondary.Secondary(
-          full_client_dir=TEMP_CLIENT_DIR_1,
+          full_client_dir=TEMP_CLIENT_DIRS[0],
           director_repo_name=demo.DIRECTOR_REPO_NAME,
-          vin=vin1,
-          ecu_serial=ecu_serial1,
           ecu_key=secondary_ecu_key,
+          vin=vins[0],
+          ecu_serial=ecu_serials[0],
           time='potato',
           timeserver_public_key=key_timeserver_pub,
           firmware_fileinfo=factory_firmware_fileinfo,
@@ -301,13 +282,13 @@ class TestSecondary(unittest.TestCase):
     # Invalid director_public_key:
     with self.assertRaises(tuf.FormatError):
       s = secondary.Secondary(
-          full_client_dir=TEMP_CLIENT_DIR_1,
+          full_client_dir=TEMP_CLIENT_DIRS[0],
           director_repo_name=demo.DIRECTOR_REPO_NAME,
-          vin=vin1,
-          ecu_serial=ecu_serial1,
           ecu_key=secondary_ecu_key,
           time=clock,
           timeserver_public_key=key_timeserver_pub,
+          vin=vins[0],
+          ecu_serial=ecu_serials[0],
           firmware_fileinfo=factory_firmware_fileinfo,
           director_public_key={''},
           partial_verifying=False)
@@ -319,25 +300,25 @@ class TestSecondary(unittest.TestCase):
     # for full verification are determined based on the root metadata file.
     with self.assertRaises(uptane.Error):
       s = secondary.Secondary(
-          full_client_dir=TEMP_CLIENT_DIR_1,
+          full_client_dir=TEMP_CLIENT_DIRS[0],
           director_repo_name=demo.DIRECTOR_REPO_NAME,
-          vin=vin1,
-          ecu_serial=ecu_serial1,
           ecu_key=secondary_ecu_key,
           time=clock,
           timeserver_public_key=key_timeserver_pub,
+          vin=vins[0],
+          ecu_serial=ecu_serials[0],
           firmware_fileinfo=factory_firmware_fileinfo,
           director_public_key=key_directortargets_pub,
           partial_verifying=False)
     with self.assertRaises(uptane.Error):
       s = secondary.Secondary(
-          full_client_dir=TEMP_CLIENT_DIR_1,
+          full_client_dir=TEMP_CLIENT_DIRS[0],
           director_repo_name=demo.DIRECTOR_REPO_NAME,
-          vin=vin1,
-          ecu_serial=ecu_serial1,
           ecu_key=secondary_ecu_key,
           time=clock,
           timeserver_public_key=key_timeserver_pub,
+          vin=vins[0],
+          ecu_serial=ecu_serials[0],
           firmware_fileinfo=factory_firmware_fileinfo,
           director_public_key=None,
           partial_verifying=True)
@@ -346,13 +327,13 @@ class TestSecondary(unittest.TestCase):
     # Invalid timeserver key
     with self.assertRaises(tuf.FormatError):
       s = secondary.Secondary(
-          full_client_dir=TEMP_CLIENT_DIR_1,
+          full_client_dir=TEMP_CLIENT_DIRS[0],
           director_repo_name=demo.DIRECTOR_REPO_NAME,
-          vin=vin1,
-          ecu_serial=ecu_serial1,
           ecu_key=secondary_ecu_key,
           time=clock,
           timeserver_public_key=clock, # INVALID
+          vin=vins[0],
+          ecu_serial=ecu_serials[0],
           firmware_fileinfo=factory_firmware_fileinfo,
           director_public_key=None,
           partial_verifying=False)
@@ -369,59 +350,30 @@ class TestSecondary(unittest.TestCase):
     # hack of swapping tuf.conf.repository_directories back and forth to make
     # it work for these tests.
 
-    # Create a first Secondary.
-    # This one will update normally.
-    tuf.conf.repository_directory = TEMP_CLIENT_DIR_1
-    secondary_instance_1 = secondary.Secondary(
-        full_client_dir=TEMP_CLIENT_DIR_1,
-        director_repo_name=demo.DIRECTOR_REPO_NAME,
-        vin=vin1,
-        ecu_serial=ecu_serial1,
-        ecu_key=secondary_ecu_key,
-        time=clock,
-        timeserver_public_key=key_timeserver_pub,
-        firmware_fileinfo=factory_firmware_fileinfo,
-        director_public_key=None,
-        partial_verifying=False)
 
-    # Create a second Secondary.
-    # This one will retrieve Director metadata that includes no updates for it.
-    tuf.conf.repository_directory = TEMP_CLIENT_DIR_2
-    secondary_instance_2 = secondary.Secondary(
-        full_client_dir=TEMP_CLIENT_DIR_2,
-        director_repo_name=demo.DIRECTOR_REPO_NAME,
-        vin=vin2,
-        ecu_serial=ecu_serial2,
-        ecu_key=secondary_ecu_key,
-        time=clock,
-        timeserver_public_key=key_timeserver_pub,
-        firmware_fileinfo=factory_firmware_fileinfo,
-        director_public_key=None,
-        partial_verifying=False)
+    # Initialize three clients and perform checks on each of them.
+    for i in range(0, len(TEMP_CLIENT_DIRS)):
+      client_dir = TEMP_CLIENT_DIRS[i]
+      ecu_serial = ecu_serials[i]
+      vin = vins[i]
 
-    # Create a third Secondary.
-    # This one will be unable to retrieve any Director metadata at all.
-    tuf.conf.repository_directory = TEMP_CLIENT_DIR_3
-    secondary_instance_3 = secondary.Secondary(
-        full_client_dir=TEMP_CLIENT_DIR_3,
-        director_repo_name=demo.DIRECTOR_REPO_NAME,
-        vin=vin3,
-        ecu_serial=ecu_serial3,
-        ecu_key=secondary_ecu_key,
-        time=clock,
-        timeserver_public_key=key_timeserver_pub,
-        firmware_fileinfo=factory_firmware_fileinfo,
-        director_public_key=None,
-        partial_verifying=False)
+      # Try initializing each of three secondaries, expecting these calls to
+      # work. Save the instances for future tests as elements in a module list
+      # variable(secondary_instances) to save time and code.
+      tuf.conf.repository_directory = client_dir
+      secondary_instances[i] = secondary.Secondary(
+          full_client_dir=client_dir,
+          director_repo_name=demo.DIRECTOR_REPO_NAME,
+          vin=vin,
+          ecu_serial=ecu_serial,
+          ecu_key=secondary_ecu_key,
+          time=clock,
+          timeserver_public_key=key_timeserver_pub,
+          firmware_fileinfo=factory_firmware_fileinfo,
+          director_public_key=None,
+          partial_verifying=False)
 
-
-    # Perform the next checks for each Secondary client initialized.
-    # (Note that the instance creation above this can't readily be put in this
-    # loop because the global references have to be assigned.)
-    for client_dir, instance, vin, ecu_serial in [
-        (TEMP_CLIENT_DIR_1, secondary_instance_1, vin1, ecu_serial1),
-        (TEMP_CLIENT_DIR_2, secondary_instance_2, vin2, ecu_serial2),
-        (TEMP_CLIENT_DIR_3, secondary_instance_3, vin3, ecu_serial3)]:
+      instance = secondary_instances[i]
 
       # Check the fields initialized in the instance to make sure they're correct.
 
@@ -478,17 +430,19 @@ class TestSecondary(unittest.TestCase):
       - change_nonce()
       - set_nonce_as_sent()
     """
-    old_nonce = secondary_instance_1.nonce_next
+    # We'll just test one of the three client instances, since it shouldn't
+    # make a difference.
+    instance = secondary_instances[0]
 
-    secondary_instance_1.change_nonce()
+    old_nonce = instance.nonce_next
+
+    instance.change_nonce()
     # Collision is unlikely in the next line (new random nonce equal to
     # previous).
-    self.assertNotEqual(old_nonce, secondary_instance_1.nonce_next)
+    self.assertNotEqual(old_nonce, instance.nonce_next)
 
-
-    secondary_instance_1.set_nonce_as_sent()
-    self.assertEqual(
-        secondary_instance_1.last_nonce_sent, secondary_instance_1.nonce_next)
+    instance.set_nonce_as_sent()
+    self.assertEqual(instance.last_nonce_sent, instance.nonce_next)
 
 
 
@@ -498,6 +452,10 @@ class TestSecondary(unittest.TestCase):
     """
     Tests uptane.clients.secondary.Secondary::validate_time_attestation()
     """
+
+    # We'll just test one of the three client instances, since it shouldn't
+    # make a difference.
+    instance = secondary_instances[0]
 
     # Try a valid time attestation first, signed by an expected timeserver key,
     # with an expected nonce (previously "received" from a Secondary)
@@ -510,7 +468,7 @@ class TestSecondary(unittest.TestCase):
 
     # Make sure that the Secondary thinks that it sent the nonce listed in the
     # sample data above.
-    secondary_instance_1.last_nonce_sent = nonce
+    instance.last_nonce_sent = nonce
 
     if tuf.conf.METADATA_FORMAT == 'der':
       # Convert this time attestation to the expected ASN.1/DER format.
@@ -518,7 +476,7 @@ class TestSecondary(unittest.TestCase):
           original_time_attestation, private_key=key_timeserver_pri, resign=True)
 
     # If the time_attestation is not deemed valid, an exception will be raised.
-    secondary_instance_1.validate_time_attestation(time_attestation)
+    instance.validate_time_attestation(time_attestation)
 
 
     # Prepare to try again with a bad signature.
@@ -541,7 +499,7 @@ class TestSecondary(unittest.TestCase):
 
     # Now actually perform the bad signature test.
     with self.assertRaises(tuf.BadSignatureError):
-      secondary_instance_1.validate_time_attestation(time_attestation__badsig)
+      instance.validate_time_attestation(time_attestation__badsig)
 
 
     self.assertNotEqual(500, nonce, msg='Programming error: bad and good '
@@ -561,7 +519,7 @@ class TestSecondary(unittest.TestCase):
           private_key=key_timeserver_pri, resign=True)
 
     with self.assertRaises(uptane.BadTimeAttestation):
-      secondary_instance_1.validate_time_attestation(time_attestation__wrongnonce)
+      instance.validate_time_attestation(time_attestation__wrongnonce)
 
 
     # TODO: Consider other tests here.
@@ -575,7 +533,9 @@ class TestSecondary(unittest.TestCase):
     Tests uptane.clients.secondary.Secondary::generate_signed_ecu_manifest()
     """
 
-    ecu_manifest = secondary_instance_1.generate_signed_ecu_manifest()
+    # We'll just test one of the three client instances, since it shouldn't
+    # make a difference.
+    ecu_manifest = secondary_instances[0].generate_signed_ecu_manifest()
 
     # If the ECU Manifest is in DER format, check its format and then
     # convert back to JSON so that we can inspect it further.
@@ -617,9 +577,9 @@ class TestSecondary(unittest.TestCase):
     Tests uptane.clients.secondary.Secondary::process_metadata()
 
     Tests three clients:
-     - secondary_instance_1: an update is provided in Director metadata
-     - secondary_instance_2: no update is provided in Director metadata
-     - secondary_instance_3: no Director metadata can be retrieved
+     - secondary_instances[0]: an update is provided in Director metadata
+     - secondary_instances[1]: no update is provided in Director metadata
+     - secondary_instances[2]: no Director metadata can be retrieved
     """
 
     # --- Test this test module's setup (defensive)
@@ -639,7 +599,7 @@ class TestSecondary(unittest.TestCase):
     # client directories when the directories were created by the
     # create_directory_structure_for_client() calls in setUpModule above, and
     # only the root metadata file.
-    for client_dir in [TEMP_CLIENT_DIR_1, TEMP_CLIENT_DIR_2, TEMP_CLIENT_DIR_3]:
+    for client_dir in TEMP_CLIENT_DIRS:
       for repo in ['director', 'imagerepo']:
         self.assertEqual(
             ['root.' + tuf.conf.METADATA_FORMAT],
@@ -659,10 +619,9 @@ class TestSecondary(unittest.TestCase):
 
 
     # Continue set-up followed by the test, per client.
-    for client_dir, instance in [
-        (TEMP_CLIENT_DIR_1, secondary_instance_1),
-        (TEMP_CLIENT_DIR_2, secondary_instance_2),
-        (TEMP_CLIENT_DIR_3, secondary_instance_3)]:
+    for i in range(0, len(TEMP_CLIENT_DIRS)):
+      client_dir = TEMP_CLIENT_DIRS[i]
+      instance = secondary_instances[i]
 
       # Make sure TUF uses the right client directory.
       # Hack to allow multiple clients to run in the same Python process.
@@ -680,7 +639,7 @@ class TestSecondary(unittest.TestCase):
 
       # Process this sample metadata.
 
-      if instance is secondary_instance_3:
+      if instance is secondary_instances[2]:
         # Expect the update to fail for the third Secondary client.
         with self.assertRaises(tuf.NoWorkingMirrorError):
           instance.process_metadata(archive_fname)
@@ -700,9 +659,9 @@ class TestSecondary(unittest.TestCase):
 
     # First: Check the top-level metadata files in the client directories.
 
-    # For clients 1 and 2, we expect root, snapshot, targets, and timestamp for
+    # For clients 0 and 1, we expect root, snapshot, targets, and timestamp for
     # both director and image repo.
-    for client_dir in [TEMP_CLIENT_DIR_1, TEMP_CLIENT_DIR_2]:
+    for client_dir in [TEMP_CLIENT_DIRS[0], TEMP_CLIENT_DIRS[1]]:
       for repo in ['director', 'imagerepo']:
         self.assertEqual([
             'root.' + tuf.conf.METADATA_FORMAT,
@@ -712,27 +671,27 @@ class TestSecondary(unittest.TestCase):
             sorted(os.listdir(os.path.join(client_dir, 'metadata', repo,
             'current'))))
 
-    # For client 3, we are certain that Director metadata will have failed to
+    # For client 2, we are certain that Director metadata will have failed to
     # update. Image Repository metadata may or may not have updated before the
-    # Director repository update failure, so we don't check that. Client 3
+    # Director repository update failure, so we don't check that. Client 2
     # started with root metadata for the Director repository, so that is all
     # we expect to find.
     self.assertEqual(
         ['root.' + tuf.conf.METADATA_FORMAT],
-        sorted(os.listdir(os.path.join(TEMP_CLIENT_DIR_3, 'metadata',
+        sorted(os.listdir(os.path.join(TEMP_CLIENT_DIRS[2], 'metadata',
         'director', 'current'))))
 
 
     # Second: Check targets each Secondary client has been instructed to
     # install (and has in turn validated).
-    # Client 1 should have validated expected_updated_fileinfo.
+    # Client 0 should have validated expected_updated_fileinfo.
     self.assertEqual(
         expected_updated_fileinfo,
-        secondary_instance_1.validated_targets_for_this_ecu[0])
+        secondary_instances[0].validated_targets_for_this_ecu[0])
 
-    # Clients 2 and 3 should have no validated targets.
-    self.assertFalse(secondary_instance_2.validated_targets_for_this_ecu)
-    self.assertFalse(secondary_instance_3.validated_targets_for_this_ecu)
+    # Clients 1 and 2 should have no validated targets.
+    self.assertFalse(secondary_instances[1].validated_targets_for_this_ecu)
+    self.assertFalse(secondary_instances[2].validated_targets_for_this_ecu)
 
 
 
@@ -742,7 +701,7 @@ class TestSecondary(unittest.TestCase):
 
     image_fname = 'TCU1.1.txt'
     sample_image_location = 'demo/images/'
-    client_unverified_targets_dir = TEMP_CLIENT_DIR_1 + '/unverified_targets'
+    client_unverified_targets_dir = TEMP_CLIENT_DIRS[0] + '/unverified_targets'
 
     if os.path.exists(client_unverified_targets_dir):
       shutil.rmtree(client_unverified_targets_dir)
@@ -751,12 +710,12 @@ class TestSecondary(unittest.TestCase):
     shutil.copy(
         sample_image_location + image_fname, client_unverified_targets_dir)
 
-    secondary_instance_1.validate_image(image_fname)
+    secondary_instances[0].validate_image(image_fname)
 
     with self.assertRaises(uptane.Error):
-      secondary_instance_2.validate_image(image_fname)
+      secondary_instances[1].validate_image(image_fname)
     with self.assertRaises(uptane.Error):
-      secondary_instance_3.validate_image(image_fname)
+      secondary_instances[2].validate_image(image_fname)
 
 
 

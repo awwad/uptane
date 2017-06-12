@@ -14,7 +14,6 @@ import uptane # Import before TUF modules; may change tuf.conf values.
 import unittest
 import os.path
 import time
-import copy
 import shutil
 import hashlib
 

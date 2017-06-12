@@ -89,70 +89,6 @@ def destroy_temp_dir():
 
 
 
-def setUpModule():
-  """
-  This is run once for the full module, before all tests.
-  It prepares some globals, including two for Secondary ECU client instances.
-  When finished, it will also start up an OEM Repository Server,
-  Director Server, and Time Server. Currently, it requires them to be already
-  running.
-  """
-  global secondary_ecu_key
-  global key_timeserver_pub
-  global key_timeserver_pri
-  global key_directortargets_pub
-  global clock
-
-  destroy_temp_dir()
-
-  # Load the private key for this Secondary ECU.
-  key_pub = demo.import_public_key('secondary')
-  key_pri = demo.import_private_key('secondary')
-  secondary_ecu_key = uptane.common.canonical_key_from_pub_and_pri(
-      key_pub, key_pri)
-
-  # Load the public timeserver key.
-  key_timeserver_pub = demo.import_public_key('timeserver')
-  key_timeserver_pri = demo.import_private_key('timeserver')
-
-  # Load the public director key.
-  key_directortargets_pub = demo.import_public_key('director')
-
-  # Generate a trusted initial time for the Secondary.
-  clock = tuf.formats.unix_timestamp_to_datetime(int(time.time()))
-  clock = clock.isoformat() + 'Z'
-  tuf.formats.ISO8601_DATETIME_SCHEMA.check_match(clock)
-
-  # Set up client directories for the two Secondaries, containing the
-  # initial root.json and root.der (both, for good measure) metadata files
-  # so that the clients can validate further metadata they obtain.
-  # NOTE that running multiple clients in the same Python process does not
-  # work normally in the reference implementation, as the value of
-  # tuf.conf.repository_directories is client-specific, and it is set during
-  # uptane.common.create_directory_structure_for_client, and used when a
-  # client is created (initialization of a Secondary in our case)
-  # We're going to cheat in this test module for the purpose of testing
-  # and update tuf.conf.repository_directories before each Secondary is
-  # created,  to refer to the client we're creating.
-  for client_dir in [TEMP_CLIENT_DIR_1, TEMP_CLIENT_DIR_2, TEMP_CLIENT_DIR_3]:
-    uptane.common.create_directory_structure_for_client(
-        client_dir,
-        TEST_PINNING_FNAME,
-        {'imagerepo': TEST_IMAGE_REPO_ROOT_FNAME,
-        'director': TEST_DIRECTOR_ROOT_FNAME})
-
-
-
-
-
-def tearDownModule():
-  """This is run once for the full module, after all tests."""
-  destroy_temp_dir()
-
-
-
-
-
 class TestSecondary(unittest.TestCase):
   """
   "unittest"-style test class for the Secondary module in the reference
@@ -162,6 +98,71 @@ class TestSecondary(unittest.TestCase):
   Several of them build on the results of previous tests. This is an unusual
   pattern but saves code and works at least for now.
   """
+
+  # Class variables
+  secondary_ecu_key = None
+  key_timeserver_pub = None
+  key_timeserver_pri = None
+  key_directortargets_pub = None
+  clock = None
+
+  @classmethod
+  def setUpClass(cls):
+    """
+    This is run once for the full class (and so the full module, which contains
+    only one class), before all tests. It prepares some variables and stores
+    them in the class.
+    """
+
+    destroy_temp_dir()
+
+    # Load the private key for this Secondary ECU.
+    cls.secondary_ecu_key = uptane.common.canonical_key_from_pub_and_pri(
+        demo.import_public_key('secondary'),
+        demo.import_private_key('secondary'))
+
+    # Load the public timeserver key.
+    cls.key_timeserver_pub = demo.import_public_key('timeserver')
+    cls.key_timeserver_pri = demo.import_private_key('timeserver')
+
+    # Load the public director key.
+    cls.key_directortargets_pub = demo.import_public_key('director')
+
+    # Generate a trusted initial time for the Secondaries.
+    cls.clock = tuf.formats.unix_timestamp_to_datetime(
+        int(time.time())).isoformat() + 'Z'
+    tuf.formats.ISO8601_DATETIME_SCHEMA.check_match(cls.clock)
+
+    # Set up client directories for the two Secondaries, containing the
+    # initial root.json and root.der (both, for good measure) metadata files
+    # so that the clients can validate further metadata they obtain.
+    # NOTE that running multiple clients in the same Python process does not
+    # work normally in the reference implementation, as the value of
+    # tuf.conf.repository_directories is client-specific, and it is set during
+    # uptane.common.create_directory_structure_for_client, and used when a
+    # client is created (initialization of a Secondary in our case)
+    # We're going to cheat in this test module for the purpose of testing
+    # and update tuf.conf.repository_directories before each Secondary is
+    # created,  to refer to the client we're creating.
+    for client_dir in TEMP_CLIENT_DIRS:
+      uptane.common.create_directory_structure_for_client(
+          client_dir,
+          TEST_PINNING_FNAME,
+          {'imagerepo': TEST_IMAGE_REPO_ROOT_FNAME,
+          'director': TEST_DIRECTOR_ROOT_FNAME})
+
+
+
+
+  @classmethod
+  def tearDownClass(cls):
+    """This is run once for the full class (and so the full module, which
+    contains only one class), after all tests."""
+    destroy_temp_dir()
+
+
+
+
 
   def test_01_init(self):
     """
@@ -184,9 +185,9 @@ class TestSecondary(unittest.TestCase):
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vins[0],
           ecu_serial=ecu_serials[0],
-          ecu_key=secondary_ecu_key,
-          time=clock,
-          timeserver_public_key=key_timeserver_pub,
+          ecu_key=TestSecondary.secondary_ecu_key,
+          time=TestSecondary.clock,
+          timeserver_public_key=TestSecondary.key_timeserver_pub,
           firmware_fileinfo=factory_firmware_fileinfo,
           director_public_key=None,
           partial_verifying=False)
@@ -203,9 +204,9 @@ class TestSecondary(unittest.TestCase):
           director_repo_name=42,
           vin=vins[0],
           ecu_serial=ecu_serials[0],
-          ecu_key=secondary_ecu_key,
-          time=clock,
-          timeserver_public_key=key_timeserver_pub,
+          ecu_key=TestSecondary.secondary_ecu_key,
+          time=TestSecondary.clock,
+          timeserver_public_key=TestSecondary.key_timeserver_pub,
           firmware_fileinfo=factory_firmware_fileinfo,
           director_public_key=None,
           partial_verifying=False)
@@ -217,9 +218,9 @@ class TestSecondary(unittest.TestCase):
           director_repo_name='string_that_is_not_a_known_repo_name',
           vin=vins[0],
           ecu_serial=ecu_serials[0],
-          ecu_key=secondary_ecu_key,
-          time=clock,
-          timeserver_public_key=key_timeserver_pub,
+          ecu_key=TestSecondary.secondary_ecu_key,
+          time=TestSecondary.clock,
+          timeserver_public_key=TestSecondary.key_timeserver_pub,
           firmware_fileinfo=factory_firmware_fileinfo,
           director_public_key=None,
           partial_verifying=False)
@@ -230,10 +231,10 @@ class TestSecondary(unittest.TestCase):
           full_client_dir=TEMP_CLIENT_DIRS[0],
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=5,
-          ecu_key=secondary_ecu_key,
-          time=clock,
-          timeserver_public_key=key_timeserver_pub,
           ecu_serial=ecu_serials[0],
+          ecu_key=TestSecondary.secondary_ecu_key,
+          time=TestSecondary.clock,
+          timeserver_public_key=TestSecondary.key_timeserver_pub,
           firmware_fileinfo=factory_firmware_fileinfo,
           director_public_key=None,
           partial_verifying=False)
@@ -245,9 +246,9 @@ class TestSecondary(unittest.TestCase):
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vins[0],
           ecu_serial=500,
-          ecu_key=secondary_ecu_key,
-          time=clock,
-          timeserver_public_key=key_timeserver_pub,
+          ecu_key=TestSecondary.secondary_ecu_key,
+          time=TestSecondary.clock,
+          timeserver_public_key=TestSecondary.key_timeserver_pub,
           firmware_fileinfo=factory_firmware_fileinfo,
           director_public_key=None,
           partial_verifying=False)
@@ -259,8 +260,8 @@ class TestSecondary(unittest.TestCase):
           vin=vins[0],
           ecu_serial=ecu_serials[0],
           ecu_key={''},
-          time=clock,
-          timeserver_public_key=key_timeserver_pub,
+          time=TestSecondary.clock,
+          timeserver_public_key=TestSecondary.key_timeserver_pub,
           firmware_fileinfo=firmware_fileinfo,
           director_public_key=None,
           partial_verifying=False)
@@ -270,13 +271,13 @@ class TestSecondary(unittest.TestCase):
       s = secondary.Secondary(
           full_client_dir=TEMP_CLIENT_DIRS[0],
           director_repo_name=demo.DIRECTOR_REPO_NAME,
-          ecu_key=secondary_ecu_key,
           vin=vins[0],
           ecu_serial=ecu_serials[0],
+          ecu_key=TestSecondary.secondary_ecu_key,
           time='potato',
-          timeserver_public_key=key_timeserver_pub,
+          timeserver_public_key=TestSecondary.key_timeserver_pub,
           firmware_fileinfo=factory_firmware_fileinfo,
-          director_public_key=key_directortargets_pub,
+          director_public_key=TestSecondary.key_directortargets_pub,
           partial_verifying=False)
 
     # Invalid director_public_key:
@@ -284,11 +285,11 @@ class TestSecondary(unittest.TestCase):
       s = secondary.Secondary(
           full_client_dir=TEMP_CLIENT_DIRS[0],
           director_repo_name=demo.DIRECTOR_REPO_NAME,
-          ecu_key=secondary_ecu_key,
-          time=clock,
-          timeserver_public_key=key_timeserver_pub,
           vin=vins[0],
           ecu_serial=ecu_serials[0],
+          ecu_key=TestSecondary.secondary_ecu_key,
+          time=TestSecondary.clock,
+          timeserver_public_key=TestSecondary.key_timeserver_pub,
           firmware_fileinfo=factory_firmware_fileinfo,
           director_public_key={''},
           partial_verifying=False)
@@ -302,23 +303,23 @@ class TestSecondary(unittest.TestCase):
       s = secondary.Secondary(
           full_client_dir=TEMP_CLIENT_DIRS[0],
           director_repo_name=demo.DIRECTOR_REPO_NAME,
-          ecu_key=secondary_ecu_key,
-          time=clock,
-          timeserver_public_key=key_timeserver_pub,
           vin=vins[0],
           ecu_serial=ecu_serials[0],
+          ecu_key=TestSecondary.secondary_ecu_key,
+          time=TestSecondary.clock,
+          timeserver_public_key=TestSecondary.key_timeserver_pub,
           firmware_fileinfo=factory_firmware_fileinfo,
-          director_public_key=key_directortargets_pub,
+          director_public_key=TestSecondary.key_directortargets_pub,
           partial_verifying=False)
     with self.assertRaises(uptane.Error):
       s = secondary.Secondary(
           full_client_dir=TEMP_CLIENT_DIRS[0],
           director_repo_name=demo.DIRECTOR_REPO_NAME,
-          ecu_key=secondary_ecu_key,
-          time=clock,
-          timeserver_public_key=key_timeserver_pub,
           vin=vins[0],
           ecu_serial=ecu_serials[0],
+          ecu_key=TestSecondary.secondary_ecu_key,
+          time=TestSecondary.clock,
+          timeserver_public_key=TestSecondary.key_timeserver_pub,
           firmware_fileinfo=factory_firmware_fileinfo,
           director_public_key=None,
           partial_verifying=True)
@@ -329,11 +330,11 @@ class TestSecondary(unittest.TestCase):
       s = secondary.Secondary(
           full_client_dir=TEMP_CLIENT_DIRS[0],
           director_repo_name=demo.DIRECTOR_REPO_NAME,
-          ecu_key=secondary_ecu_key,
-          time=clock,
-          timeserver_public_key=clock, # INVALID
           vin=vins[0],
           ecu_serial=ecu_serials[0],
+          ecu_key=TestSecondary.secondary_ecu_key,
+          time=TestSecondary.clock,
+          timeserver_public_key=TestSecondary.clock, # INVALID
           firmware_fileinfo=factory_firmware_fileinfo,
           director_public_key=None,
           partial_verifying=False)
@@ -366,9 +367,9 @@ class TestSecondary(unittest.TestCase):
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vin,
           ecu_serial=ecu_serial,
-          ecu_key=secondary_ecu_key,
-          time=clock,
-          timeserver_public_key=key_timeserver_pub,
+          ecu_key=TestSecondary.secondary_ecu_key,
+          time=TestSecondary.clock,
+          timeserver_public_key=TestSecondary.key_timeserver_pub,
           firmware_fileinfo=factory_firmware_fileinfo,
           director_public_key=None,
           partial_verifying=False)
@@ -382,10 +383,11 @@ class TestSecondary(unittest.TestCase):
       self.assertEqual(demo.DIRECTOR_REPO_NAME, instance.director_repo_name)
       self.assertEqual(vin, instance.vin)
       self.assertEqual(ecu_serial, instance.ecu_serial)
-      self.assertEqual(secondary_ecu_key, instance.ecu_key)
-      self.assertEqual(clock, instance.all_valid_timeserver_times[0])
-      self.assertEqual(clock, instance.all_valid_timeserver_times[1])
-      self.assertEqual(key_timeserver_pub, instance.timeserver_public_key)
+      self.assertEqual(TestSecondary.secondary_ecu_key, instance.ecu_key)
+      self.assertEqual(TestSecondary.clock, instance.all_valid_timeserver_times[0])
+      self.assertEqual(TestSecondary.clock, instance.all_valid_timeserver_times[1])
+      self.assertEqual(
+          TestSecondary.key_timeserver_pub, instance.timeserver_public_key)
       self.assertTrue(None is instance.director_public_key)
       self.assertFalse(instance.partial_verifying)
 
@@ -473,7 +475,8 @@ class TestSecondary(unittest.TestCase):
     if tuf.conf.METADATA_FORMAT == 'der':
       # Convert this time attestation to the expected ASN.1/DER format.
       time_attestation = asn1_codec.convert_signed_metadata_to_der(
-          original_time_attestation, private_key=key_timeserver_pri, resign=True)
+          original_time_attestation,
+          private_key=TestSecondary.key_timeserver_pri, resign=True)
 
     # If the time_attestation is not deemed valid, an exception will be raised.
     instance.validate_time_attestation(time_attestation)
@@ -516,7 +519,7 @@ class TestSecondary(unittest.TestCase):
       # Convert this time attestation to the expected ASN.1/DER format.
       time_attestation__wrongnonce = asn1_codec.convert_signed_metadata_to_der(
           time_attestation__wrongnonce,
-          private_key=key_timeserver_pri, resign=True)
+          private_key=TestSecondary.key_timeserver_pri, resign=True)
 
     with self.assertRaises(uptane.BadTimeAttestation):
       instance.validate_time_attestation(time_attestation__wrongnonce)
@@ -556,14 +559,10 @@ class TestSecondary(unittest.TestCase):
     self.assertEqual(1, len(ecu_manifest['signatures']))
 
     # TODO: Check some values from the ECU Manifest
-    # TODO: Check some values from the ECU Manifest
-    # TODO: Check some values from the ECU Manifest
-
-    # TODO: More testing of the contents of the ECU Manifest.
 
     # Check the signature on the ECU Manifest.
     self.assertTrue(uptane.common.verify_signature_over_metadata(
-        secondary_ecu_key,
+        TestSecondary.secondary_ecu_key,
         ecu_manifest['signatures'][0], # TODO: Deal with 1-sig assumption?
         ecu_manifest['signed'],
         datatype='ecu_manifest'))

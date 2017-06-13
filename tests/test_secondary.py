@@ -9,7 +9,6 @@
 <Copyright>
   See LICENSE for licensing information.
 """
-from __future__ import print_function
 from __future__ import unicode_literals
 
 import uptane # Import before TUF modules; may change tuf.conf values.
@@ -659,8 +658,6 @@ class TestSecondary(unittest.TestCase):
     # both director and image repo.
     for client_dir in [TEMP_CLIENT_DIR_1, TEMP_CLIENT_DIR_2]:
       for repo in ['director', 'imagerepo']:
-        print('Checking client ' + client_dir + ' downloaded metadata from ' +
-            repr(repo))
         self.assertEqual([
             'root.' + tuf.conf.METADATA_FORMAT,
             'snapshot.' + tuf.conf.METADATA_FORMAT,
@@ -674,7 +671,6 @@ class TestSecondary(unittest.TestCase):
     # Director repository update failure, so we don't check that. Client 3
     # started with root metadata for the Director repository, so that is all
     # we expect to find.
-    print('Checking client 3 downloaded metadata from Director Repository')
     self.assertEqual(
         ['root.' + tuf.conf.METADATA_FORMAT],
         sorted(os.listdir(os.path.join(TEMP_CLIENT_DIR_3, 'metadata',

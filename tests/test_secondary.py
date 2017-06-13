@@ -104,7 +104,7 @@ class TestSecondary(unittest.TestCase):
   key_timeserver_pub = None
   key_timeserver_pri = None
   key_directortargets_pub = None
-  clock = None
+  initial_time = None
 
   @classmethod
   def setUpClass(cls):
@@ -129,9 +129,9 @@ class TestSecondary(unittest.TestCase):
     cls.key_directortargets_pub = demo.import_public_key('director')
 
     # Generate a trusted initial time for the Secondaries.
-    cls.clock = tuf.formats.unix_timestamp_to_datetime(
+    cls.initial_time = tuf.formats.unix_timestamp_to_datetime(
         int(time.time())).isoformat() + 'Z'
-    tuf.formats.ISO8601_DATETIME_SCHEMA.check_match(cls.clock)
+    tuf.formats.ISO8601_DATETIME_SCHEMA.check_match(cls.initial_time)
 
     # Set up client directories for the two Secondaries, containing the
     # initial root.json and root.der (both, for good measure) metadata files
@@ -186,7 +186,7 @@ class TestSecondary(unittest.TestCase):
           vin=vins[0],
           ecu_serial=ecu_serials[0],
           ecu_key=TestSecondary.secondary_ecu_key,
-          time=TestSecondary.clock,
+          time=TestSecondary.initial_time,
           timeserver_public_key=TestSecondary.key_timeserver_pub,
           firmware_fileinfo=factory_firmware_fileinfo,
           director_public_key=None,
@@ -205,7 +205,7 @@ class TestSecondary(unittest.TestCase):
           vin=vins[0],
           ecu_serial=ecu_serials[0],
           ecu_key=TestSecondary.secondary_ecu_key,
-          time=TestSecondary.clock,
+          time=TestSecondary.initial_time,
           timeserver_public_key=TestSecondary.key_timeserver_pub,
           firmware_fileinfo=factory_firmware_fileinfo,
           director_public_key=None,
@@ -219,7 +219,7 @@ class TestSecondary(unittest.TestCase):
           vin=vins[0],
           ecu_serial=ecu_serials[0],
           ecu_key=TestSecondary.secondary_ecu_key,
-          time=TestSecondary.clock,
+          time=TestSecondary.initial_time,
           timeserver_public_key=TestSecondary.key_timeserver_pub,
           firmware_fileinfo=factory_firmware_fileinfo,
           director_public_key=None,
@@ -233,7 +233,7 @@ class TestSecondary(unittest.TestCase):
           vin=5,
           ecu_serial=ecu_serials[0],
           ecu_key=TestSecondary.secondary_ecu_key,
-          time=TestSecondary.clock,
+          time=TestSecondary.initial_time,
           timeserver_public_key=TestSecondary.key_timeserver_pub,
           firmware_fileinfo=factory_firmware_fileinfo,
           director_public_key=None,
@@ -247,7 +247,7 @@ class TestSecondary(unittest.TestCase):
           vin=vins[0],
           ecu_serial=500,
           ecu_key=TestSecondary.secondary_ecu_key,
-          time=TestSecondary.clock,
+          time=TestSecondary.initial_time,
           timeserver_public_key=TestSecondary.key_timeserver_pub,
           firmware_fileinfo=factory_firmware_fileinfo,
           director_public_key=None,
@@ -260,13 +260,13 @@ class TestSecondary(unittest.TestCase):
           vin=vins[0],
           ecu_serial=ecu_serials[0],
           ecu_key={''},
-          time=TestSecondary.clock,
+          time=TestSecondary.initial_time,
           timeserver_public_key=TestSecondary.key_timeserver_pub,
           firmware_fileinfo=firmware_fileinfo,
           director_public_key=None,
           partial_verifying=False)
 
-    # Invalid time:
+    # Invalid initial time:
     with self.assertRaises(tuf.FormatError):
       secondary.Secondary(
           full_client_dir=TEMP_CLIENT_DIRS[0],
@@ -288,7 +288,7 @@ class TestSecondary(unittest.TestCase):
           vin=vins[0],
           ecu_serial=ecu_serials[0],
           ecu_key=TestSecondary.secondary_ecu_key,
-          time=TestSecondary.clock,
+          time=TestSecondary.initial_time,
           timeserver_public_key=TestSecondary.key_timeserver_pub,
           firmware_fileinfo=factory_firmware_fileinfo,
           director_public_key={''},
@@ -306,7 +306,7 @@ class TestSecondary(unittest.TestCase):
           vin=vins[0],
           ecu_serial=ecu_serials[0],
           ecu_key=TestSecondary.secondary_ecu_key,
-          time=TestSecondary.clock,
+          time=TestSecondary.initial_time,
           timeserver_public_key=TestSecondary.key_timeserver_pub,
           firmware_fileinfo=factory_firmware_fileinfo,
           director_public_key=TestSecondary.key_directortargets_pub,
@@ -318,7 +318,7 @@ class TestSecondary(unittest.TestCase):
           vin=vins[0],
           ecu_serial=ecu_serials[0],
           ecu_key=TestSecondary.secondary_ecu_key,
-          time=TestSecondary.clock,
+          time=TestSecondary.initial_time,
           timeserver_public_key=TestSecondary.key_timeserver_pub,
           firmware_fileinfo=factory_firmware_fileinfo,
           director_public_key=None,
@@ -333,8 +333,8 @@ class TestSecondary(unittest.TestCase):
           vin=vins[0],
           ecu_serial=ecu_serials[0],
           ecu_key=TestSecondary.secondary_ecu_key,
-          time=TestSecondary.clock,
-          timeserver_public_key=TestSecondary.clock, # INVALID
+          time=TestSecondary.initial_time,
+          timeserver_public_key=TestSecondary.initial_time, # INVALID
           firmware_fileinfo=factory_firmware_fileinfo,
           director_public_key=None,
           partial_verifying=False)
@@ -368,7 +368,7 @@ class TestSecondary(unittest.TestCase):
           vin=vin,
           ecu_serial=ecu_serial,
           ecu_key=TestSecondary.secondary_ecu_key,
-          time=TestSecondary.clock,
+          time=TestSecondary.initial_time,
           timeserver_public_key=TestSecondary.key_timeserver_pub,
           firmware_fileinfo=factory_firmware_fileinfo,
           director_public_key=None,
@@ -384,8 +384,10 @@ class TestSecondary(unittest.TestCase):
       self.assertEqual(vin, instance.vin)
       self.assertEqual(ecu_serial, instance.ecu_serial)
       self.assertEqual(TestSecondary.secondary_ecu_key, instance.ecu_key)
-      self.assertEqual(TestSecondary.clock, instance.all_valid_timeserver_times[0])
-      self.assertEqual(TestSecondary.clock, instance.all_valid_timeserver_times[1])
+      self.assertEqual(
+          TestSecondary.initial_time, instance.all_valid_timeserver_times[0])
+      self.assertEqual(
+          TestSecondary.initial_time, instance.all_valid_timeserver_times[1])
       self.assertEqual(
           TestSecondary.key_timeserver_pub, instance.timeserver_public_key)
       self.assertTrue(None is instance.director_public_key)

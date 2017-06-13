@@ -86,7 +86,7 @@ class TestPrimary(unittest.TestCase):
   ecu_key = None
   key_timeserver_pub = None
   key_timeserver_pri = None
-  clock = None
+  initial_time = None
   # I'll initialize instance in the first test, and use it for later tests so
   # as to avoid repeated initialization.
   instance = None
@@ -113,9 +113,9 @@ class TestPrimary(unittest.TestCase):
     cls.key_timeserver_pri = demo.import_private_key('timeserver')
 
     # Generate a trusted initial time for the Primary.
-    cls.clock = tuf.formats.unix_timestamp_to_datetime(
+    cls.initial_time = tuf.formats.unix_timestamp_to_datetime(
         int(time.time())).isoformat() + 'Z'
-    tuf.formats.ISO8601_DATETIME_SCHEMA.check_match(cls.clock)
+    tuf.formats.ISO8601_DATETIME_SCHEMA.check_match(cls.initial_time)
 
 
 
@@ -161,7 +161,7 @@ class TestPrimary(unittest.TestCase):
           vin=5,  # INVALID
           ecu_serial=primary_ecu_serial,
           primary_key=TestPrimary.ecu_key,
-          time=TestPrimary.clock,
+          time=TestPrimary.initial_time,
           timeserver_public_key=TestPrimary.key_timeserver_pub,
           my_secondaries=[])
 
@@ -173,7 +173,7 @@ class TestPrimary(unittest.TestCase):
           vin=vin,
           ecu_serial=500, # INVALID
           primary_key=TestPrimary.ecu_key,
-          time=TestPrimary.clock,
+          time=TestPrimary.initial_time,
           timeserver_public_key=TestPrimary.key_timeserver_pub,
           my_secondaries=[])
 
@@ -185,7 +185,7 @@ class TestPrimary(unittest.TestCase):
           vin=vin,
           ecu_serial=primary_ecu_serial,
           primary_key={''}, # INVALID
-          time=TestPrimary.clock,
+          time=TestPrimary.initial_time,
           timeserver_public_key=TestPrimary.key_timeserver_pub,
           my_secondaries=[])
 
@@ -208,8 +208,8 @@ class TestPrimary(unittest.TestCase):
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vin,
           ecu_serial=primary_ecu_serial,
-          primary_key=TestPrimary.ecu_key, time=TestPrimary.clock,
-          timeserver_public_key=TestPrimary.clock, # INVALID
+          primary_key=TestPrimary.ecu_key, time=TestPrimary.initial_time,
+          timeserver_public_key=TestPrimary.initial_time, # INVALID
           my_secondaries=[])
 
 
@@ -225,7 +225,7 @@ class TestPrimary(unittest.TestCase):
         vin=vin,
         ecu_serial=primary_ecu_serial,
         primary_key=TestPrimary.ecu_key,
-        time=TestPrimary.clock,
+        time=TestPrimary.initial_time,
         timeserver_public_key=TestPrimary.key_timeserver_pub)
 
 

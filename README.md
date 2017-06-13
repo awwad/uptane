@@ -29,6 +29,7 @@ implementation code, divided into these sections:
   * [3.5: Compromise Both Repositories Simultaneously to Serve Arbitrary Package](#35-compromise-both-repositories-simultaneously-to-server-arbitrary-package)
   * [3.6: Recover from Major Key Compromise](#36-recover-from-major-key-compromise)
   * [3.7: Arbitrary Package Attack with Revoked Keys](#37-arbitrary-package-attack-with-revoked-keys)
+* [Testing](#testing)
 
 
 # 0: Installation
@@ -76,18 +77,10 @@ If you want the demo to play notification sounds you need one of the following a
 - omxplayer (built-in on Raspbian)
 - afplay (built-in on OS X)
 
-#### Testing
-You can run Uptane's unit tests by invoking [tox](https://testrun.org/tox/).
-```Bash
-$ tox
-```
+#### Troubleshooting
+If you are running into errors or want to run unit and integration tests, see
+the [Testing](#testing) section at the bottom of this document.
 
-Alternatively, you can execute `runtests.py`, which runs all of the units tests, or individual unit
-tests from the root directory.
-```Bash
-$ python tests/runtests.py
-$ python tests/test_secondary.py
-```
 
 # 1: Starting the Demo
 The code below is intended to be run in five or more consoles:
@@ -603,3 +596,30 @@ have been saved by the Primary.
 >>> dp.update_cycle()
 ```
 
+
+
+# Testing
+
+If you are concerned that there may be installation issues or have run into
+issues running the demo below -- or if you simply want a thorough test of
+whether or not the Uptane reference implementation would work in a particular
+environment -- you can run Uptane's unit tests from the root uptane/ repository
+directory by invoking
+[tox](https://testrun.org/tox/) like so:
+```Bash
+$ tox
+```
+
+Alternatively, you can execute any of the unit tests in the tests directory
+directly, like so:
+```Bash
+$ python tests/test_secondary.py
+```
+
+Or you can run all tests with a particular encoding (default ASN.1/DER):
+```Bash
+$ python tests/runtests.py
+// Or:
+$ python tests/runtests.py json
+$ python tests/runtests.py der
+```

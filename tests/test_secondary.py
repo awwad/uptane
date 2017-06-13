@@ -472,6 +472,7 @@ class TestSecondary(unittest.TestCase):
       time_attestation = asn1_codec.convert_signed_metadata_to_der(
           original_time_attestation, private_key=key_timeserver_pri, resign=True)
 
+    # If the time_attestation is not deemed valid, an exception will be raised.
     secondary_instance_1.validate_time_attestation(time_attestation)
 
 

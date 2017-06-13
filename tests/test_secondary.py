@@ -5,6 +5,9 @@
 <Purpose>
   Unit testing for uptane/clients/secondary.py
   Much of this is copied from test_primary.py and then modified slightly
+
+<Copyright>
+  See LICENSE for licensing information.
 """
 from __future__ import print_function
 from __future__ import unicode_literals

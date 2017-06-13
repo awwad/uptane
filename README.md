@@ -76,6 +76,16 @@ If you want the demo to play notification sounds you need one of the following a
 - omxplayer (built-in on Raspbian)
 - afplay (built-in on OS X)
 
+#### Testing
+You can run Uptane's unit tests by invoking [tox](https://testrun.org/tox/).
+```Bash
+$ tox
+```
+
+Alternatively, you can execute `runtests.py` from the root directory.
+```Bash
+$ python tests/runtests.py
+```
 
 # 1: Starting the Demo
 The code below is intended to be run in five or more consoles:

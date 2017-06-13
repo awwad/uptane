@@ -72,6 +72,7 @@ key_directortargets_pub = None
 clock = None
 
 # Set starting firmware fileinfo (that this ECU had coming from the factory)
+# It will serve as the initial firmware state for the Secondary clients.
 factory_firmware_fileinfo = {
     'filepath': '/secondary_firmware.txt',
     'fileinfo': {

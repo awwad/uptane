@@ -362,8 +362,6 @@ class TestSecondary(unittest.TestCase):
     # Try initializing three Secondaries, expecting the three calls to work.
     # Save the instances for future tests as module variables (global keyword
     # used above), to save time and code.
-    # TODO: Stick TEST_PINNING_FNAME in the right place.
-    # Stick TEST_IMAGE_REPO_ROOT_FNAME and TEST_DIRECTOR_ROOT_FNAME in the right place.
 
     # Recall that, as mentioned in a comment in the SetUpModule method, running
     # multiple reference implementation updater clients simultaneously in the

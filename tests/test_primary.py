@@ -230,8 +230,6 @@ class TestPrimary(unittest.TestCase):
     # Initializes a Primary ECU, making a client directory and copying the root
     # file from the repositories.
     # Save the result for future tests, to save time and code.
-    # TODO: Stick TEST_PINNING_FNAME in the right place.
-    # Stick TEST_IMAGE_REPO_ROOT_FNAME and TEST_DIRECTOR_ROOT_FNAME in the right place.
     primary_instance = primary.Primary(
         full_client_dir=TEMP_CLIENT_DIR,
         director_repo_name=demo.DIRECTOR_REPO_NAME,

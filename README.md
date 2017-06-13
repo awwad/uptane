@@ -82,9 +82,11 @@ You can run Uptane's unit tests by invoking [tox](https://testrun.org/tox/).
 $ tox
 ```
 
-Alternatively, you can execute `runtests.py` from the root directory.
+Alternatively, you can execute `runtests.py`, which runs all of the units tests, or individual unit
+tests from the root directory.
 ```Bash
 $ python tests/runtests.py
+$ python tests/test_secondary.py
 ```
 
 # 1: Starting the Demo

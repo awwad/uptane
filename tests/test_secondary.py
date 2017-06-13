@@ -196,6 +196,53 @@ class TestSecondary(unittest.TestCase):
     # Now try creating a Secondary with a series of bad arguments, expecting
     # errors.
 
+    # Invalid full_client_dir
+    with self.assertRaises(tuf.FormatError):
+      secondary.Secondary(
+          full_client_dir=42,
+          director_repo_name=demo.DIRECTOR_REPO_NAME,
+          vin=vin1,
+          ecu_serial=ecu_serial1,
+          ecu_key=secondary_ecu_key,
+          time=clock,
+          timeserver_public_key=key_timeserver_pub,
+          firmware_fileinfo=factory_firmware_fileinfo,
+          director_public_key=None,
+          partial_verifying=False)
+
+    # TODO: Test providing a nonexistent directory for full_client_dir
+    # TODO: Test providing the wrong directory for full_client_dir.
+    #       Both of these tests may require saving additional clients and
+    #       running the later tests with them.
+
+    # Invalid director_repo_name
+    with self.assertRaises(tuf.FormatError):
+      secondary.Secondary(
+          full_client_dir=TEMP_CLIENT_DIR_1,
+          director_repo_name=42,
+          vin=vin1,
+          ecu_serial=ecu_serial1,
+          ecu_key=secondary_ecu_key,
+          time=clock,
+          timeserver_public_key=key_timeserver_pub,
+          firmware_fileinfo=factory_firmware_fileinfo,
+          director_public_key=None,
+          partial_verifying=False)
+
+    # Unknown director_repo_name
+    with self.assertRaises(uptane.Error):
+      secondary.Secondary(
+          full_client_dir=TEMP_CLIENT_DIR_1,
+          director_repo_name='string_that_is_not_a_known_repo_name',
+          vin=vin1,
+          ecu_serial=ecu_serial1,
+          ecu_key=secondary_ecu_key,
+          time=clock,
+          timeserver_public_key=key_timeserver_pub,
+          firmware_fileinfo=factory_firmware_fileinfo,
+          director_public_key=None,
+          partial_verifying=False)
+
     # Invalid VIN:
     with self.assertRaises(tuf.FormatError):
       s = secondary.Secondary(

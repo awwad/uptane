@@ -29,6 +29,7 @@ implementation code, divided into these sections:
   * [3.5: Compromise Both Repositories Simultaneously to Serve Arbitrary Package](#35-compromise-both-repositories-simultaneously-to-server-arbitrary-package)
   * [3.6: Recover from Major Key Compromise](#36-recover-from-major-key-compromise)
   * [3.7: Arbitrary Package Attack with Revoked Keys](#37-arbitrary-package-attack-with-revoked-keys)
+* [Testing](#testing)
 
 
 # 0: Installation
@@ -75,6 +76,11 @@ If you want the demo to play notification sounds you need one of the following a
 - mplayer (available for all major operating systems)
 - omxplayer (built-in on Raspbian)
 - afplay (built-in on OS X)
+
+#### Troubleshooting
+If you are running into errors or want to run unit and integration tests to
+better understand the workings of the reference implementation, see the
+[Testing](#testing) section at the bottom of this document.
 
 
 # 1: Starting the Demo
@@ -591,3 +597,30 @@ have been saved by the Primary.
 >>> dp.update_cycle()
 ```
 
+
+
+# Testing
+
+If you are concerned that there may be installation issues, or have run into
+issues running the demo, or want to better understand the workings of
+the reference implementation, or want a thorough test of whether or not the
+Uptane reference implementation would work in a particular environment, you can
+run Uptane's unit tests from the root uptane/ repository directory by invoking
+[tox](https://testrun.org/tox/) like so:
+```Bash
+$ tox
+```
+
+Alternatively, you can execute any of the unit tests in the tests directory
+directly, like so:
+```Bash
+$ python tests/test_secondary.py
+```
+
+Or you can run all tests with a particular encoding (default ASN.1/DER):
+```Bash
+$ python tests/runtests.py
+// Or:
+$ python tests/runtests.py json
+$ python tests/runtests.py der
+```

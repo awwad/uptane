@@ -227,7 +227,7 @@ class TestSecondary(unittest.TestCase):
 
     # Invalid VIN:
     with self.assertRaises(tuf.FormatError):
-      s = secondary.Secondary(
+      secondary.Secondary(
           full_client_dir=TEMP_CLIENT_DIRS[0],
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=5,
@@ -241,7 +241,7 @@ class TestSecondary(unittest.TestCase):
 
     # Invalid ECU Serial
     with self.assertRaises(tuf.FormatError):
-      s = secondary.Secondary(
+      secondary.Secondary(
           full_client_dir=TEMP_CLIENT_DIRS[0],
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vins[0],
@@ -254,7 +254,7 @@ class TestSecondary(unittest.TestCase):
           partial_verifying=False)
 
     # Invalid ECU Key
-      s = secondary.Secondary(
+      secondary.Secondary(
           full_client_dir=TEMP_CLIENT_DIRS[0],
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vins[0],
@@ -268,7 +268,7 @@ class TestSecondary(unittest.TestCase):
 
     # Invalid time:
     with self.assertRaises(tuf.FormatError):
-      s = secondary.Secondary(
+      secondary.Secondary(
           full_client_dir=TEMP_CLIENT_DIRS[0],
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vins[0],
@@ -282,7 +282,7 @@ class TestSecondary(unittest.TestCase):
 
     # Invalid director_public_key:
     with self.assertRaises(tuf.FormatError):
-      s = secondary.Secondary(
+      secondary.Secondary(
           full_client_dir=TEMP_CLIENT_DIRS[0],
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vins[0],
@@ -300,7 +300,7 @@ class TestSecondary(unittest.TestCase):
     # performing partial verification makes no sense, as the keys to be used
     # for full verification are determined based on the root metadata file.
     with self.assertRaises(uptane.Error):
-      s = secondary.Secondary(
+      secondary.Secondary(
           full_client_dir=TEMP_CLIENT_DIRS[0],
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vins[0],
@@ -312,7 +312,7 @@ class TestSecondary(unittest.TestCase):
           director_public_key=TestSecondary.key_directortargets_pub,
           partial_verifying=False)
     with self.assertRaises(uptane.Error):
-      s = secondary.Secondary(
+      secondary.Secondary(
           full_client_dir=TEMP_CLIENT_DIRS[0],
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vins[0],
@@ -327,7 +327,7 @@ class TestSecondary(unittest.TestCase):
 
     # Invalid timeserver key
     with self.assertRaises(tuf.FormatError):
-      s = secondary.Secondary(
+      secondary.Secondary(
           full_client_dir=TEMP_CLIENT_DIRS[0],
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vins[0],

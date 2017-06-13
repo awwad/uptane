@@ -155,7 +155,7 @@ class TestPrimary(unittest.TestCase):
 
     # Invalid VIN:
     with self.assertRaises(tuf.FormatError):
-      p = primary.Primary(
+      primary.Primary(
           full_client_dir=TEMP_CLIENT_DIR,
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=5,  # INVALID
@@ -167,7 +167,7 @@ class TestPrimary(unittest.TestCase):
 
     # Invalid ECU Serial
     with self.assertRaises(tuf.FormatError):
-      p = primary.Primary(
+      primary.Primary(
           full_client_dir=TEMP_CLIENT_DIR,
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vin,
@@ -179,7 +179,7 @@ class TestPrimary(unittest.TestCase):
 
     # Invalid ECU Key
     with self.assertRaises(tuf.FormatError):
-      p = primary.Primary(
+      primary.Primary(
           full_client_dir=TEMP_CLIENT_DIR,
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vin,
@@ -191,7 +191,7 @@ class TestPrimary(unittest.TestCase):
 
     # Invalid time:
     with self.assertRaises(tuf.FormatError):
-      p = primary.Primary(
+      primary.Primary(
           full_client_dir=TEMP_CLIENT_DIR,
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vin,
@@ -203,7 +203,7 @@ class TestPrimary(unittest.TestCase):
 
     # Invalid timeserver key
     with self.assertRaises(tuf.FormatError):
-      p = primary.Primary(
+      primary.Primary(
           full_client_dir=TEMP_CLIENT_DIR,
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vin,

@@ -81,7 +81,7 @@ expected_updated_fileinfo = {
 
 def destroy_temp_dir():
   # Clean up anything that may currently exist in the temp test directories.
-  for client_dir in [TEMP_CLIENT_DIRS[0], TEMP_CLIENT_DIRS[1], TEMP_CLIENT_DIRS[2]]:
+  for client_dir in TEMP_CLIENT_DIRS:
     if os.path.exists(client_dir):
       shutil.rmtree(client_dir)
 
@@ -200,7 +200,7 @@ class TestSecondary(unittest.TestCase):
     # Invalid director_repo_name
     with self.assertRaises(tuf.FormatError):
       secondary.Secondary(
-          full_client_dir=TEMP_CLIENT_DIR_1,
+          full_client_dir=TEMP_CLIENT_DIRS[0],
           director_repo_name=42,
           vin=vins[0],
           ecu_serial=ecu_serials[0],
@@ -214,7 +214,7 @@ class TestSecondary(unittest.TestCase):
     # Unknown director_repo_name
     with self.assertRaises(uptane.Error):
       secondary.Secondary(
-          full_client_dir=TEMP_CLIENT_DIR_1,
+          full_client_dir=TEMP_CLIENT_DIRS[0],
           director_repo_name='string_that_is_not_a_known_repo_name',
           vin=vins[0],
           ecu_serial=ecu_serials[0],

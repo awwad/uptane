@@ -64,14 +64,6 @@ def destroy_temp_dir():
 
 
 
-def tearDownModule():
-  """This is run once for the full module, after all tests."""
-  destroy_temp_dir()
-
-
-
-
-
 class TestPrimary(unittest.TestCase):
   """
   "unittest"-style test class for the Primary module in the reference

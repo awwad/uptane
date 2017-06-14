@@ -9,7 +9,6 @@
   Repo be running.
 
 """
-from __future__ import print_function
 from __future__ import unicode_literals
 
 import uptane # Import before TUF modules; may change tuf.conf values.
@@ -212,8 +211,6 @@ class TestPrimary(unittest.TestCase):
           timeserver_public_key=TestPrimary.initial_time, # INVALID
           my_secondaries=[])
 
-
-    print(TEMP_CLIENT_DIR)
 
     # Try creating a Primary, expecting it to work.
     # Initializes a Primary ECU, making a client directory and copying the root
@@ -484,9 +481,7 @@ class TestPrimary(unittest.TestCase):
     try:
       TestPrimary.instance.refresh_toplevel_metadata_from_repositories()
     except (URLError, tuf.NoWorkingMirrorError) as e:
-      print('Unable to open connection to repositories. (This test requires '
-          'that the demo Director and demo Image Repository be running.) '
-          'Skipping test.')
+      pass
     else:
       # Check the resulting top-level metadata files in the client directory.
       # Expect root, snapshot, targets, and timestamp for both director and

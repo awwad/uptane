@@ -256,6 +256,10 @@ class TestPrimary(unittest.TestCase):
 
     # TODO: Test providing bad data.
 
+    # TODO: Update this test to use either a JSON or an ASN.1/DER ECU Manifest
+    # depending on tuf.conf.METADATA_FORMAT instead of always using a JSON
+    # manifest.
+
     # Starting with an empty ecu manifest dictionary.
     self.assertEqual(dict(), TestPrimary.instance.ecu_manifests)
 
@@ -310,7 +314,7 @@ class TestPrimary(unittest.TestCase):
 
     # TODO: Other possible tests here.
 
-    # Do it correctly and expect it to work.
+    # Initialize correctly this time.
     TestPrimary.instance.register_ecu_manifest(
         vin=vin, ecu_serial='ecu11111', nonce=nonce,
         signed_ecu_manifest=sample_ecu_manifest,
@@ -459,7 +463,8 @@ class TestPrimary(unittest.TestCase):
     # Testing this requires that we have an OEM Repository and Director server
     # running, with particulars (e.g. address and port) specified in
     # demo/pinned.json.
-    # TODO: Determine if this test should spin up servers.
+    # TODO: Rewrite this test to grab data from a sample directory instead of
+    #       requiring that a demo repository be running.
 
     # Check that in the fresh temp directory for this test Primary client,
     # there aren't any metadata files except root.json yet.

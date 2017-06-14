@@ -41,6 +41,7 @@ import tuf.formats
 
 import uptane.encoding.asn1_codec as asn1_codec
 
+import time
 import threading # for the director services interface
 import os # For paths and symlink
 import shutil # For copying directory trees
@@ -165,15 +166,17 @@ def create_spamcar_metadata():
         vin,
         is_primary=i==0)
 
-    # Add a target for each of those ECUs.
-    # TODO: Make the contents of every file distinct so that the hashes are
+    # Add a target for each of those ECUs. Make the name of every file distinct
+    # so that they coexist in the same Director targets role metadata. Also
+    # make the contents of every target file distinct so that the hashes are
     # all different, in case someone wants to see the size of the whole zipped
     # piece of metadata.
-    add_target_to_director(
-        os.path.join(demo.DEMO_DIR, 'images', 'BCU1.0.txt'),
-        'BCU1.0.txt',
-        vin,
-        ecu)
+    fobj = open('image.txt', 'w')
+    fobj.write(ecu)
+    fobj.close()
+    time.sleep(0.01)
+    add_target_to_director('image.txt', ecu + '.txt', vin, ecu)
+    os.remove('image.txt')
 
   # Write all the metadata out.
   write_to_live(vin)

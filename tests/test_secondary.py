@@ -4,7 +4,7 @@
 
 <Purpose>
   Unit testing for uptane/clients/secondary.py
-  Much of this is copied from test_primary.py and then modified slightly
+  Much of this is modified from test_primary.py.
 
 <Copyright>
   See LICENSE for licensing information.
@@ -342,10 +342,10 @@ class TestSecondary(unittest.TestCase):
 
 
     # Try initializing three Secondaries, expecting the three calls to work.
-    # Save the instances for future tests as module variables (global keyword
-    # used above), to save time and code.
+    # Save the instances for future tests as class variables to save time and
+    # code.
 
-    # Recall that, as mentioned in a comment in the SetUpModule method, running
+    # Recall that, as mentioned in a comment in the SetUpClass method, running
     # multiple reference implementation updater clients simultaneously in the
     # same Python process is not supported, and we're going to engage in the
     # hack of swapping tuf.conf.repository_directories back and forth to make
@@ -586,7 +586,7 @@ class TestSecondary(unittest.TestCase):
     # --- Test this test module's setup (defensive)
     # First, check the source directories, from which the temp dir is copied.
     # This first part is testing this test module, since this setup was done
-    # above in setUpModule(), to maintain test integrity over time.
+    # above in setUpClass(), to maintain test integrity over time.
     # We should see only root.(json or der).
     for data_directory in [
         TEST_DIRECTOR_METADATA_DIR, TEST_IMAGE_REPO_METADATA_DIR]:
@@ -598,7 +598,7 @@ class TestSecondary(unittest.TestCase):
     # Next, check that the clients' metadata directories have the same
     # properties -- that the correct root metadata file was transferred to the
     # client directories when the directories were created by the
-    # create_directory_structure_for_client() calls in setUpModule above, and
+    # create_directory_structure_for_client() calls in setUpClass above, and
     # only the root metadata file.
     for client_dir in TEMP_CLIENT_DIRS:
       for repo in ['director', 'imagerepo']:
@@ -626,7 +626,7 @@ class TestSecondary(unittest.TestCase):
 
       # Make sure TUF uses the right client directory.
       # Hack to allow multiple clients to run in the same Python process.
-      # See comments in SetUpModule() method.
+      # See comments in SetUpClass() method.
       tuf.conf.repository_directory = client_dir
 
       # Location in the client directory to which we'll copy the archive.

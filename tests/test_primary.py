@@ -5,9 +5,8 @@
 <Purpose>
   Unit testing for uptane/clients/primary.py
 
-  Currently, running this test requires that the demo Director and demo OEM
-  Repo be running.
-
+<Copyright>
+  See LICENSE for licensing information.
 """
 from __future__ import unicode_literals
 
@@ -463,8 +462,11 @@ class TestPrimary(unittest.TestCase):
     # Testing this requires that we have an OEM Repository and Director server
     # running, with particulars (e.g. address and port) specified in
     # demo/pinned.json.
-    # TODO: Rewrite this test to grab data from a sample directory instead of
-    #       requiring that a demo repository be running.
+    #
+    # TODO: Write this in a way that draws on saved sample metadata.
+    #       Don't expect an actual server to be running.
+    #       This will probably entail modification to the pinned.json file to
+    #       point it to a local directory instead of a remote server.
 
     # Check that in the fresh temp directory for this test Primary client,
     # there aren't any metadata files except root.json yet.
@@ -499,12 +501,10 @@ class TestPrimary(unittest.TestCase):
 
 
   def test_35_get_target_list_from_director(self):
-    # Testing this requires that we have a Director server up and running.
-    # That seems outside of the scope of this test and more of a subject for
-    # integration tests.
-    # TODO: Decide whether or not to spin up a Director server within this
-    # test.
-
+    # TODO: Write this in a way that draws on saved sample Director metadata.
+    #       Don't expect an actual server to be running.
+    #       This will probably entail modification to the pinned.json file to
+    #       point it to a local directory instead of a remote server.
     #directed_targets = TestPrimary.instance.test_35_get_target_list_from_director
     pass
 
@@ -513,11 +513,10 @@ class TestPrimary(unittest.TestCase):
 
 
   def test_40_get_validated_target_info(self):
-    # Testing this requires that we have a Director server up and running.
-    # That seems outside of the scope of this test and more of a subject for
-    # integration tests.
-    # TODO: Decide whether or not to spin up a Director server within this
-    # test.
+    # TODO: Write this in a way that draws on saved sample metadata from the
+    #       Director and Image Repo. Don't expect an actual server to be
+    #       running. This will probably entail modification to the pinned.json
+    #       file to point it to a local directory instead of a remote server.
     pass
 
 

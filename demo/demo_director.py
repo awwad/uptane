@@ -139,6 +139,40 @@ def clean_slate(use_new_keys=False):
 
 
 
+def create_spamcar_metadata():
+
+  vin = 'spamcar'
+  ecu_key = demo.import_public_key('primary')
+
+  director_service_instance.add_new_vehicle(vin)
+
+  for i in range(128):
+
+    # Register 128 ECUs for this vehicle, and set ECU 0 as the Primary.
+    ecu = str(i)
+    director_service_instance.register_ecu_serial(
+        ecu,
+        ecu_key,
+        vin,
+        is_primary=i==0)
+
+    # Add a target for each of those ECUs.
+    # TODO: Make the contents of every file distinct so that the hashes are
+    # all different, in case someone wants to see the size of the whole zipped
+    # piece of metadata.
+    add_target_to_director(
+        os.path.join(demo.DEMO_DIR, 'images', 'BCU1.0.txt'),
+        'BCU1.0.txt',
+        vin,
+        ecu)
+
+  # Write all the metadata out.
+  write_to_live(vin)
+
+
+
+
+
 def write_to_live(vin_to_update=None):
   # Release updated metadata.
 

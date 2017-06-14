@@ -128,10 +128,16 @@ class Secondary(object):
     self.last_nonce_sent
       The latest nonce this ECU sent to the Timeserver (via the Primary).
 
-    all_valid_timeserver_times:
+    self.all_valid_timeserver_times:
       A list of all times extracted from all Timeserver attestations that have
       been validated by validate_time_attestation.
       Items are appended to the end.
+
+    self.validated_targets_for_this_ecu:
+      A list of the targets validated for this ECU, populated in method
+      fully_validate_metadata (which is called by method process_metadata).
+      # TODO: Since this is now expected to always be one target, this should
+      # just be a single value rather than a list....
 
 
   Methods, as called: ("self" arguments excluded):
@@ -266,6 +272,7 @@ class Secondary(object):
 
     self.last_nonce_sent = None
     self.nonce_next = self._create_nonce()
+    self.validated_targets_for_this_ecu = []
 
 
 

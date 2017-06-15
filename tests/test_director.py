@@ -22,14 +22,17 @@ import tuf.conf
 
 import uptane.formats
 import uptane.services.director as director
+import uptane.services.inventorydb as inventory
 # import uptane.common # verify sigs, create client dir structure, convert key
 # import uptane.encoding.asn1_codec as asn1_codec
 
 # For temporary convenience:
 import demo # for generate_key, import_public_key, import_private_key
 
-keys_pri = {'root': None, 'timestamp': None, 'snapshot': None, 'targets': None}
-keys_pub = {'root': None, 'timestamp': None, 'snapshot': None, 'targets': None}
+# The public and private keys to use during testing, including the Director
+# repository keys (public and private) as well as client keys (public).
+keys_pri = {}
+keys_pub = {}
 
 TEST_DATA_DIR = os.path.join(uptane.WORKING_DIR, 'tests', 'test_data')
 TEST_DIRECTOR_DIR = os.path.join(TEST_DATA_DIR, 'temp_test_director')
@@ -89,6 +92,10 @@ class TestDirector(unittest.TestCase):
     keys_pub['targets'] = demo.import_public_key('director')
     keys_pri['targets'] = demo.import_private_key('director')
 
+    # Load public keys for a Primary and some Secondaries and Primary, for use
+    # in testing registration of ECUs and validation of manifests.
+    for keyname in ['primary', 'secondary', 'secondary2']:
+      keys_pub[keyname] = demo.import_public_key(keyname)
 
 
 
@@ -127,7 +134,7 @@ class TestDirector(unittest.TestCase):
     # Try creating Director instances with invalid values, expecting errors.
     for i in range(len(GOOD_ARGS)):
 
-      arguments = GOOD_ARGS[:i] + [INVALID_ARG] + GOOD_ARGS[i+1:]
+      arguments = GOOD_ARGS[:i] + [INVALID_ARG] + GOOD_ARGS[i + 1:]
 
       with self.assertRaises(tuf.FormatError):
         director.Director(*arguments)
@@ -158,12 +165,128 @@ class TestDirector(unittest.TestCase):
     # Check values not copied from parameters.
     self.assertEqual({}, TestDirector.instance.vehicle_repositories)
 
+    # Expect that the inventory db is currently empty.
+    self.assertFalse(inventory.ecus_by_vin)
+    self.assertFalse(inventory.ecu_public_keys)
+    self.assertFalse(inventory.primary_ecus_by_vin)
+    self.assertFalse(inventory.vehicle_manifests)
+    self.assertFalse(inventory.ecu_manifests)
+
+
+
+
+
+  def test_03_add_new_vehicle(self):
+
+    # Expect that the inventory db is currently empty.
+    # These checks are redundant (test_01_init tested this) and defensive.
+    self.assertFalse(inventory.ecus_by_vin)
+    self.assertFalse(inventory.ecu_public_keys)
+    self.assertFalse(inventory.primary_ecus_by_vin)
+    self.assertFalse(inventory.vehicle_manifests)
+    self.assertFalse(inventory.ecu_manifests)
+
+    # Register a new vehicle and expect success.
+    # This also creates a TUF repository to provide Director metadata for
+    # that vehicle.
+    TestDirector.instance.add_new_vehicle('democar')
+
+    # TODO: Test the resulting state of the Director and inventorydb after
+    #       this registration.
+
 
 
 
 
   def test_05_register_ecu_serial(self):
-    pass
+
+    vin = 'democar'
+
+    # Expect no registered ECUs or manifests yet.
+    self.assertFalse(inventory.ecu_public_keys)
+    self.assertFalse(inventory.vehicle_manifests[vin])
+    self.assertFalse(inventory.ecu_manifests)
+    self.assertIsNone(inventory.primary_ecus_by_vin[vin])
+
+    primary_serial = 'INFOdemocar'
+    secondary_serial = 'TCUdemocar'
+
+    GOOD_PRIMARY_ARGS = [
+        primary_serial,        # ecu_serial
+        keys_pub['primary'],   # ecu_key
+        vin,                   # vin
+        True]                  # is_primary
+
+    GOOD_SECONDARY_ARGS = [
+        secondary_serial,      # ecu_serial
+        keys_pub['secondary'], # ecu_key
+        vin,                   # vin
+        False]                 # is_primary
+
+
+    # Expect these calls to fail due to invalid argument format.
+    # Note that none of the arguments should be integers.
+    for i in range(4):
+
+      bad_args = GOOD_PRIMARY_ARGS[:i] + [42] + GOOD_PRIMARY_ARGS[i + 1 :]
+      with self.assertRaises(tuf.FormatError):
+        TestDirector.instance.register_ecu_serial(*bad_args)
+
+      bad_args = GOOD_SECONDARY_ARGS[:i] + [42] + GOOD_SECONDARY_ARGS[i + 1 :]
+      with self.assertRaises(tuf.FormatError):
+        TestDirector.instance.register_ecu_serial(*bad_args)
+
+
+    # Expect this call to fail because the vehicle is not known to the Director
+    with self.assertRaises(uptane.UnknownVehicle):
+      bad_args = \
+          GOOD_PRIMARY_ARGS[:2] + ['not_a_real_vin'] + GOOD_PRIMARY_ARGS[3:]
+      TestDirector.instance.register_ecu_serial(*bad_args)
+
+
+
+    # Register a Primary.
+    TestDirector.instance.register_ecu_serial(*GOOD_PRIMARY_ARGS)
+
+    # Test result of Primary registration in inventory.
+    self.assertIn(vin, inventory.ecus_by_vin)
+    self.assertIn(primary_serial, inventory.ecus_by_vin[vin])
+
+    self.assertIn(vin, inventory.primary_ecus_by_vin)
+    self.assertEqual(primary_serial, inventory.primary_ecus_by_vin[vin])
+
+    self.assertIn(primary_serial, inventory.ecu_public_keys)
+    self.assertEqual(
+        keys_pub['primary'], inventory.ecu_public_keys[primary_serial])
+
+
+    # Register a Secondary.
+    TestDirector.instance.register_ecu_serial(*GOOD_SECONDARY_ARGS)
+
+    # Test result of Secondary registration in inventory.
+    # (The next two checks are redundant and defend possible future changes.)
+    self.assertIn(vin, inventory.ecus_by_vin)
+    self.assertIn(secondary_serial, inventory.ecus_by_vin[vin])
+
+    self.assertIn(secondary_serial, inventory.ecu_public_keys)
+    self.assertEqual(
+        keys_pub['secondary'], inventory.ecu_public_keys[secondary_serial])
+
+
+    # Due to a workaround for the demo website, the next checks will not work,
+    # so we skip them. Currently, re-registering the same ECU is simply
+    # ignored.
+    # TODO: Resolve this issue: allow Spoofing errors to rise if an attempt is
+    #       made to register an ECU Serial that is already registered, instead
+    #       of ignoring the attempt.
+    # # Expect these attempts to re-register the same ECUs to raise spoofing
+    # # errors.
+    # with self.assertRaises(uptane.Spoofing):
+    #   TestDirector.instance.register_ecu_serial(*GOOD_PRIMARY_ARGS)
+    # with self.assertRaises(uptane.Spoofing):
+    #   TestDirector.instance.register_ecu_serial(*GOOD_SECONDARY_ARGS)
+
+
 
 
 
@@ -194,11 +317,6 @@ class TestDirector(unittest.TestCase):
     pass
 
 
-
-
-
-  def test_30_add_new_vehicle(self):
-    pass
 
 
 

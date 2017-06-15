@@ -209,7 +209,9 @@ def create_primary_pinning_file():
   Returns the filename of the created file.
   """
 
-  pinnings = json.load(open(demo.DEMO_PRIMARY_PINNING_FNAME, 'r'))
+  fobj = open(demo.DEMO_PRIMARY_PINNING_FNAME, 'r')
+  pinnings = json.load(fobj)
+  fobj.close()
 
   fname_to_create = os.path.join(
       demo.DEMO_DIR, 'pinned.json_primary_' + demo.get_random_string(5))

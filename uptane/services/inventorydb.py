@@ -115,7 +115,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 from io import open
 
-import uptane # Import before TUF modules; may change tuf.conf values. 
+import uptane # Import before TUF modules; may change tuf.conf values.
 import uptane.formats
 import tuf
 
@@ -304,6 +304,7 @@ def register_ecu(is_primary, vin, ecu_serial, public_key, overwrite=True):
     if ecu_serial in ecu_public_keys:
 
       # Demo website hack.
+      # TODO: Get rid of this hack and resume raising the Spoofing error.
       print('The given ECU Serial, ' + repr(ecu_serial) +
           ', is already associated with a public key.')
       return

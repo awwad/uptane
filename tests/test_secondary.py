@@ -701,7 +701,7 @@ class TestSecondary(unittest.TestCase):
   def test_50_validate_image(self):
 
     image_fname = 'TCU1.1.txt'
-    sample_image_location = 'demo/images/'
+    sample_image_location = os.path.join(demo.DEMO_DIR, 'images')
     client_unverified_targets_dir = TEMP_CLIENT_DIRS[0] + '/unverified_targets'
 
     if os.path.exists(client_unverified_targets_dir):
@@ -709,7 +709,8 @@ class TestSecondary(unittest.TestCase):
     os.mkdir(client_unverified_targets_dir)
 
     shutil.copy(
-        sample_image_location + image_fname, client_unverified_targets_dir)
+        os.path.join(sample_image_location, image_fname),
+        client_unverified_targets_dir)
 
     secondary_instances[0].validate_image(image_fname)
 

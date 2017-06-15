@@ -110,8 +110,8 @@ class TestPrimary(unittest.TestCase):
 
 
 
-
-  def tearDownClass():
+  @classmethod
+  def tearDownClass(cls):
     """
     This is run once for the class, after all tests. Since there is only one
     class, this runs once.

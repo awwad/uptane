@@ -90,20 +90,12 @@ class TestDirector(unittest.TestCase):
     keys_pri['targets'] = demo.import_private_key('director')
 
 
-    # # Load the public timeserver key.
-    # cls.key_timeserver_pub = demo.import_public_key('timeserver')
-    # cls.key_timeserver_pri = demo.import_private_key('timeserver')
-
-    # # Generate a trusted initial time for the Primary.
-    # cls.initial_time = tuf.formats.unix_timestamp_to_datetime(
-    #     int(time.time())).isoformat() + 'Z'
-    # tuf.formats.ISO8601_DATETIME_SCHEMA.check_match(cls.initial_time)
 
 
 
 
-
-  def tearDownClass():
+  @classmethod
+  def tearDownClass(cls):
     """
     This is run once for the class, after all tests. Since there is only one
     class, this runs once.

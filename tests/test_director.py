@@ -178,6 +178,8 @@ class TestDirector(unittest.TestCase):
 
   def test_03_add_new_vehicle(self):
 
+    vin = 'democar'
+
     # Expect that the inventory db is currently empty.
     # These checks are redundant (test_01_init tested this) and defensive.
     self.assertFalse(inventory.ecus_by_vin)
@@ -189,10 +191,33 @@ class TestDirector(unittest.TestCase):
     # Register a new vehicle and expect success.
     # This also creates a TUF repository to provide Director metadata for
     # that vehicle.
-    TestDirector.instance.add_new_vehicle('democar')
+    TestDirector.instance.add_new_vehicle(vin)
+    os.chdir(uptane.WORKING_DIR)
 
-    # TODO: Test the resulting state of the Director and inventorydb after
-    #       this registration.
+    # Check resulting contents of inventorydb.
+    self.assertIn(vin, inventory.ecus_by_vin)
+    self.assertIn(vin, inventory.primary_ecus_by_vin)
+
+    # Check resulting contents of Director - specifically, the new repository
+    # for the vehicle.
+    self.assertIn(vin, TestDirector.instance.vehicle_repositories)
+    repo = TestDirector.instance.vehicle_repositories[vin]
+    self.assertEqual(1, len(repo.root.keys))
+    self.assertEqual(1, len(repo.timestamp.keys))
+    self.assertEqual(1, len(repo.snapshot.keys))
+    self.assertEqual(1, len(repo.targets.keys))
+    # The repo hasn't been written yet, so the metadata file versions are 0.
+    self.assertEqual(0, repo.root.version)
+    self.assertEqual(0, repo.timestamp.version)
+    self.assertEqual(0, repo.snapshot.version)
+    self.assertEqual(0, repo.targets.version)
+    self.assertEqual(keys_pub['root']['keyid'], repo.root.keys[0])
+    self.assertEqual(keys_pub['timestamp']['keyid'], repo.timestamp.keys[0])
+    self.assertEqual(keys_pub['snapshot']['keyid'], repo.snapshot.keys[0])
+    self.assertEqual(keys_pub['targets']['keyid'], repo.targets.keys[0])
+
+    # TODO: Consider delving into the TUF repository for tests.
+    #       Probably shouldn't.
 
 
 
@@ -293,7 +318,42 @@ class TestDirector(unittest.TestCase):
 
 
   def test_10_validate_ecu_manifest(self):
-    pass
+
+    # Load the sample manifest from ECU 'ecu11111'.
+    import os; print(os.getcwd())
+    sample_manifest = tuf.util.load_file(os.path.join(
+        'samples', 'sample_ecu_manifest_ecu11111.' + tuf.conf.METADATA_FORMAT))
+
+    # Try validating with incorrectly formatted arguments, expecting error.
+    for serial, manifest in [(42, 42), ('ecu11111', 42), (42, sample_manifest)]:
+      with self.assertRaises(tuf.FormatError):
+        TestDirector.instance.validate_ecu_manifest(serial, manifest)
+
+    # Try validating a manifest that doesn't match the serial passed in as an
+    # argument, expecting error.
+    with self.assertRaises(uptane.Spoofing):
+      TestDirector.instance.validate_ecu_manifest(
+          'not_the_real_ecu_serial', sample_manifest)
+
+    # Try validating the manifest now, before ECU 'ecu11111' is registered,
+    # expecting an error.
+    with self.assertRaises(uptane.UnknownECU):
+      TestDirector.instance.validate_ecu_manifest('ecu11111', sample_manifest)
+
+    # TODO: Try validating a manifest with a bad signature, expecting
+    #       tuf.BadSignatureError.
+    #       Using JSON, we can just tweak any value and try validating, but
+    #       using DER we have to be more careful.
+    #       The best answer is probably to change the public key listed for
+    #       the ECU in the inventorydb so that the signed manifest signature
+    #       is regarded as invalid because it's signed with the wrong key.
+
+    # Register the ECU whose sample manifest we'll try to validate.
+    TestDirector.instance.register_ecu_serial(
+        'ecu11111', keys_pub['secondary'], 'democar', is_primary=False)
+
+    # Attempt validation. If no error is raised, it was valid as expected.
+    TestDirector.instance.validate_ecu_manifest('ecu11111', sample_manifest)
 
 
 

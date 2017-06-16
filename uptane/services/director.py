@@ -178,7 +178,6 @@ class Director:
       log.info(
           'Validation failed on an ECU Manifest: ECU ' + repr(ecu_serial) +
           ' is not registered.')
-      # Raise a fault for the offending ECU's XMLRPC request.
       raise uptane.UnknownECU('The Director is not aware of the given ECU '
           'SERIAL (' + repr(ecu_serial) + '. Manifest rejected. If the ECU is '
           'new, Register the new ECU with its key in order to be able to '
@@ -197,7 +196,6 @@ class Director:
       log.info(
           'Validation failed on an ECU Manifest: signature is not valid. '
           'It must be correctly signed by the expected key for that ECU.')
-      # Raise a fault for the offending ECU's XMLRPC request.
       raise tuf.BadSignatureError('Sender supplied an invalid signature. '
           'ECU Manifest is unacceptable. If you see this persistently, it is '
           'possible that the Primary is compromised or that there is a man in '
@@ -352,7 +350,6 @@ class Director:
       log.debug(
           'Rejecting a vehicle manifest from a Primary ECU whose '
           'key is not registered.')
-      # Raise a fault for the offending ECU's XMLRPC request.
       raise uptane.UnknownECU('The Director is not aware of the given Primary '
           'ECU Serial (' + repr(primary_ecu_serial) + '. Manifest rejected. If '
           'the ECU is new, Register the new ECU with its key in order to be '
@@ -409,7 +406,6 @@ class Director:
           'Rejecting a vehicle manifest because the Primary signature on it is '
           'not valid. It must be correctly signed by the expected Primary ECU '
           'key.')
-      # Raise a fault for the offending ECU's XMLRPC request.
       raise tuf.BadSignatureError('Sender supplied an invalid signature. '
           'Vehicle Manifest is questionable; discarding. If you see this '
           'persistently, it is possible that there is a man in the middle '

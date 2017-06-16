@@ -20,6 +20,7 @@ import tuf
 import tuf.formats
 import tuf.conf
 
+import uptane.encoding.asn1_codec as asn1_codec
 import uptane.formats
 import uptane.services.director as director
 import uptane.services.inventorydb as inventory
@@ -315,14 +316,22 @@ class TestDirector(unittest.TestCase):
 
 
 
-
-
   def test_10_validate_ecu_manifest(self):
 
     # Load the sample manifest from ECU 'ecu11111'.
-    import os; print(os.getcwd())
-    sample_manifest = tuf.util.load_file(os.path.join(
-        'samples', 'sample_ecu_manifest_ecu11111.' + tuf.conf.METADATA_FORMAT))
+
+    if tuf.conf.METADATA_FORMAT == 'der':
+      # Load the sample manifest from ECU 'ecu11111'.
+      der_data = open(os.path.join('samples', 'sample_ecu_manifest_ecu11111.' +
+          tuf.conf.METADATA_FORMAT), 'rb').read()
+
+      # Use asn1_codec to convert to a JSON-compatible dictionary.
+      sample_manifest = asn1_codec.convert_signed_der_to_dersigned_json(
+          der_data, datatype='ecu_manifest')
+
+    else:
+      sample_manifest = tuf.util.load_file(os.path.join('samples',
+          'sample_ecu_manifest_ecu11111.' + tuf.conf.METADATA_FORMAT))
 
     # Try validating with incorrectly formatted arguments, expecting error.
     for serial, manifest in [(42, 42), ('ecu11111', 42), (42, sample_manifest)]:
@@ -375,8 +384,6 @@ class TestDirector(unittest.TestCase):
 
   def test_25_register_ecu_manifest(self):
     pass
-
-
 
 
 

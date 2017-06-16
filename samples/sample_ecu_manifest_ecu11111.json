@@ -1,0 +1,25 @@
+{
+ "signatures": [
+  {
+   "keyid": "49309f114b857e4b29bfbff1c1c75df59f154fbc45539b2eb30c8a867843b2cb",
+   "method": "ed25519",
+   "sig": "a8fbb6f1e867e1c9c4c83e30ee9bacd3350bdb65c2354993ca1650c0cd431ffa878972e690c4c7385686f10a78a7fd60b956c9e818d691960a1a7e811c004703"
+  }
+ ],
+ "signed": {
+  "attacks_detected": "",
+  "ecu_serial": "ecu11111",
+  "installed_image": {
+   "fileinfo": {
+    "hashes": {
+     "sha256": "6b9f987226610bfed08b824c93bf8b2f59521fce9a2adef80c495f363c1c9c44",
+     "sha512": "706c283972c5ae69864b199e1cdd9b4b8babc14f5a454d0fd4d3b35396a04ca0b40af731671b74020a738b5108a78deb032332c36d6ae9f31fae2f8a70f7e1ce"
+    },
+    "length": 37
+   },
+   "filepath": "/secondary_firmware.txt"
+  },
+  "previous_timeserver_time": "2017-06-16T18:11:32Z",
+  "timeserver_time": "2017-06-16T18:11:32Z"
+ }
+}

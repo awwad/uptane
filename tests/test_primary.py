@@ -191,28 +191,56 @@ class TestPrimary(unittest.TestCase):
           timeserver_public_key=TestPrimary.key_timeserver_pub,
           my_secondaries=[])
 
+
     # Invalid timeserver key
     with self.assertRaises(tuf.FormatError):
       primary.Primary(
+          primary_key=TestPrimary.ecu_key, time=TestPrimary.initial_time,
+          timeserver_public_key=TestPrimary.initial_time, # INVALID
           full_client_dir=TEMP_CLIENT_DIR,
-          director_repo_name=demo.DIRECTOR_REPO_NAME,
+          director_repo_name=5, #INVALID
           vin=vin,
           ecu_serial=primary_ecu_serial,
           primary_key=TestPrimary.ecu_key, time=TestPrimary.initial_time,
           timeserver_public_key=TestPrimary.initial_time, # INVALID
           my_secondaries=[])
 
-    # Invalid Director Repository name
-    with self.assertRaises(tuf.FormatError):
+    # Invalid format for Director Repository name
+    with self.assertRaises(uptane.Error):
       p = primary.Primary(
           full_client_dir=TEMP_CLIENT_DIR,
-          director_repo_name='Invalid Name', 
+          director_repo_name=5, #INVALID
           vin=vin,
           ecu_serial=primary_ecu_serial,
           primary_key=primary_ecu_key, time=clock,
+          timeserver_public_key = key_timeserver_pub,
+          my_secondaries=[])
+
+    # Invalid name for Director repository
+    with self.assertRaises(uptane.Error):
+      p = primary.Primary(
+          full_client_dir=TEMP_CLIENT_DIR,
+          director_repo_name= "invalid", #INVALID
+          vin=vin,
+          ecu_serial=primary_ecu_serial,
+          primary_key=primary_ecu_key, time=clock,
+          timeserver_public_key = key_timeserver_pub,
+          my_secondaries=[])
+
+
+    # Invalid timeserver key
+    with self.assertRaises(tuf.FormatError):
+      p = primary.Primary(
+          full_client_dir=TEMP_CLIENT_DIR,
+          director_repo_name=demo.DIRECTOR_REPO_NAME,
+          vin=vin,
+          ecu_serial=primary_ecu_serial,
+          primary_key=primary_ecu_key,
+          time=clock,
           timeserver_public_key=clock, # INVALID
           my_secondaries=[])
 
+    
 
     # Try creating a Primary, expecting it to work.
     # Initializes a Primary ECU, making a client directory and copying the root
@@ -545,9 +573,50 @@ class TestPrimary(unittest.TestCase):
     pass
 
 
+  def test_55_update_exists_for_ecu(self):
 
+    Registered_Unknown_Secondary = "potato" #Secondary that will be registered w/ primary as secondaries but will not listed by targets/director for any updates
+    Unregistered_Unknown_Secondary = "potato1" #Secondary that will be not registered w/ primary as secondaries and will not listed by targets/director for any updates
+    Registered_Known_Secondary = "TCUdemocar" #Secondary that will be registered w/ primary as secondaries and will be listed by targets/director for updates.
+    Registered_Unknown_Invalid_Secondary = 5 #Invalid ECU Serial for a secondary
 
+    Target = {'filepath': '/TCU1.1.txt', 'fileinfo': {'hashes': {'sha256': '56d7cd56a85e34e40d005e1f79c0e95d6937d5528ac0b301dbe68d57e03a5c21', 'sha512': '94d7419b8606103f363aa17feb875575a978df8e88038ea284ff88d90e534eaa7218040384b19992cc7866f5eca803e1654c9ccdf3b250d6198b3c4731216db4'}, 'length': 17, 'custom': {'ecu_serial': 'TCUdemocar'}}} #Manually setting a target for primary the way it would be given to it by the director for updating a secondary ECU.
 
+    # Registering valid names
+    primary_instance.register_new_secondary(Registered_Unknown_Secondary) 
+    primary_instance.register_new_secondary(Registered_Known_Secondary)
+
+    # Registering already registered names for testing lines in register_new_secondary()
+    primary_instance.register_new_secondary(Registered_Unknown_Secondary)
+    
+    # Trying to register an invalid name
+    with self.assertRaises(tuf.FormatError):
+      primary_instance.register_new_secondary(Registered_Unknown_Invalid_Secondary)
+
+    #Asserting that as long as name is in a valid format it will be registered by the primary as a secondary.
+    self.assertIn(Registered_Unknown_Secondary, primary_instance.my_secondaries)
+    self.assertIn(Registered_Known_Secondary, primary_instance.my_secondaries)
+    
+    with self.assertRaises(uptane.UnknownECU):
+      primary_instance._check_ecu_serial(Unregistered_Unknown_Secondary)
+    
+    # Setting the target for primary to send updates to "TCUdemocar" secondary ECU  
+    primary_instance.assigned_targets[Registered_Known_Secondary] = Target
+    
+    # Running a primary update cycle so it process all the files required for a establishing update cycle    
+    primary_instance.primary_update_cycle()
+
+    #Trying to get updates for an unregistered unknown ECU 
+    with self.assertRaises(uptane.UnknownECU):
+      primary_instance.update_exists_for_ecu(Unregistered_Unknown_Secondary)
+
+    #Trying to get updates for a registered secondary that is not listed by targets for updates
+    self.assertFalse(primary_instance.update_exists_for_ecu(Registered_Unknown_Secondary))
+
+    #Trying to get updates for a registered secondary that is listed by targets for updates
+    self.assertTrue(primary_instance.update_exists_for_ecu(Registered_Known_Secondary))
+
+      
 # Run unit test.
 if __name__ == '__main__':
   unittest.main()

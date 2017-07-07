@@ -604,7 +604,7 @@ class TestPrimary(unittest.TestCase):
     primary_instance.assigned_targets[Registered_Known_Secondary] = Target
     
     # Running a primary update cycle so it process all the files required for a establishing update cycle    
-    primary_instance.primary_update_cycle()
+    #primary_instance.primary_update_cycle()
 
     #Trying to get updates for an unregistered unknown ECU 
     with self.assertRaises(uptane.UnknownECU):

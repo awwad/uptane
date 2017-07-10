@@ -45,7 +45,7 @@ TEST_DIRECTOR_ROOT_FNAME = os.path.join(
     TEST_DIRECTOR_METADATA_DIR, 'root.' + tuf.conf.METADATA_FORMAT)
 TEST_IMAGE_REPO_ROOT_FNAME = os.path.join(
     TEST_IMAGE_REPO_METADATA_DIR, 'root.' + tuf.conf.METADATA_FORMAT)
-#TEST_PINNING_FNAME = os.path.join(TEST_DATA_DIR, 'pinned.json')
+TEST_TEMP_PINNING_FNAME = os.path.join(TEST_DATA_DIR, 'pinned.json') # Uses the TEST_PINNING_TEMPLATE_FNAME to point to the correct repositories and gets deleted once the tests are over 
 TEST_PINNING_TEMPLATE_FNAME = os.path.join(TEST_DATA_DIR, "pinned_template.json")
 TEMP_CLIENT_DIR = os.path.join(TEST_DATA_DIR, 'temp_test_primary')
 #Source to copy all the local metadata to the TEMP_CLIENT_DIR
@@ -122,7 +122,7 @@ def create_primary_pinning_file():
   pinnings = json.load(
   open(TEST_PINNING_TEMPLATE_FNAME, 'r', encoding='utf-8')) 
 
-  fname_to_create = os.path.join(TEST_DATA_DIR, "pinned.json")
+  fname_to_create = TEST_TEMP_PINNING_FNAME
 
   for repo_name in pinnings['repositories']:
 
@@ -629,11 +629,6 @@ TEST_PINNING_FNAME = create_primary_pinning_file()
     Unregistered_Unknown_Secondary = "potato1" #Secondary that will be not registered w/ primary as secondaries and will not listed by targets/director for any updates
     Registered_Known_Secondary = "TCUdemocar" #Secondary that will be registered w/ primary as secondaries and will be listed by targets/director for updates.
     Registered_Unknown_Invalid_Secondary = 5 #Invalid ECU Serial for a secondary
-    """
-    Target = {'filepath': '/TCU1.1.txt', 'fileinfo': {'hashes': {'sha256': '56d7cd56a85e34e40d005e1f79c0e95d6937d5528ac0b301dbe68d57e03a5c21', 'sha512': '94d7419b8606103f363aa17feb875575a978df8e88038ea284ff88d90e534eaa7218040384b19992cc7866f5eca803e1654c9ccdf3b250d6198b3c4731216db4'}, 'length': 17, 'custom': {'ecu_serial': 'TCUdemocar'}}} #Manually setting a target for primary the way it would be given to it by the director for updating a secondary ECU.
-    """
-
-
 
     # Registering valid names
     primary_instance.register_new_secondary(Registered_Unknown_Secondary) 
@@ -653,9 +648,6 @@ TEST_PINNING_FNAME = create_primary_pinning_file()
     with self.assertRaises(uptane.UnknownECU):
       primary_instance._check_ecu_serial(Unregistered_Unknown_Secondary)
     
-    # Setting the target for primary to send updates to "TCUdemocar" secondary ECU  
-    #primary_instance.assigned_targets[Registered_Known_Secondary] = Target
-    
     # Running a primary update cycle so it process all the files required for a establishing update cycle    
     primary_instance.primary_update_cycle()
 
@@ -669,8 +661,8 @@ TEST_PINNING_FNAME = create_primary_pinning_file()
     #Trying to get updates for a registered secondary that is listed by targets for updates
     self.assertTrue(primary_instance.update_exists_for_ecu(Registered_Known_Secondary))
 
-    destroy_temp_dir()
-
+    # delete pinned.json file because new pinned.json will be created depending on the current working directory of uptane every time the tests are run
+    os.remove(TEST_TEMP_PINNING_FNAME)
       
 # Run unit test.
 if __name__ == '__main__':

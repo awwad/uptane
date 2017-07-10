@@ -657,7 +657,7 @@ TEST_PINNING_FNAME = create_primary_pinning_file()
     self.assertTrue(primary_instance.update_exists_for_ecu(Registered_Known_Secondary))
 
     # delete pinned.json file because new pinned.json will be created depending on the current working directory of uptane every time the tests are run
-    os.remove(TEST_TEMP_PINNING_FNAME)
+    #os.remove(TEST_TEMP_PINNING_FNAME)
       
 # Run unit test.
 if __name__ == '__main__':

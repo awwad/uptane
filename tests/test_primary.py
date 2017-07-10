@@ -35,6 +35,7 @@ import uptane.encoding.asn1_codec as asn1_codec
 import demo # for generate_key, import_public_key, import_private_key
 import json
 import canonicaljson
+import codecs
 
 
 TEST_DATA_DIR = os.path.join(uptane.WORKING_DIR, 'tests', 'test_data')
@@ -119,8 +120,12 @@ class TestPrimary(unittest.TestCase):
 def create_primary_pinning_file():
   """ To change the pinned_template.json file to point to the right source for metadata"""
 
-  pinnings = json.load(
-  open(TEST_PINNING_TEMPLATE_FNAME, 'r', encoding='utf-8')) 
+  try:
+  	with open(TEST_PINNING_TEMPLATE_FNAME, 'r', encoding = 'utf-8') as pinned_file:
+  		pinnings = json.load(pinned_file)
+  except:
+  	with codecs.open(TEST_PINNING_TEMPLATE_FNAME, 'r', encoding = 'utf-8') as pinned_file: #Support for Python 2
+  		pinnings = json.load(pinned_file)
 
   fname_to_create = TEST_TEMP_PINNING_FNAME
 

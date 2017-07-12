@@ -77,6 +77,14 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
       (In other implementations, the important point is that this should be
       unique.) The Director should be aware of this identifier.
 
+
+    self.hardware_ID
+      A unique identifier for an ECU through it's hardware ID. Conforms to uptane.formats.HARDWARE_ID_SCHEMA. This is used to prevent a compromised director from causing an ECU to download an image not intended for it. 
+
+
+    self.release_counter
+      A counter to track the version number of the latest image installed. Conforms to uptane.formats.RELEASE_COUNTER_SCHEMA. This is used to prevent a compromised director from causing an ECU to download an outdated image or an older one with known vulnerabilities. 
+
     self.primary_key
       The signing key for this Secondary ECU. This key will be used to sign
       Vehicle Manifests that will then be sent to the Director). The Director
@@ -218,9 +226,11 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     director_repo_name, # e.g. 'director'; value must appear in pinning file
     vin,              # 'vin11111'
     ecu_serial,       # 'ecu00000'
+    hardware_ID,      #  906941628 // Decide to have it as string or integer 
     primary_key,
     time,
     timeserver_public_key,
+    release_counter = 0,  #  0
     my_secondaries=[]):
 
     """
@@ -273,6 +283,8 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
     self.vin = vin
     self.ecu_serial = ecu_serial
+    self.hardware_ID = hardware_ID
+    self.release_counter = 0
     self.full_client_dir = full_client_dir
     self.all_valid_timeserver_times = [time]
     self.all_valid_timeserver_attestations = []

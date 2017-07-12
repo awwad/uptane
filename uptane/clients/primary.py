@@ -576,13 +576,19 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
       tuf.formats.TARGETFILE_SCHEMA.check_match(target) # redundant, defensive
 
-      if 'custom' not in target['fileinfo'] or \
-          'ecu_serial' not in target['fileinfo']['custom']:
-        raise uptane.Error('Director repo failed to include an ECU Serial for '
+      if 'custom' not in target['fileinfo']:
+        raise uptane.Error('Director repo failed to include the custom field in '
             'a target. Target metadata was: ' + repr(target))
+      else:
+        for custom_field in ['ecu_serial', 'hardware_ID', 'release_counter']:
+          if custom_field not in targetinfo['fileinfo']['custom']:
+            raise uptane.Error(
+              "Director repo failed to include an {} for a target. Target metadata was: {}".format(custom_field, repr(target)))
 
-      # Get the ECU Serial listed in the custom file data.
+      # Get the ECU Serial, hardware_ID, release_counter listed in the custom file data.
       assigned_ecu_serial = target['fileinfo']['custom']['ecu_serial']
+      target_hardware_ID = target['fileinfo']['custom']['hardware_ID']
+      target_release_counter = target['fileinfo']['custom']['rekease_counter']
 
       # Make sure it's actually an ECU we know about.
       if assigned_ecu_serial not in self.my_secondaries:
@@ -591,6 +597,15 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
             'to this Primary! Disregarding / not downloading target or saving '
             'fileinfo!' + ENDCOLORS)
         continue
+
+      if assigned_ecu_serial == self.ecu_serial:
+        if target_hardware_ID != self.hardware_ID:
+          log.warning(RED + 'Received a target from the Director with instructions to install an Image on self with ECU_Serial {} with mismatching hardwareID. Diregarding/not downloading target for saving. The target is {}'.format(self.ecu_serial, repr(target)))
+          continue
+        if target_release_counter < self.release_counter:
+          log.warning(RED + 'Received a target from the Director with instructions to install an Image on self with ECU_Serial {} with lower value of release counter than current. Diregarding/not downloading target for saving. The target is {}'.format(self.ecu_serial, repr(target)))
+          continue
+
 
       # Save the target info as an update assigned to that ECU.
       self.assigned_targets[assigned_ecu_serial] = target
@@ -856,6 +871,8 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     vehicle_manifest = {
         'vin': self.vin,
         'primary_ecu_serial': self.ecu_serial,
+        'primary_hardware_ID' : self.hardware_ID,
+        'release_counter' : self.release_counter,
         'ecu_version_manifests': self.ecu_manifests
     }
 

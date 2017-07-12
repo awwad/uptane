@@ -44,6 +44,8 @@ RELEASE_COUNTER_SCHEMA = SCHEMA.Integer()
 # Implementation Specification, but the signed contents of that object.
 ECU_VERSION_MANIFEST_SCHEMA = SCHEMA.Object(
     ecu_serial = ECU_SERIAL_SCHEMA,
+    hardware_ID = HARDWARE_ID_SCHEMA,
+    release_counter = RELEASE_COUNTER_SCHEMA,
     installed_image = TARGETFILE_SCHEMA,
     timeserver_time = ISO8601_DATETIME_SCHEMA,
     previous_timeserver_time = ISO8601_DATETIME_SCHEMA,
@@ -68,6 +70,8 @@ DER_DATA_SCHEMA = SCHEMA.AnyBytes()
 VEHICLE_VERSION_MANIFEST_SCHEMA = SCHEMA.Object(
     vin = VIN_SCHEMA, # Spec: vehicleIdentifier
     primary_ecu_serial = ECU_SERIAL_SCHEMA, # Spec: primaryIdentifier
+    primary_hardware_ID = HARDWARE_ID_SCHEMA,
+    release_counter = RELEASE_COUNTER_SCHEMA,
     ecu_version_manifests = SCHEMA.DictOf(
         key_schema = ECU_SERIAL_SCHEMA,
         value_schema = SCHEMA.ListOf(SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA)))

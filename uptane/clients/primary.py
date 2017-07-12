@@ -83,7 +83,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
 
     self.release_counter
-      A counter to track the version number of the latest image installed. Conforms to uptane.formats.RELEASE_COUNTER_SCHEMA. This is used to prevent a compromised director from causing an ECU to download an outdated image or an older one with known vulnerabilities. 
+      A dictionary wih counters to track the version number of the images installed. Conforms to uptane.formats.RELEASE_COUNTER_SCHEMA. This is used to prevent a compromised director from causing an ECU to download an outdated image or an older one with known vulnerabilities. 
 
     self.primary_key
       The signing key for this Secondary ECU. This key will be used to sign
@@ -226,11 +226,11 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     director_repo_name, # e.g. 'director'; value must appear in pinning file
     vin,              # 'vin11111'
     ecu_serial,       # 'ecu00000'
-    hardware_ID,      #  906941628 // Decide to have it as string or integer 
     primary_key,
     time,
     timeserver_public_key,
-    release_counter = 0,  #  0
+    hardware_ID = 100,      #  100 // Decide to have it as string or integer 
+    release_counter = {'Sample' : 0},  # Sample image has version 0
     my_secondaries=[]):
 
     """
@@ -276,6 +276,8 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     tuf.formats.ISO8601_DATETIME_SCHEMA.check_match(time)
     uptane.formats.VIN_SCHEMA.check_match(vin)
     uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial)
+    uptane.formats.HARDWARE_ID_SCHEMA.check_match(hardware_ID)
+    uptane.formats.RELEASE_COUNTER_SCHEMA.check_match(release_counter)
     tuf.formats.ANYKEY_SCHEMA.check_match(timeserver_public_key)
     tuf.formats.ANYKEY_SCHEMA.check_match(primary_key)
     # TODO: Should also check that primary_key is a private key, not a
@@ -284,7 +286,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     self.vin = vin
     self.ecu_serial = ecu_serial
     self.hardware_ID = hardware_ID
-    self.release_counter = 0
+    self.release_counter = release_counter
     self.full_client_dir = full_client_dir
     self.all_valid_timeserver_times = [time]
     self.all_valid_timeserver_attestations = []
@@ -588,8 +590,9 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
       # Get the ECU Serial, hardware_ID, release_counter listed in the custom file data.
       assigned_ecu_serial = target['fileinfo']['custom']['ecu_serial']
       target_hardware_ID = target['fileinfo']['custom']['hardware_ID']
-      target_release_counter = target['fileinfo']['custom']['rekease_counter']
-
+      target_release_counter = target['fileinfo']['custom']['release_counter']
+      name_of_image_target = target['filpath'].rsplit(sep = '/', maxsplit = 1)[1] #Using to check release counter associated with it. 
+      
       # Make sure it's actually an ECU we know about.
       if assigned_ecu_serial not in self.my_secondaries:
         log.warning(RED + 'Received a target from the Director with '
@@ -598,13 +601,19 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
             'fileinfo!' + ENDCOLORS)
         continue
 
+      # Checking the target info for the primary itself. Disregarding if the hardware ID or release counters do not satisfy the requirements
       if assigned_ecu_serial == self.ecu_serial:
         if target_hardware_ID != self.hardware_ID:
           log.warning(RED + 'Received a target from the Director with instructions to install an Image on self with ECU_Serial {} with mismatching hardwareID. Diregarding/not downloading target for saving. The target is {}'.format(self.ecu_serial, repr(target)))
           continue
-        if target_release_counter < self.release_counter:
-          log.warning(RED + 'Received a target from the Director with instructions to install an Image on self with ECU_Serial {} with lower value of release counter than current. Diregarding/not downloading target for saving. The target is {}'.format(self.ecu_serial, repr(target)))
+
+        if name_of_image_target in self.release_counter: # Image previously installed
+          # Checking for version
+          if target_release_counter < self.release_counter[name_of_image_target]:
+            log.warning(RED + 'Received a target from the Director with instructions to install an Image {} on self with ECU_Serial {} with lower value of release counter than current. Diregarding/not downloading target for saving. The target is {}'.format(target['fileinfo'], self.ecu_serial, repr(target)))
           continue
+        else:
+          raise.Error("Image being installed for the first time.")  #SHOULD THIS BE AN ERROR
 
 
       # Save the target info as an update assigned to that ECU.

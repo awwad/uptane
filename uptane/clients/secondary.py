@@ -73,6 +73,13 @@ class Secondary(object):
       (In other implementations, the important point is that this should be
       unique.) The Director should be aware of this identifier.
 
+    self.hardware_ID
+      A unique identifier for an ECU through it's hardware ID. Conforms to uptane.formats.HARDWARE_ID_SCHEMA. This is used to prevent a compromised director from causing an ECU to download an image not intended for it. 
+
+
+    self.release_counter
+      A dictionary wih counters to track the version number of the images installed. Conforms to uptane.formats.RELEASE_COUNTER_SCHEMA. This is used to prevent a compromised director from causing an ECU to download an outdated image or an older one with known vulnerabilities.  
+
     self.ecu_key:
       The signing key for this Secondary ECU. This key will be used to sign
       ECU Manifests that will then be sent along to the Primary (and
@@ -170,9 +177,11 @@ class Secondary(object):
     director_repo_name,
     vin,
     ecu_serial,
+    hardware_ID,
     ecu_key,
     time,
     timeserver_public_key,
+    release_counter = {"Sample":1},
     firmware_fileinfo=None,
     director_public_key=None,
     partial_verifying=False):
@@ -230,6 +239,8 @@ class Secondary(object):
     tuf.formats.PATH_SCHEMA.check_match(director_repo_name)
     uptane.formats.VIN_SCHEMA.check_match(vin)
     uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial)
+    uptane.formats.HARDWARE_ID_SCHEMA.check_match(hardware_ID)
+    uptane.formats.RELEASE_COUNTER_SCHEMA.check_match(release_counter)
     tuf.formats.ISO8601_DATETIME_SCHEMA.check_match(time)
     tuf.formats.ANYKEY_SCHEMA.check_match(timeserver_public_key)
     tuf.formats.ANYKEY_SCHEMA.check_match(ecu_key)
@@ -338,6 +349,8 @@ class Secondary(object):
     # First, construct and check an ECU_VERSION_MANIFEST_SCHEMA.
     ecu_manifest = {
         'ecu_serial': self.ecu_serial,
+        'hardware_ID' : self.hardware_ID,
+        'release_counter' : self.release_counter,
         'installed_image': self.firmware_fileinfo,
         'timeserver_time': self.all_valid_timeserver_times[-1],
         'previous_timeserver_time': self.all_valid_timeserver_times[-2],
@@ -492,10 +505,26 @@ class Secondary(object):
         rolename='targets', repo_name=self.director_repo_name):
 
       # Ignore target info not marked as being for this ECU.
+      name_of_image_target = target['filpath'].rsplit(sep = '/', maxsplit = 1)[1] #Using to check release counter associated with it. 
       if 'custom' not in target['fileinfo'] or \
           'ecu_serial' not in target['fileinfo']['custom'] or \
+          'hardware_ID' not in target['fileinfo']['custom'] or \
+          'release_counter' not in target['fileinfo']['custom'] or \
           self.ecu_serial != target['fileinfo']['custom']['ecu_serial']:
         continue
+
+      elif self.hardware_ID != target['fileinfo']['custom']['hardware_ID']:
+        continue
+        
+      elif name_of_image_target in self.release_counter: # Image previously installed
+          # Checking for version
+          if target_release_counter < self.release_counter[name_of_image_target]:
+            log.warning(RED + 'Received a target from the Director with instructions to install an Image {} on self with ECU_Serial {} with lower value of release counter than current. Diregarding/not downloading target for saving. The target is {}'.format(target['fileinfo'], self.ecu_serial, repr(target)))
+          continue
+        else:
+          raise.Error("Image being installed for the first time.")  #SHOULD THIS BE AN ERROR:
+
+
 
       # Fully validate the target info for our target(s).
       try:

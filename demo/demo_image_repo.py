@@ -27,7 +27,6 @@ import demo
 import uptane # Import before TUF modules; may change tuf.conf values.
 import uptane.formats
 import tuf.formats
-
 import threading # for the interface for the demo website
 import os
 import sys, subprocess, time # For hosting and arguments

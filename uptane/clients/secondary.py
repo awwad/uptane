@@ -520,10 +520,11 @@ class Secondary(object):
           # Checking for version
           if target_release_counter < self.release_counter[name_of_image_target]:
             log.warning(RED + 'Received a target from the Director with instructions to install an Image {} on self with ECU_Serial {} with lower value of release counter than current. Diregarding/not downloading target for saving. The target is {}'.format(target['fileinfo'], self.ecu_serial, repr(target)))
-          continue
+            continue
+          else:
+            self.release_counter[name_of_image_target] = target_release_counter
         else:
-          raise.Error("Image being installed for the first time.")  #SHOULD THIS BE AN ERROR:
-
+          self.release_counter[name_of_image_target] = target_release_counter
 
 
       # Fully validate the target info for our target(s).

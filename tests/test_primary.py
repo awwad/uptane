@@ -11,7 +11,7 @@
 from __future__ import unicode_literals
 
 import uptane # Import before TUF modules; may change tuf.conf values.
-
+from io import open
 import unittest
 import os.path
 import time

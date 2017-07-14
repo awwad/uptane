@@ -229,7 +229,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     primary_key,
     time,
     timeserver_public_key,
-    hardware_ID = 100,      #  100 // Decide to have it as string or integer 
+    hardware_ID = "Infotainment101",   
     release_counter = {'Sample' : 0},  # Sample image has version 0
     my_secondaries=[]):
 
@@ -329,7 +329,10 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
           'known repository, according to the pinned metadata from pinned.json')
 
 
-
+  def __str__(self):
+    a = "VIN: {}, ECU_SERIAL: {}, HARDWARE_ID: {}, RELEASE_COUNTER: {}".format(self.vin, self.ecu_serial, self.hardware_ID, self.release_counter)
+    print("MYSELF")
+    return a
 
 
   def refresh_toplevel_metadata_from_repositories(self):
@@ -611,9 +614,11 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
           # Checking for version
           if target_release_counter < self.release_counter[name_of_image_target]:
             log.warning(RED + 'Received a target from the Director with instructions to install an Image {} on self with ECU_Serial {} with lower value of release counter than current. Diregarding/not downloading target for saving. The target is {}'.format(target['fileinfo'], self.ecu_serial, repr(target)))
-          continue
+            continue
+          else:
+            self.release_counter[name_of_image_target] = target_release_counter
         else:
-          raise.Error("Image being installed for the first time.")  #SHOULD THIS BE AN ERROR
+          self.release_counter[name_of_image_target] = target_release_counter
 
 
       # Save the target info as an update assigned to that ECU.
@@ -880,8 +885,8 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     vehicle_manifest = {
         'vin': self.vin,
         'primary_ecu_serial': self.ecu_serial,
-        'primary_hardware_ID' : self.hardware_ID,
-        'release_counter' : self.release_counter,
+        'primary_hardware_ID': self.hardware_ID,
+        'release_counter': self.release_counter,
         'ecu_version_manifests': self.ecu_manifests
     }
 
@@ -893,12 +898,15 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     #     'signed': vehicle_manifest,
     #     'signatures': []
     # }
+    #print("vehicle manifest", vehicle_manifest)
     signable_vehicle_manifest = tuf.formats.make_signable(vehicle_manifest)
+    print("Signable vehicle manifest", signable_vehicle_manifest)
     uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
         signable_vehicle_manifest)
-
+    #print("no error 2")
     if tuf.conf.METADATA_FORMAT == 'der':
       # Convert to DER and sign, replacing the Python dictionary.
+      print("was it der?")
       signable_vehicle_manifest = asn1_codec.convert_signed_metadata_to_der(
           signable_vehicle_manifest, private_key=self.primary_key,
           resign=True, datatype='vehicle_manifest')
@@ -912,13 +920,15 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
       uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
           signable_vehicle_manifest)
+    print("Looking at formatting again \n", asn1_codec.convert_signed_der_to_dersigned_json(
+          signable_vehicle_manifest, datatype='vehicle_manifest'))
 
-
+    #print("no error 2")  
     # Now that the ECU manifests have been incorporated into a vehicle manifest,
     # discard the ECU manifests.
 
     self.ecu_manifests = dict()
-
+    print("SIGNABLE VEHICLE MANIFEST", signable_vehicle_manifest)
     return signable_vehicle_manifest
 
 

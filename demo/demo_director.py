@@ -669,7 +669,7 @@ class RequestHandler(xmlrpc_server.SimpleXMLRPCRequestHandler):
 
 
 def register_vehicle_manifest_wrapper(
-    vin, primary_ecu_serial, signed_vehicle_manifest):
+    vin, primary_ecu_serial, hardware_ID, release_counter, signed_vehicle_manifest):
   """
   This function is a wrapper for director.Director::register_vehicle_manifest().
 
@@ -691,11 +691,12 @@ def register_vehicle_manifest_wrapper(
 
   """
   if tuf.conf.METADATA_FORMAT == 'der':
+    print("Format der")
     director_service_instance.register_vehicle_manifest(
-        vin, primary_ecu_serial, signed_vehicle_manifest.data)
+        vin, primary_ecu_serial, hardware_ID, release_counter, signed_vehicle_manifest.data)
   else:
     director_service_instance.register_vehicle_manifest(
-        vin, primary_ecu_serial, signed_vehicle_manifest)
+        vin, primary_ecu_serial, hardware_ID, release_counter, signed_vehicle_manifest)
 
 
 

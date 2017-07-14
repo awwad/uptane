@@ -60,6 +60,8 @@ CLIENT_DIRECTORY = None
 #_client_directory_name = 'temp_primary' # name for this Primary's directory
 _vin = '111'
 _ecu_serial = '11111'
+_hardware_ID = 'Potato101'
+_release_counter = {"Sample":1}
 # firmware_filename = 'infotainment_firmware.txt'
 
 
@@ -155,6 +157,8 @@ def clean_slate(
       ecu_serial=_ecu_serial,
       primary_key=ecu_key,
       time=clock,
+      hardware_ID = _hardware_ID,
+      release_counter = _release_counter,
       timeserver_public_key=key_timeserver_pub)
 
 
@@ -362,7 +366,8 @@ def update_cycle():
 
 
   # Generate and submit vehicle manifest.
-  generate_signed_vehicle_manifest()
+  print(generate_signed_vehicle_manifest())
+
   submit_vehicle_manifest_to_director()
 
 
@@ -391,16 +396,22 @@ def submit_vehicle_manifest_to_director(signed_vehicle_manifest=None):
   if signed_vehicle_manifest is None:
     signed_vehicle_manifest = most_recent_signed_vehicle_manifest
 
+  print("in submit_vehicle_manifest", signed_vehicle_manifest)
+  print(asn1_codec.convert_signed_der_to_dersigned_json(
+          signed_vehicle_manifest, datatype='vehicle_manifest'))
+
   if tuf.conf.METADATA_FORMAT == 'der':
     # If we're working with DER ECU Manifests, check that the manifest to send
     # is a byte array, and encapsulate it in a Binary() object for XMLRPC
     # transmission.
     uptane.formats.DER_DATA_SCHEMA.check_match(signed_vehicle_manifest)
     signed_vehicle_manifest = xmlrpc_client.Binary(signed_vehicle_manifest)
+    print("Made binary")
 
   else:
     uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
         signed_vehicle_manifest)
+
 
 
   server = xmlrpc_client.ServerProxy(
@@ -408,12 +419,17 @@ def submit_vehicle_manifest_to_director(signed_vehicle_manifest=None):
       str(demo.DIRECTOR_SERVER_PORT))
 
   print("Submitting the Primary's manifest to the Director.")
+  print("Signed vehicle manifest", signed_vehicle_manifest)
+  print(primary_ecu)
+
+  
 
   server.submit_vehicle_manifest(
       primary_ecu.vin,
       primary_ecu.ecu_serial,
+      primary_ecu.hardware_ID,
+      primary_ecu.release_counter,
       signed_vehicle_manifest)
-
 
   print(GREEN + 'Submission of Vehicle Manifest complete.' + ENDCOLORS)
 

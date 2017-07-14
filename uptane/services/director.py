@@ -207,7 +207,7 @@ class Director:
 
 
   def register_vehicle_manifest(
-      self, vin, primary_ecu_serial, signed_vehicle_manifest):
+      self, vin, primary_ecu_serial, hardware_ID, release_counter, signed_vehicle_manifest):
     """
     Saves the vehicle manifest in the InventoryDB, validating first the
     Primary's key on the full vehicle manifest, then each individual ECU
@@ -260,13 +260,24 @@ class Director:
     """
     uptane.formats.VIN_SCHEMA.check_match(vin)
     uptane.formats.ECU_SERIAL_SCHEMA.check_match(primary_ecu_serial)
+    uptane.formats.HARDWARE_ID_SCHEMA.check_match(hardware_ID)
+    uptane.formats.RELEASE_COUNTER_SCHEMA.check_match(release_counter)
 
     if tuf.conf.METADATA_FORMAT == 'der':
       # Check format and convert back to expected vehicle manifest format.
-      uptane.formats.DER_DATA_SCHEMA.check_match(signed_vehicle_manifest)
+      print("Format is der")
+      print("Type of signed_vehicle_manifest")
+      try:
+        uptane.formats.DER_DATA_SCHEMA.check_match(signed_vehicle_manifest)
+      except:
+        print("Error with der_data_schema")
+      print("No error 1")
       signed_vehicle_manifest = asn1_codec.convert_signed_der_to_dersigned_json(
           signed_vehicle_manifest, datatype='vehicle_manifest')
+      print("Signed vehicle manifest", signed_vehicle_manifest)
 
+    print(signed_vehicle_manifest)
+    
     uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
         signed_vehicle_manifest)
 
@@ -277,7 +288,7 @@ class Director:
     # Process Primary's signature on full manifest here.
     # If it doesn't match expectations, error out here.
     self.validate_primary_certification_in_vehicle_manifest(
-        vin, primary_ecu_serial, signed_vehicle_manifest)
+        vin, primary_ecu_serial, hardware_ID, release_counter, signed_vehicle_manifest)
 
     # If the Primary's signature is valid, save the whole vehicle manifest to
     # the inventorydb.
@@ -301,7 +312,7 @@ class Director:
         try:
           # This calls validate_ecu_manifest, which can raise the errors
           # caught below.
-          self.register_ecu_manifest(vin, ecu_serial, manifest)
+          self.register_ecu_manifest(vin, ecu_serial, hardware_ID, release_counter, manifest)
         except uptane.Spoofing as e:
           log.warning(
               RED + 'Discarding a spoofed or malformed ECU Manifest. Error '
@@ -322,7 +333,7 @@ class Director:
 
 
   def validate_primary_certification_in_vehicle_manifest(
-      self, vin, primary_ecu_serial, vehicle_manifest):
+      self, vin, primary_ecu_serial, hardware_ID, release_counter, vehicle_manifest):
     """
     Check the Primary's signature on the Vehicle Manifest and any other data
     the Primary is certifying, without diving into the individual ECU Manifests
@@ -335,9 +346,12 @@ class Director:
     log.info('Beginning validate_primary_certification_in_vehicle_manifest')
     uptane.formats.VIN_SCHEMA.check_match(vin)
     uptane.formats.ECU_SERIAL_SCHEMA.check_match(primary_ecu_serial)
+    uptane.formats.HARDWARE_ID_SCHEMA.check_match(hardware_ID)
+    uptane.formats.RELEASE_COUNTER_SCHEMA.check_match(release_counter)
     uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
         vehicle_manifest)
 
+    print("VEHICLE MANIFEST", vehicle_manifest)
 
     if primary_ecu_serial != vehicle_manifest['signed']['primary_ecu_serial']:
       raise uptane.Spoofing('Received a spoofed or mistaken vehicle manifest: '

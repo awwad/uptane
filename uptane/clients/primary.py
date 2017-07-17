@@ -463,15 +463,23 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     for repository_name in validated_target_info.keys():
       if 'custom' not in validated_target_info[repository_name]['fileinfo']:
         raise uptane.Error('{} repo failed to include the custom field in a target. \nTarget metadata was: {}'.format(repository_name, repr(target)))
-      for custom_target_metadata in validated_target_info[repository_name]['fileinfo']['custom']:
-        for custom_field in ['hardware_id', 'release_counter']:
-          if custom_field not in custom_target_metadata:
-            raise uptane.Error('{} repo failed to include the {} field in the custom field of the target. \nTarget metadata was: {}'.format(repository_name, custom_field, repr(target)))
-            # Using a set to keep track of the values of hardware ID and release counter. Since all repos should have the same value for release acounter and hardware ID, the set length should never be greater than 2. 
-          Hardware_ID_Release_Counter.add(custom_target_metadata[custom_field])
-          if len(Hardware_ID_Release_Counter) > 2:
-            # Assuming that the director is the only repository that can be compromised
-            raise uptane.Error('Director repo had a bad value for the field {} in the target {} that did not match the value in the other repos.'.format(custom_field, repr(target))) 
+
+      custom_target_metadata = validated_target_info[repository_name]['fileinfo']['custom']
+      print(custom_target_metadata)
+      for custom_field in ['hardware_id', 'release_counter']:   
+      
+        if custom_field not in custom_target_metadata:
+      
+          raise uptane.Error('{} repo failed to include the {} field in the custom field of the target. \nTarget metadata was: {}'.format(repository_name, custom_field, repr(target)))
+          # Using a set to keep track of the values of hardware ID and release counter. Since all repos should have the same value for release acounter and hardware ID, the set length should never be greater than 2. 
+      
+        Hardware_ID_Release_Counter.add(custom_target_metadata[custom_field])
+        print(Hardware_ID_Release_Counter)
+      
+        if len(Hardware_ID_Release_Counter) > 2:
+          # Assuming that the director is the only repository that can be compromised
+      
+          raise uptane.Error('Director repo had a bad value for the field {} in the target {} that did not match the value in the other repos.'.format(custom_field, repr(target))) 
 
 
 

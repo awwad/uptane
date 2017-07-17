@@ -73,7 +73,7 @@ class Secondary(object):
       (In other implementations, the important point is that this should be
       unique.) The Director should be aware of this identifier.
 
-    self.hardware_ID
+    self.hardware_id
       A unique identifier for an ECU through it's hardware ID. Conforms to uptane.formats.HARDWARE_ID_SCHEMA. This is used to prevent a compromised director from causing an ECU to download an image not intended for it. 
 
 
@@ -177,7 +177,7 @@ class Secondary(object):
     director_repo_name,
     vin,
     ecu_serial,
-    hardware_ID,
+    hardware_id,
     ecu_key,
     time,
     timeserver_public_key,
@@ -239,7 +239,7 @@ class Secondary(object):
     tuf.formats.PATH_SCHEMA.check_match(director_repo_name)
     uptane.formats.VIN_SCHEMA.check_match(vin)
     uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial)
-    uptane.formats.HARDWARE_ID_SCHEMA.check_match(hardware_ID)
+    uptane.formats.HARDWARE_ID_SCHEMA.check_match(hardware_id)
     uptane.formats.RELEASE_COUNTER_SCHEMA.check_match(release_counter)
     tuf.formats.ISO8601_DATETIME_SCHEMA.check_match(time)
     tuf.formats.ANYKEY_SCHEMA.check_match(timeserver_public_key)
@@ -257,6 +257,8 @@ class Secondary(object):
     self.director_public_key = director_public_key
     self.partial_verifying = partial_verifying
     self.firmware_fileinfo = firmware_fileinfo
+    self.hardware_id = hardware_id
+    self.release_counter = release_counter
 
     if not self.partial_verifying and self.director_public_key is not None:
       raise uptane.Error('Secondary not set as partial verifying, but a director ' # TODO: Choose error class.
@@ -349,7 +351,7 @@ class Secondary(object):
     # First, construct and check an ECU_VERSION_MANIFEST_SCHEMA.
     ecu_manifest = {
         'ecu_serial': self.ecu_serial,
-        'hardware_ID' : self.hardware_ID,
+        'hardware_id' : self.hardware_id,
         'release_counter' : self.release_counter,
         'installed_image': self.firmware_fileinfo,
         'timeserver_time': self.all_valid_timeserver_times[-1],
@@ -504,27 +506,22 @@ class Secondary(object):
     for target in self.updater.targets_of_role(
         rolename='targets', repo_name=self.director_repo_name):
 
-      # Ignore target info not marked as being for this ECU.
-      name_of_image_target = target['filpath'].rsplit(sep = '/', maxsplit = 1)[1] #Using to check release counter associated with it. 
       if 'custom' not in target['fileinfo'] or \
           'ecu_serial' not in target['fileinfo']['custom'] or \
-          'hardware_ID' not in target['fileinfo']['custom'] or \
+          'hardware_id' not in target['fileinfo']['custom'] or \
           'release_counter' not in target['fileinfo']['custom'] or \
           self.ecu_serial != target['fileinfo']['custom']['ecu_serial']:
         continue
 
-      elif self.hardware_ID != target['fileinfo']['custom']['hardware_ID']:
-        continue
-        
-      elif name_of_image_target in self.release_counter: # Image previously installed
-          # Checking for version
-          if target_release_counter < self.release_counter[name_of_image_target]:
-            log.warning(RED + 'Received a target from the Director with instructions to install an Image {} on self with ECU_Serial {} with lower value of release counter than current. Diregarding/not downloading target for saving. The target is {}'.format(target['fileinfo'], self.ecu_serial, repr(target)))
-            continue
-          else:
-            self.release_counter[name_of_image_target] = target_release_counter
-        else:
-          self.release_counter[name_of_image_target] = target_release_counter
+      else:
+        if self.hardware_id != target['fileinfo']['custom']['hardware_id']:
+          log.warning(RED + 'Received a target from the Director with instructions to install an Image on self with ECU_Serial {} with mismatching hardwareID. Diregarding/not downloading target for saving. The target is {}'.format(self.ecu_serial, repr(target)))
+          continue
+
+        if self.release_counter > target['fileinfor']['custom']['release_counter']:
+          log.warning(RED + 'Received a target from the Director with instructions to install an Image {} on self with ECU_Serial {} with lower value of release counter than current. Diregarding/not downloading target for saving. The target is {}'.format(target['filepath'], self.ecu_serial, repr(target)))
+          continue
+      
 
 
       # Fully validate the target info for our target(s).

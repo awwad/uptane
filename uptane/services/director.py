@@ -536,7 +536,8 @@ class Director:
 
 
 
-  def add_target_for_ecu(self, vin, ecu_serial, target_filepath):
+  def add_target_for_ecu(self, vin, ecu_serial, target_filepath,
+      hardware_id=None, release_counter=None):
     """
     Add a target to the repository for a vehicle, marked as being for a
     specific ECU.
@@ -560,5 +561,11 @@ class Director:
     #   raise uptane.UnknownECU('The ECU Serial provided, ' + repr(ecu_serial) +
     #       ' is not that of an ECU known to this Director.')
 
+    custom = {'ecu_serial': ecu_serial}
+    if hardware_id is not None:
+      custom['hardware_id'] = hardware_id
+    if release_counter is not None:
+      custom['release_counter'] = release_counter
+
     self.vehicle_repositories[vin].targets.add_target(
-        target_filepath, custom={'ecu_serial': ecu_serial})
+        target_filepath, custom=custom)

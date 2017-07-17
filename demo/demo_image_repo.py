@@ -27,6 +27,7 @@ import demo
 import uptane # Import before TUF modules; may change tuf.conf values.
 import uptane.formats
 import tuf.formats
+
 import threading # for the interface for the demo website
 import os
 import sys, subprocess, time # For hosting and arguments
@@ -117,14 +118,20 @@ def clean_slate(use_new_keys=False):
 
 
   # Add some starting image files, primarily for use with the web frontend.
-  add_target_to_imagerepo('demo/images/INFO1.0.txt', 'INFO1.0.txt')
-  add_target_to_imagerepo('demo/images/TCU1.0.txt', 'TCU1.0.txt')
-  add_target_to_imagerepo('demo/images/TCU1.1.txt', 'TCU1.1.txt')
-  add_target_to_imagerepo('demo/images/TCU1.2.txt', 'TCU1.2.txt')
-  add_target_to_imagerepo('demo/images/BCU1.0.txt', 'BCU1.0.txt')
-  add_target_to_imagerepo('demo/images/BCU1.1.txt', 'BCU1.1.txt')
-  add_target_to_imagerepo('demo/images/BCU1.2.txt', 'BCU1.2.txt')
-
+  add_target_to_imagerepo('demo/images/INFO1.0.txt', 'INFO1.0.txt',
+      hardware_id='info', release_counter=0)
+  add_target_to_imagerepo('demo/images/TCU1.0.txt', 'TCU1.0.txt',
+      hardware_id='tcu', release_counter=0)
+  add_target_to_imagerepo('demo/images/TCU1.1.txt', 'TCU1.1.txt',
+      hardware_id='tcu', release_counter=1)
+  add_target_to_imagerepo('demo/images/TCU1.2.txt', 'TCU1.2.txt',
+      hardware_id='tcu', release_counter=2)
+  add_target_to_imagerepo('demo/images/BCU1.0.txt', 'BCU1.0.txt',
+      hardware_id='bcu', release_counter=0)
+  add_target_to_imagerepo('demo/images/BCU1.1.txt', 'BCU1.1.txt',
+      hardware_id='bcu', release_counter=0)
+  add_target_to_imagerepo('demo/images/BCU1.2.txt', 'BCU1.2.txt',
+      hardware_id='bcu', release_counter=0)
 
   write_to_live()
 
@@ -156,7 +163,8 @@ def write_to_live():
 
 
 
-def add_target_to_imagerepo(target_fname, filepath_in_repo):
+def add_target_to_imagerepo(
+    target_fname, filepath_in_repo, hardware_id=None, release_counter=None):
   """
   For use in attacks and more specific demonstration.
 
@@ -164,11 +172,24 @@ def add_target_to_imagerepo(target_fname, filepath_in_repo):
   as a target file (calculating its cryptographic hash and length)
 
   <Arguments>
+
     target_fname
       The full filename of the file to be added as a target to the image
       repository's targets role metadata. This file should be in the targets
       subdirectory of the repository directory.  This doesn't employ
       delegations, which would have to be done manually.
+
+    filepath_in_repo
+      The path relative to the root of the repository's targets directory
+      where this file will be kept and accessed by clients. (e.g. 'file1.txt'
+      or 'brakes/firmware.tar.gz')
+
+    hardware_id
+      # TODO: Add docstring for this argument.
+
+    release_counter
+      # TODO: Add docstring for this argument.
+
   """
   global repo
 
@@ -181,7 +202,15 @@ def add_target_to_imagerepo(target_fname, filepath_in_repo):
 
   shutil.copy(target_fname, destination_filepath)
 
-  repo.targets.add_target(destination_filepath)
+  custom = {}
+  if hardware_id is not None:
+    custom['hardware_id'] = hardware_id
+  if release_counter is not None:
+    custom['release_counter'] = release_counter
+
+  # If custom is empty, pass None, which is what TUF expects instead of {}.
+  repo.targets.add_target(
+    destination_filepath, custom=custom if custom else None)
 
 
 

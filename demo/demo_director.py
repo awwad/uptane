@@ -128,6 +128,20 @@ def clean_slate(use_new_keys=False):
           'infotainment_firmware.txt',
           vin,
           ecu)
+    add_target_to_director(uptane.WORKING_DIR + '/demo/images/INFO1.0.txt',
+        'INFO1.0.txt', vin, 'INFO' + vin, hardware_id='info', release_counter=0)
+    add_target_to_director(uptane.WORKING_DIR + '/demo/images/TCU1.0.txt',
+        'TCU1.0.txt', vin, 'TCU' + vin, hardware_id='tcu', release_counter=0)
+    add_target_to_director(uptane.WORKING_DIR + '/demo/images/TCU1.1.txt',
+        'TCU1.1.txt', vin, 'TCU' + vin, hardware_id='tcu', release_counter=1)
+    add_target_to_director(uptane.WORKING_DIR + '/demo/images/TCU1.2.txt',
+        'TCU1.2.txt', vin, 'TCU' + vin, hardware_id='tcu', release_counter=2)
+    add_target_to_director(uptane.WORKING_DIR + '/demo/images/BCU1.0.txt',
+        'BCU1.0.txt', vin, 'BCU' + vin, hardware_id='bcu', release_counter=0)
+    add_target_to_director(uptane.WORKING_DIR + '/demo/images/BCU1.1.txt',
+        'BCU1.1.txt', vin, 'BCU' + vin, hardware_id='bcu', release_counter=0)
+    add_target_to_director(uptane.WORKING_DIR + '/demo/images/BCU1.2.txt',
+        'BCU1.2.txt', vin, 'BCU' + vin, hardware_id='bcu', release_counter=0)
 
   write_to_live()
 
@@ -546,7 +560,8 @@ def undo_sign_with_compromised_keys_attack():
 
 
 
-def add_target_to_director(target_fname, filepath_in_repo, vin, ecu_serial):
+def add_target_to_director(target_fname, filepath_in_repo, vin, ecu_serial,
+    hardware_id=None, release_counter=None):
   """
   For use in attacks and more specific demonstration.
 
@@ -570,6 +585,12 @@ def add_target_to_director(target_fname, filepath_in_repo, vin, ecu_serial):
     ecu_serial
       The ECU to assign this target to in the targets metadata.
       Complies with uptane.formats.ECU_SERIAL_SCHEMA
+
+    hardware_id
+      # TODO: Add docstring for this argument.
+
+    release_counter
+      # TODO: Add docstring for this argument.
 
   """
   global director_service_instance
@@ -597,7 +618,8 @@ def add_target_to_director(target_fname, filepath_in_repo, vin, ecu_serial):
 
   # This calls the appropriate vehicle repository.
   director_service_instance.add_target_for_ecu(
-      vin, ecu_serial, destination_filepath)
+      vin, ecu_serial, destination_filepath,
+      hardware_id=hardware_id, release_counter=release_counter)
 
 
 

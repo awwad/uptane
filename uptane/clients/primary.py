@@ -78,7 +78,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
       unique.) The Director should be aware of this identifier.
 
 
-    self.hardware_ID
+    self.hardware_id
       A unique identifier for an ECU through it's hardware ID. Conforms to uptane.formats.HARDWARE_ID_SCHEMA. This is used to prevent a compromised director from causing an ECU to download an image not intended for it. 
 
 
@@ -229,8 +229,8 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     primary_key,
     time,
     timeserver_public_key,
-    hardware_ID = "Infotainment101",   
-    release_counter = {'Sample' : 0},  # Sample image has version 0
+    hardware_id = "Infotainment101",   
+    release_counter = 1,  # Sample image has version 0
     my_secondaries=[]):
 
     """
@@ -276,7 +276,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     tuf.formats.ISO8601_DATETIME_SCHEMA.check_match(time)
     uptane.formats.VIN_SCHEMA.check_match(vin)
     uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial)
-    uptane.formats.HARDWARE_ID_SCHEMA.check_match(hardware_ID)
+    uptane.formats.HARDWARE_ID_SCHEMA.check_match(hardware_id)
     uptane.formats.RELEASE_COUNTER_SCHEMA.check_match(release_counter)
     tuf.formats.ANYKEY_SCHEMA.check_match(timeserver_public_key)
     tuf.formats.ANYKEY_SCHEMA.check_match(primary_key)
@@ -285,7 +285,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
     self.vin = vin
     self.ecu_serial = ecu_serial
-    self.hardware_ID = hardware_ID
+    self.hardware_id = hardware_id
     self.release_counter = release_counter
     self.full_client_dir = full_client_dir
     self.all_valid_timeserver_times = [time]
@@ -330,7 +330,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
 
   def __str__(self):
-    a = "VIN: {}, ECU_SERIAL: {}, HARDWARE_ID: {}, RELEASE_COUNTER: {}".format(self.vin, self.ecu_serial, self.hardware_ID, self.release_counter)
+    a = "VIN: {}, ECU_SERIAL: {}, HARDWARE_ID: {}, RELEASE_COUNTER: {}".format(self.vin, self.ecu_serial, self.hardware_id, self.release_counter)
     print("MYSELF")
     return a
 
@@ -421,7 +421,8 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
     """
     tuf.formats.RELPATH_SCHEMA.check_match(target_filepath)
-
+    Hardware_ID_Release_Counter = set() # To check if the hardwareIDs and release counters are matching in all the repos
+    
     validated_target_info = self.updater.target(
         target_filepath, multi_custom=True)
 
@@ -458,6 +459,24 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
           'to allow some targets to validate without Director approval, or is'
           'the wrong repository specified as the Director repository in the '
           'initialization of this primary object?')
+
+    for repository_name in validated_target_info.keys():
+      if 'custom' not in validated_target_info[repository_name]['fileinfo']:
+        raise uptane.Error('{} repo failed to include the custom field in a target. \nTarget metadata was: {}'.format(repository_name, repr(target)))
+      for custom_target_metadata in validated_target_info[repository_name]['fileinfo']['custom']:
+        for custom_field in ['hardware_id', 'release_counter']:
+          if custom_field not in custom_target_metadata:
+            raise uptane.Error('{} repo failed to include the {} field in the custom field of the target. \nTarget metadata was: {}'.format(repository_name, custom_field, repr(target)))
+            # Using a set to keep track of the values of hardware ID and release counter. Since all repos should have the same value for release acounter and hardware ID, the set length should never be greater than 2. 
+          Hardware_ID_Release_Counter.add(custom_target_metadata[custom_field])
+          if len(Hardware_ID_Release_Counter) > 2:
+            # Assuming that the director is the only repository that can be compromised
+            raise uptane.Error('Director repo had a bad value for the field {} in the target {} that did not match the value in the other repos.'.format(custom_field, repr(target))) 
+
+
+
+
+
 
     # Defensive coding: this should already have been checked.
     tuf.formats.TARGETFILE_SCHEMA.check_match(
@@ -585,17 +604,21 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
         raise uptane.Error('Director repo failed to include the custom field in '
             'a target. Target metadata was: ' + repr(target))
       else:
-        for custom_field in ['ecu_serial', 'hardware_ID', 'release_counter']:
+        for custom_field in ['ecu_serial', 'hardware_id', 'release_counter']:
           if custom_field not in targetinfo['fileinfo']['custom']:
             raise uptane.Error(
               "Director repo failed to include an {} for a target. Target metadata was: {}".format(custom_field, repr(target)))
 
       # Get the ECU Serial, hardware_ID, release_counter listed in the custom file data.
       assigned_ecu_serial = target['fileinfo']['custom']['ecu_serial']
-      target_hardware_ID = target['fileinfo']['custom']['hardware_ID']
+      target_hardware_ID = target['fileinfo']['custom']['hardware_id']
       target_release_counter = target['fileinfo']['custom']['release_counter']
-      name_of_image_target = target['filpath'].rsplit(sep = '/', maxsplit = 1)[1] #Using to check release counter associated with it. 
-      
+
+      # Checking the formats
+      uptane.formats.ECU_SERIAL_SCHEMA.check_match(assigned_ecu_serial)
+      uptane.formats.HARDWARE_ID_SCHEMA.check_match(target_hardware_ID)
+      uptane.formats.RELEASE_COUNTER_SCHEMA.check_match(target_release_counter)
+       
       # Make sure it's actually an ECU we know about.
       if assigned_ecu_serial not in self.my_secondaries:
         log.warning(RED + 'Received a target from the Director with '
@@ -605,21 +628,15 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
         continue
 
       # Checking the target info for the primary itself. Disregarding if the hardware ID or release counters do not satisfy the requirements
+
       if assigned_ecu_serial == self.ecu_serial:
-        if target_hardware_ID != self.hardware_ID:
+        if target_hardware_ID != self.hardware_id:
           log.warning(RED + 'Received a target from the Director with instructions to install an Image on self with ECU_Serial {} with mismatching hardwareID. Diregarding/not downloading target for saving. The target is {}'.format(self.ecu_serial, repr(target)))
           continue
 
-        if name_of_image_target in self.release_counter: # Image previously installed
-          # Checking for version
-          if target_release_counter < self.release_counter[name_of_image_target]:
-            log.warning(RED + 'Received a target from the Director with instructions to install an Image {} on self with ECU_Serial {} with lower value of release counter than current. Diregarding/not downloading target for saving. The target is {}'.format(target['fileinfo'], self.ecu_serial, repr(target)))
-            continue
-          else:
-            self.release_counter[name_of_image_target] = target_release_counter
-        else:
-          self.release_counter[name_of_image_target] = target_release_counter
-
+        if target_release_counter < self.release_counter:
+          log.warning(RED + 'Received a target from the Director with instructions to install an Image {} on self with ECU_Serial {} with lower value of release counter than current. Diregarding/not downloading target for saving. The target is {}'.format(target['filepath'], self.ecu_serial, repr(target)))
+          continue
 
       # Save the target info as an update assigned to that ECU.
       self.assigned_targets[assigned_ecu_serial] = target
@@ -885,7 +902,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     vehicle_manifest = {
         'vin': self.vin,
         'primary_ecu_serial': self.ecu_serial,
-        'primary_hardware_ID': self.hardware_ID,
+        'hardware_id': self.hardware_id,
         'release_counter': self.release_counter,
         'ecu_version_manifests': self.ecu_manifests
     }
@@ -920,8 +937,6 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
       uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
           signable_vehicle_manifest)
-    print("Looking at formatting again \n", asn1_codec.convert_signed_der_to_dersigned_json(
-          signable_vehicle_manifest, datatype='vehicle_manifest'))
 
     #print("no error 2")  
     # Now that the ECU manifests have been incorporated into a vehicle manifest,
@@ -930,8 +945,6 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     self.ecu_manifests = dict()
     print("SIGNABLE VEHICLE MANIFEST", signable_vehicle_manifest)
     return signable_vehicle_manifest
-
-
 
 
 

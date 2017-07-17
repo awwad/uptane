@@ -37,8 +37,7 @@ ECU_SERIAL_SCHEMA = SCHEMA.AnyString() # Instead, for now, we'll go with an ecu 
 
 HARDWARE_ID_SCHEMA = SCHEMA.AnyString()
 
-RELEASE_COUNTER_SCHEMA = SCHEMA.DictOf(SCHEMA.AnyString(), 
-                                        SCHEMA.Integer(lo = 0))
+RELEASE_COUNTER_SCHEMA = SCHEMA.Integer(lo=0)
 
 # Information specifying the target(s) installed on a given ECU.
 # This object corresponds to not "ECUVersionManifest" in the Uptane
@@ -71,7 +70,7 @@ DER_DATA_SCHEMA = SCHEMA.AnyBytes()
 VEHICLE_VERSION_MANIFEST_SCHEMA = SCHEMA.Object(
     vin = VIN_SCHEMA, # Spec: vehicleIdentifier
     primary_ecu_serial = ECU_SERIAL_SCHEMA, # Spec: primaryIdentifier
-    primary_hardware_ID = HARDWARE_ID_SCHEMA,
+    hardware_id = HARDWARE_ID_SCHEMA,
     release_counter = RELEASE_COUNTER_SCHEMA,
     ecu_version_manifests = SCHEMA.DictOf(
         key_schema = ECU_SERIAL_SCHEMA,

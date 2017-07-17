@@ -61,7 +61,7 @@ CLIENT_DIRECTORY = None
 _vin = '111'
 _ecu_serial = '11111'
 _hardware_ID = 'Potato101'
-_release_counter = {"Sample":1}
+_release_counter = 1
 # firmware_filename = 'infotainment_firmware.txt'
 
 
@@ -157,7 +157,7 @@ def clean_slate(
       ecu_serial=_ecu_serial,
       primary_key=ecu_key,
       time=clock,
-      hardware_ID = _hardware_ID,
+      hardware_id = _hardware_ID,
       release_counter = _release_counter,
       timeserver_public_key=key_timeserver_pub)
 
@@ -396,10 +396,6 @@ def submit_vehicle_manifest_to_director(signed_vehicle_manifest=None):
   if signed_vehicle_manifest is None:
     signed_vehicle_manifest = most_recent_signed_vehicle_manifest
 
-  print("in submit_vehicle_manifest", signed_vehicle_manifest)
-  print(asn1_codec.convert_signed_der_to_dersigned_json(
-          signed_vehicle_manifest, datatype='vehicle_manifest'))
-
   if tuf.conf.METADATA_FORMAT == 'der':
     # If we're working with DER ECU Manifests, check that the manifest to send
     # is a byte array, and encapsulate it in a Binary() object for XMLRPC
@@ -427,7 +423,7 @@ def submit_vehicle_manifest_to_director(signed_vehicle_manifest=None):
   server.submit_vehicle_manifest(
       primary_ecu.vin,
       primary_ecu.ecu_serial,
-      primary_ecu.hardware_ID,
+      primary_ecu.hardware_id,
       primary_ecu.release_counter,
       signed_vehicle_manifest)
 

@@ -56,6 +56,13 @@ class BadReleaseCounterValue(Error):
   """
   pass
 
+
+class BadReleaseCounterValue(Error):
+  """
+  Received an image to download with the Release Counter value lower than the one already installed.
+  """
+  pass
+
 class BadTimeAttestation(Error):
   """
   Received a time attestation from a Timeserver that is not as expected. It may

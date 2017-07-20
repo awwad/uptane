@@ -379,6 +379,12 @@ def update_cycle():
               ' that is not meant for the stated ECU. HardwareIDdoes not'
               ' match with other repositorie. This image has'
               ' been rejected.', sound=TADA)
+  except uptane.BadHardwareIDReleaseCounter:
+    print_banner(BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG,
+              text='The Director has instructed us to download an image'
+              ' that is not meant for the stated ECU. HardwareIDdoes and'
+              ' release counters do not match with other repositorie.'
+              ' This image has been rejected.', sound=TADA)
 
 
   # All targets have now been downloaded.

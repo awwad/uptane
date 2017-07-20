@@ -561,7 +561,7 @@ def undo_sign_with_compromised_keys_attack():
 
 
 def add_target_to_director(target_fname, filepath_in_repo, vin, ecu_serial,
-    hardware_id=None, release_counter=None):
+    hardware_id, release_counter):
   """
   For use in attacks and more specific demonstration.
 
@@ -691,7 +691,7 @@ class RequestHandler(xmlrpc_server.SimpleXMLRPCRequestHandler):
 
 
 def register_vehicle_manifest_wrapper(
-    vin, primary_ecu_serial, hardware_ID, release_counter, signed_vehicle_manifest):
+    vin, primary_ecu_serial, signed_vehicle_manifest):
   """
   This function is a wrapper for director.Director::register_vehicle_manifest().
 
@@ -713,12 +713,11 @@ def register_vehicle_manifest_wrapper(
 
   """
   if tuf.conf.METADATA_FORMAT == 'der':
-    print("Format der")
     director_service_instance.register_vehicle_manifest(
-        vin, primary_ecu_serial, hardware_ID, release_counter, signed_vehicle_manifest.data)
+        vin, primary_ecu_serial, signed_vehicle_manifest.data)
   else:
     director_service_instance.register_vehicle_manifest(
-        vin, primary_ecu_serial, hardware_ID, release_counter, signed_vehicle_manifest)
+        vin, primary_ecu_serial, signed_vehicle_manifest)
 
 
 
@@ -915,6 +914,37 @@ def undo_mitm_arbitrary_package_attack(vin, target_filepath):
   print('COMPLETED UNDO ATTACK')
 
 
+def image_rollback_attack(firmware_fname, ecu_serial = '22222', vin = '111', release_counter = 0, hardware_id = "SecondaryPotato101"):
+  """
+  Tries to install an image with a lower release counter on the ecu. Should be stopped. 
+  Default release counter of our ECUs is set to 1. 
+  """
+  print("ATTACK: IMAGE ROLLBACK ATTACK, an attempt to install a firmware with lower release counter than that of the ECU")
+  filepath_in_repo = firmware_fname
+  add_target_to_director(firmware_fname, filepath_in_repo, vin, ecu_serial, hardware_id, release_counter)
+  write_to_live(vin_to_update = vin)
+
+
+def confused_bundle_attack(firmware_fname, ecu_serial = '22222', vin = '111', release_counter = 0, hardware_id = "SecondaryPotato101"):
+  """
+  Assumes a compromised director.
+  Tries to install images with release counters that don't match the other image repositories. 
+  """
+  print("ATTACK: confused_bundle_attack, an attempt to install a compromised image with a release_counter that doesn't match that of other repositories.")
+  filepath_in_repo = firmware_fname
+  add_target_to_director(firmware_fname, filepath_in_repo, vin, ecu_serial, hardware_id, release_counter)
+  write_to_live(vin_to_update = vin)
+
+
+def sneaky_director_attack(firmware_fname, ecu_serial = '22222', vin = '111', release_counter = 3, hardware_id = "NotARealSecondaryPotato101"):
+  """
+  Assumes a compromised director. 
+  Tries to install an image on an ECU that is not meant for that particular ECU through leveraging the ECU serial.
+  """
+  print("ATTACK: SNEAKY DIRECTOR ATTACK. Tries to install an image on an ECU that is not meant for that particular ECU through leveraging the ECU serial.")
+  filepath_in_repo = firmware_fname
+  add_target_to_director(firmware_fname, filepath_in_repo, vin, ecu_serial, hardware_id, release_counter)
+  write_to_live(vin_to_update = vin)
 
 
 """

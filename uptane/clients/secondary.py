@@ -22,6 +22,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 from io import open # TODO: Determine if this should be here.
 
+
 import uptane # Import before TUF modules; may change tuf.conf values.
 
 import os # For paths and makedirs
@@ -41,7 +42,7 @@ import uptane.encoding.asn1_codec as asn1_codec
 
 
 from uptane import GREEN, RED, YELLOW, ENDCOLORS
-
+from demo.uptane_banners import *
 
 log = uptane.logging.getLogger('secondary')
 log.addHandler(uptane.file_handler)
@@ -177,11 +178,11 @@ class Secondary(object):
     director_repo_name,
     vin,
     ecu_serial,
-    hardware_id,
     ecu_key,
     time,
     timeserver_public_key,
-    release_counter = {"Sample":1},
+    release_counter = 1,
+    hardware_id = "SecondaryPotato101",
     firmware_fileinfo=None,
     director_public_key=None,
     partial_verifying=False):
@@ -287,7 +288,10 @@ class Secondary(object):
     self.nonce_next = self._create_nonce()
     self.validated_targets_for_this_ecu = []
 
-
+  def __str__(self):
+    a = "VIN: {}, ECU_SERIAL: {}, HARDWARE_ID: {}, RELEASE_COUNTER: {}".format(self.vin, self.ecu_serial, self.hardware_id, self.release_counter)
+    #print("MYSELF")
+    return a
 
 
 
@@ -498,7 +502,6 @@ class Secondary(object):
 
     # Refresh the top-level metadata first (all repositories).
     self.updater.refresh()
-
     validated_targets_for_this_ecu = []
 
     # Comb through the Director's direct instructions, picking out only the
@@ -515,12 +518,15 @@ class Secondary(object):
 
       else:
         if self.hardware_id != target['fileinfo']['custom']['hardware_id']:
-          log.warning(RED + 'Received a target from the Director with instructions to install an Image on self with ECU_Serial {} with mismatching hardwareID. Diregarding/not downloading target for saving. The target is {}'.format(self.ecu_serial, repr(target)))
+          log.warning(RED + 'Received a target from the Director with instructions to install an Image on self with ECU_Serial {} with mismatching hardwareID. Diregarding/not downloading target for saving. The target is {}'.format(self.ecu_serial, repr(target))+ ENDCOLORS)
           continue
 
-        if self.release_counter > target['fileinfor']['custom']['release_counter']:
-          log.warning(RED + 'Received a target from the Director with instructions to install an Image {} on self with ECU_Serial {} with lower value of release counter than current. Diregarding/not downloading target for saving. The target is {}'.format(target['filepath'], self.ecu_serial, repr(target)))
-          continue
+        if self.release_counter > target['fileinfo']['custom']['release_counter']:
+          log.warning(RED + 'Received a target from the Director with instructions to install an Image {} on self with ECU_Serial {} with lower value of release counter than current. Diregarding/not downloading target for saving. The target is {}'.format(target['filepath'], self.ecu_serial, repr(target))+ ENDCOLORS)
+          raise uptane.BadReleaseCounterValue("The director has instructed the ECU to download an image that has a lower relase counter than the current. Image rejected")
+        else:
+          new_self_release_counter = target['fileinfo']['custom']['release_counter']
+
       
 
 
@@ -535,11 +541,11 @@ class Secondary(object):
             ENDCOLORS)
         continue
 
-
     self.validated_targets_for_this_ecu = validated_targets_for_this_ecu
 
 
-
+  def update_release_counter(self, new_release_counter_val):
+    self.release_counter = new_release_counter_val
 
 
   def get_validated_target_info(self, target_filepath):

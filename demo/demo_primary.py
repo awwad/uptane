@@ -60,7 +60,7 @@ CLIENT_DIRECTORY = None
 #_client_directory_name = 'temp_primary' # name for this Primary's directory
 _vin = '111'
 _ecu_serial = '11111'
-_hardware_ID = 'Potato101'
+_hardware_id = 'Potato101'
 _release_counter = 1
 # firmware_filename = 'infotainment_firmware.txt'
 
@@ -95,6 +95,8 @@ def clean_slate(
     # client_directory_name=None,
     vin=_vin,
     ecu_serial=_ecu_serial,
+    release_counter = _release_counter,
+    hardware_id = _hardware_id,
     c_interface=False):
   """
   """
@@ -106,6 +108,8 @@ def clean_slate(
   global use_can_interface
   _vin = vin
   _ecu_serial = ecu_serial
+  _hardware_id = hardware_id
+  _release_counter = release_counter
   use_can_interface = c_interface
 
   # if client_directory_name is not None:
@@ -157,7 +161,7 @@ def clean_slate(
       ecu_serial=_ecu_serial,
       primary_key=ecu_key,
       time=clock,
-      hardware_id = _hardware_ID,
+      hardware_id = _hardware_id,
       release_counter = _release_counter,
       timeserver_public_key=key_timeserver_pub)
 
@@ -339,6 +343,8 @@ def update_cycle():
   try:
     primary_ecu.primary_update_cycle()
 
+    #print("\nUPDATE CYCLE SUCCESSFUL\n")
+
   # Print a REPLAY or DEFENDED banner if ReplayedMetadataError or
   # BadSignatureError is raised by primary_update_cycle().  These banners are
   # only triggered for bad Timestamp metadata, and all other exception are
@@ -361,13 +367,26 @@ def update_cycle():
 
         else:
           raise
+  except uptane.BadReleaseCounterValue:
+    print_banner(BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG,
+              text='The Director has instructed us to download an image'
+              ' that has a bad release counter and does not match with ' 
+              ' other repositories. This image has'
+              ' been rejected.', sound=TADA)
+  except uptane.HardwareIDMismatch:
+    print_banner(BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG,
+              text='The Director has instructed us to download an image'
+              ' that is not meant for the stated ECU. HardwareIDdoes not'
+              ' match with other repositorie. This image has'
+              ' been rejected.', sound=TADA)
+
 
   # All targets have now been downloaded.
 
 
   # Generate and submit vehicle manifest.
-  print(generate_signed_vehicle_manifest())
-
+  #print(generate_signed_vehicle_manifest())
+  print(primary_ecu)
   submit_vehicle_manifest_to_director()
 
 
@@ -402,7 +421,6 @@ def submit_vehicle_manifest_to_director(signed_vehicle_manifest=None):
     # transmission.
     uptane.formats.DER_DATA_SCHEMA.check_match(signed_vehicle_manifest)
     signed_vehicle_manifest = xmlrpc_client.Binary(signed_vehicle_manifest)
-    print("Made binary")
 
   else:
     uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
@@ -415,16 +433,14 @@ def submit_vehicle_manifest_to_director(signed_vehicle_manifest=None):
       str(demo.DIRECTOR_SERVER_PORT))
 
   print("Submitting the Primary's manifest to the Director.")
-  print("Signed vehicle manifest", signed_vehicle_manifest)
-  print(primary_ecu)
+  #print("Signed vehicle manifest", signed_vehicle_manifest)
+  #print(primary_ecu)
 
   
 
   server.submit_vehicle_manifest(
       primary_ecu.vin,
       primary_ecu.ecu_serial,
-      primary_ecu.hardware_id,
-      primary_ecu.release_counter,
       signed_vehicle_manifest)
 
   print(GREEN + 'Submission of Vehicle Manifest complete.' + ENDCOLORS)
@@ -731,7 +747,7 @@ class RequestHandler(xmlrpc_server.SimpleXMLRPCRequestHandler):
 
 
 
-def register_ecu_manifest_wrapper(vin, ecu_serial, nonce, signed_ecu_manifest):
+def register_ecu_manifest_wrapper(vin, ecu_serial, hardware_id, release_counter, nonce, signed_ecu_manifest):
   """
   This function is a wrapper for primary.Primary::register_ecu_manifest().
 
@@ -742,10 +758,10 @@ def register_ecu_manifest_wrapper(vin, ecu_serial, nonce, signed_ecu_manifest):
   """
   if tuf.conf.METADATA_FORMAT == 'der':
     primary_ecu.register_ecu_manifest(
-        vin, ecu_serial, nonce, signed_ecu_manifest.data)
+        vin, ecu_serial, hardware_id, release_counter, nonce, signed_ecu_manifest.data)
   else:
     primary_ecu.register_ecu_manifest(
-        vin, ecu_serial, nonce, signed_ecu_manifest)
+        vin, ecu_serial, hardware_id, release_counter, nonce, signed_ecu_manifest)
 
 
 

@@ -21,6 +21,7 @@
 from __future__ import print_function
 from __future__ import unicode_literals
 from io import open # TODO: Determine if this should be here.
+from pprint import pprint
 
 
 import uptane # Import before TUF modules; may change tuf.conf values.
@@ -391,7 +392,7 @@ class Secondary(object):
         signable_ecu_manifest, [self.ecu_key], datatype='ecu_manifest')
     uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
         signable_ecu_manifest)
-
+    print("SignableEcuManifest", signable_ecu_manifest)
     return signable_ecu_manifest
 
 

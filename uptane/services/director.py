@@ -40,6 +40,7 @@ import tuf.formats
 import tuf.repository_tool as rt
 #import uptane.ber_encoder as ber_encoder
 from uptane import GREEN, RED, YELLOW, ENDCOLORS
+from pprint import pprint
 
 import os
 import hashlib
@@ -437,7 +438,8 @@ class Director:
     # Error out if the signature isn't valid and from the expected party.
     # Also checks argument format.
     self.validate_ecu_manifest(ecu_serial, signed_ecu_manifest)
-
+    print("SIGNED ECU MANIFEST")
+    pprint(signed_ecu_manifest)
     # Otherwise, we save it:
     inventory.save_ecu_manifest(vin, ecu_serial, signed_ecu_manifest)
 

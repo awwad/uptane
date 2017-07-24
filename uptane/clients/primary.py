@@ -488,16 +488,23 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
 
     if Hardware_ID_Release_Counter != Director_HardwareID_Release_counter:
-      
+      print("HardwareID", Hardware_ID_Release_Counter)
+      print("Director", Director_HardwareID_Release_counter)
       Bad_element_director = Director_HardwareID_Release_counter.difference(Hardware_ID_Release_Counter) 
+      print(Bad_element_director)
 
       if len(Bad_element_director) == 1:
-        if type(list(Bad_element_director)[0]) == str:
-          raise uptane.HardwareIDMismatch('Bad value for the field hardware_ID in the that did not correspond the value in the other repos. Value did not match between the director and the other repos. The value of director target is {}'.format(repr(director_target))) 
+        print("1")
+        print(list(Bad_element_director))
+        if type(list(Bad_element_director)[0]) == int:
+          print(2)
+          raise uptane.BadReleaseCounterValue('Bad value for the field release_counter that did not correspond the value in the other repos. Value did not match between the director and the other repos. The value of director target is {}'.format(repr(director_target)))        
         else:
-          raise uptane.BadReleaseCounterValue('Bad value for the field release_counter that did not correspond the value in the other repos. Value did not match between the director and the other repos. The value of director target is {}'.format(repr(director_target)))
+          print(3)
+          raise uptane.HardwareIDMismatch('Bad value for the field hardware_ID in the that did not correspond the value in the other repos. Value did not match between the director and the other repos. The value of director target is {}'.format(repr(director_target))) 
 
       elif len(Bad_element_director) == 2:
+        print(4)
         raise uptane.BadHardwareIDReleaseCounter("Both the values of hardwareID and release counters did not satisfy the requirements. The target was" + repr(current_target))
 
 
@@ -1019,7 +1026,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
 
   def register_ecu_manifest(
-      self, vin, ecu_serial, hardware_id, release_counter, nonce, signed_ecu_manifest, force_pydict=False):
+      self, vin, ecu_serial, nonce, signed_ecu_manifest, force_pydict=False):
     """
     Called by Secondaries (in the demo, this is via an XMLRPC interface, or
     through another interface and passed through the XMLRPC interface).

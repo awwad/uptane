@@ -18,6 +18,7 @@ Please see README.md for further instructions.
 from __future__ import print_function
 from __future__ import unicode_literals
 from io import open
+from pprint import pprint
 
 import demo
 import uptane # Import before TUF modules; may change tuf.conf values.
@@ -391,7 +392,7 @@ def update_cycle():
 
 
   # Generate and submit vehicle manifest.
-  #print(generate_signed_vehicle_manifest())
+  pprint(generate_signed_vehicle_manifest())
   print(primary_ecu)
   submit_vehicle_manifest_to_director()
 
@@ -753,7 +754,7 @@ class RequestHandler(xmlrpc_server.SimpleXMLRPCRequestHandler):
 
 
 
-def register_ecu_manifest_wrapper(vin, ecu_serial, hardware_id, release_counter, nonce, signed_ecu_manifest):
+def register_ecu_manifest_wrapper(vin, ecu_serial, nonce, signed_ecu_manifest):
   """
   This function is a wrapper for primary.Primary::register_ecu_manifest().
 
@@ -764,10 +765,10 @@ def register_ecu_manifest_wrapper(vin, ecu_serial, hardware_id, release_counter,
   """
   if tuf.conf.METADATA_FORMAT == 'der':
     primary_ecu.register_ecu_manifest(
-        vin, ecu_serial, hardware_id, release_counter, nonce, signed_ecu_manifest.data)
+        vin, ecu_serial, nonce, signed_ecu_manifest.data)
   else:
     primary_ecu.register_ecu_manifest(
-        vin, ecu_serial, hardware_id, release_counter, nonce, signed_ecu_manifest)
+        vin, ecu_serial, nonce, signed_ecu_manifest)
 
 
 

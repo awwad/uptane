@@ -57,9 +57,9 @@ class BadReleaseCounterValue(Error):
   pass
 
 
-class BadReleaseCounterValue(Error):
+class BadHardwareIDReleaseCounter(Error):
   """
-  Received an image to download with the Release Counter value lower than the one already installed.
+  Received an image to download with a mismatching hardwareID and release counter value with respect to other repositories.
   """
   pass
 

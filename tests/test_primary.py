@@ -266,6 +266,7 @@ class TestPrimary(unittest.TestCase):
     self.assertEqual([], TestPrimary.instance.nonces_to_send)
     self.assertEqual([], TestPrimary.instance.nonces_sent)
 
+    """
     sample_ecu_manifest = {
         "signatures": [{
           "method": "ed25519",
@@ -280,6 +281,30 @@ class TestPrimary(unittest.TestCase):
           "previous_timeserver_time": "2016-10-14T16:06:03Z",
           "ecu_serial": "ecu11111",
           "attacks_detected": ""}}
+    """
+
+    sample_ecu_manifest = {
+    	'signatures': [{
+    	'keyid': '49309f114b857e4b29bfbff1c1c75df59f154fbc45539b2eb30c8a867843b2cb',
+    	'method': 'ed25519',
+      'sig': '52d19725155ccdbcabb37d016508ec0f5adcc0c16f24f1f16d6e1f71396991c4aa28a737778e3231d596cfdffc79b9e5212c8ad4bd8cd02aff7f41e803d94d0e'}],
+ 			'signed': {
+ 						'attacks_detected': '',
+            'ecu_serial': 'ecu11111',
+            'hardware_id': 'SecondaryPotato101',
+            'installed_image': {
+            	'fileinfo':
+            		{
+            			'hashes': {
+            				'sha256':
+            					'6b9f987226610bfed08b824c93bf8b2f59521fce9a2adef80c495f363c1c9c44',
+                    'sha512': '706c283972c5ae69864b199e1cdd9b4b8babc14f5a454d0fd4d3b35396a04ca0b40af731671b74020a738b5108a78deb032332c36d6ae9f31fae2f8a70f7e1ce'},
+                 'length': 37},
+                                'filepath': '/secondary_firmware.txt'},
+            'previous_timeserver_time': '2017-07-24T16:22:51Z',
+            'release_counter': 1,
+            'timeserver_time': '2017-07-24T16:22:51Z'}}
+
 
     # Try using the wrong vin.
     with self.assertRaises(uptane.Error):

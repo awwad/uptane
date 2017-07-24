@@ -51,7 +51,7 @@ from pprint import pprint
 CLIENT_DIRECTORY_PREFIX = 'temp_secondary' # name for this secondary's directory
 CLIENT_DIRECTORY = None
 _vin = '111'
-_ecu_serial = '22222'
+_ecu_serial = 'ecu11111'
 _hardware_id = "SecondaryPotato101"
 _release_counter = 1
 _primary_host = demo.PRIMARY_SERVER_HOST
@@ -240,8 +240,6 @@ def submit_ecu_manifest_to_primary(signed_ecu_manifest=None):
   server.submit_ecu_manifest(
       secondary_ecu.vin,
       secondary_ecu.ecu_serial,
-      secondary_ecu.hardware_id,
-      secondary_ecu.release_counter,
       secondary_ecu.nonce_next,
       signed_ecu_manifest)
 
@@ -523,7 +521,7 @@ def update_cycle():
     print('---------------------------------------------------------')
 
   # Submit info on what is currently installed back to the Primary.
-  generate_signed_ecu_manifest()
+  pprint("generated Signed ecu manifest", generate_signed_ecu_manifest())
   submit_ecu_manifest_to_primary()
 
 

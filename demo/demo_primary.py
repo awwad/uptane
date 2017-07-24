@@ -61,7 +61,7 @@ CLIENT_DIRECTORY = None
 #_client_directory_name = 'temp_primary' # name for this Primary's directory
 _vin = '111'
 _ecu_serial = '11111'
-_hardware_id = 'Potato101'
+_hardware_id = 'Infotainment111'
 _release_counter = 1
 # firmware_filename = 'infotainment_firmware.txt'
 

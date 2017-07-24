@@ -52,7 +52,7 @@ CLIENT_DIRECTORY_PREFIX = 'temp_secondary' # name for this secondary's directory
 CLIENT_DIRECTORY = None
 _vin = '111'
 _ecu_serial = 'ecu11111'
-_hardware_id = "SecondaryPotato101"
+_hardware_id = 'SecondaryInfotainment111'
 _release_counter = 1
 _primary_host = demo.PRIMARY_SERVER_HOST
 _primary_port = demo.PRIMARY_SERVER_DEFAULT_PORT
@@ -334,6 +334,7 @@ def update_cycle():
     submit_ecu_manifest_to_primary()
     return
 
+
   # As part of the process_metadata call, the secondary will have saved
   # validated target info for targets intended for it in
   # secondary_ecu.validated_targets_for_this_ecu.
@@ -363,8 +364,6 @@ def update_cycle():
 
 
   expected_target_info = secondary_ecu.validated_targets_for_this_ecu[-1]
-  print("\n\nEXPECTED TARGET INFO\n\n")
-  pprint(expected_target_info)
   expected_image_fname = expected_target_info['filepath']
   if expected_image_fname[0] == '/':
     expected_image_fname = expected_image_fname[1:]
@@ -502,10 +501,9 @@ def update_cycle():
 
   # 2. Set the fileinfo in the secondary_ecu object to the target info for the
   #    new firmware.
-  print("Before update", secondary_ecu)
   secondary_ecu.firmware_fileinfo = expected_target_info
-  secondary_ecu.update_release_counter(expected_target_info['fileinfo']['custom']['release_counter']) 
-  print("Updated", secondary_ecu)
+  secondary_ecu.update_release_counter(expected_target_info['fileinfo']\
+      ['custom']['release_counter'])
 
   print_banner(
       BANNER_UPDATED, color=WHITE+GREEN_BG,
@@ -521,7 +519,6 @@ def update_cycle():
     print('---------------------------------------------------------')
 
   # Submit info on what is currently installed back to the Primary.
-  pprint("generated Signed ecu manifest", generate_signed_ecu_manifest())
   submit_ecu_manifest_to_primary()
 
 

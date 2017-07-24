@@ -40,7 +40,6 @@ import tuf.formats
 import tuf.repository_tool as rt
 #import uptane.ber_encoder as ber_encoder
 from uptane import GREEN, RED, YELLOW, ENDCOLORS
-from pprint import pprint
 
 import os
 import hashlib
@@ -175,20 +174,7 @@ class Director:
           'origin ECU (' + repr(ecu_serial) + ') is not the same as what is '
           'signed in the manifest itself (' +
           repr(signed_ecu_manifest['signed']['ecu_serial']) + ').')
-    """
-    if hardware_id != signed_ecu_manifest['signed']['hardware_id']:
-      raise uptane.Spoofing('Received a spoofed or mistaken manifest: supposed '
-          'hardware_id (' + repr(hardware_id) + ') is not the same as what is '
-          'signed in the manifest itself (' +
-          repr(signed_ecu_manifest['signed']['hardware_id']) + ').')
 
-    if release_counter != signed_ecu_manifest['signed']['release_counter']:
-      raise uptane.Spoofing('Received a spoofed or mistaken manifest: supposed '
-          'release_counter (' + repr(release_counter) + ') is not the same as what is '
-          'signed in the manifest itself (' +
-          repr(signed_ecu_manifest['signed']['release_counter']) + ').')
-
-    """
     if ecu_serial not in inventory.ecu_public_keys:
       log.info(
           'Validation failed on an ECU Manifest: ECU ' + repr(ecu_serial) +
@@ -280,10 +266,7 @@ class Director:
       uptane.formats.DER_DATA_SCHEMA.check_match(signed_vehicle_manifest)
       signed_vehicle_manifest = asn1_codec.convert_signed_der_to_dersigned_json(
           signed_vehicle_manifest, datatype='vehicle_manifest')
-      #print("Signed vehicle manifest", signed_vehicle_manifest)
 
-    #print(signed_vehicle_manifest)
-    
     uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
         signed_vehicle_manifest)
 
@@ -311,7 +294,7 @@ class Director:
     # ECU (may have multiple manifests per ECU).
     all_ecu_manifests = \
         signed_vehicle_manifest['signed']['ecu_version_manifests']
-   
+
     for ecu_serial in all_ecu_manifests:
       ecu_manifests = all_ecu_manifests[ecu_serial]
       for manifest in ecu_manifests:
@@ -438,8 +421,6 @@ class Director:
     # Error out if the signature isn't valid and from the expected party.
     # Also checks argument format.
     self.validate_ecu_manifest(ecu_serial, signed_ecu_manifest)
-    print("SIGNED ECU MANIFEST")
-    pprint(signed_ecu_manifest)
     # Otherwise, we save it:
     inventory.save_ecu_manifest(vin, ecu_serial, signed_ecu_manifest)
 

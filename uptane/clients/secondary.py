@@ -299,9 +299,8 @@ class Secondary(object):
     self.validated_targets_for_this_ecu = []
 
   def __str__(self):
-    return("VIN: {}, ECU_SERIAL: {}, HARDWARE_ID: {}, \
-        RELEASE_COUNTER: {}".format(self.vin, self.ecu_serial, \
-        self.hardware_id, self.release_counter))
+    return("VIN:{},ECU_SERIAL:{},HARDWARE_ID:{},RELEASE_COUNTER:{}".format(
+      self.vin, self.ecu_serial, self.hardware_id, self.release_counter))
 
 
 
@@ -551,9 +550,6 @@ class Secondary(object):
               the current. Original Value was {}. New value is {} \
               Image rejected".format(self.release_counter, \
               target['fileinfo']['custom']['release_counter']))
-        else:
-          new_self_release_counter = \
-          target['fileinfo']['custom']['release_counter']
 
       # Fully validate the target info for our target(s).
       try:

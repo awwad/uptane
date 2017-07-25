@@ -53,7 +53,7 @@ CLIENT_DIRECTORY = None
 _vin = '111'
 _ecu_serial = 'ecu11111'
 _hardware_id = 'SecondaryInfotainment111'
-_release_counter = 1
+_release_counter = 0
 _primary_host = demo.PRIMARY_SERVER_HOST
 _primary_port = demo.PRIMARY_SERVER_DEFAULT_PORT
 firmware_filename = 'secondary_firmware.txt'
@@ -194,7 +194,8 @@ def create_secondary_pinning_file():
   # To delete the temp pinned file after the script ends
   for repo_name in pinnings['repositories']:
 
-    assert 1 == len(pinnings['repositories'][repo_name]['mirrors']), 'Config error.'
+    assert 1 == len(pinnings['repositories'][repo_name]['mirrors']), \
+    'Config error.'
 
     mirror = pinnings['repositories'][repo_name]['mirrors'][0]
 
@@ -325,7 +326,7 @@ def update_cycle():
   try:
     secondary_ecu.process_metadata(archive_fname)
     #print("ARCHIVE FNAME \n\n\n", archive_fname)
-  except uptane.BadReleaseCounterValue:
+  except uptane.ImageRollBack:
     print_banner(BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG,
               text='The Director has instructed us to download an image'
               ' that has a lower release counter. This image has'
@@ -502,8 +503,8 @@ def update_cycle():
   # 2. Set the fileinfo in the secondary_ecu object to the target info for the
   #    new firmware.
   secondary_ecu.firmware_fileinfo = expected_target_info
-  secondary_ecu.update_release_counter(expected_target_info['fileinfo']\
-      ['custom']['release_counter'])
+  secondary_ecu.update_release_counter(
+    expected_target_info['fileinfo']['custom']['release_counter'])
 
   print_banner(
       BANNER_UPDATED, color=WHITE+GREEN_BG,

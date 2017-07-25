@@ -77,10 +77,21 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
       unique.) The Director should be aware of this identifier.
 
     self.hardware_id
-      A unique identifier for an ECU through it's hardware ID. Conforms to uptane.formats.HARDWARE_ID_SCHEMA. This is used to prevent a compromised director from causing an ECU to download an image not intended for it. 
+      An identifier for a group of ECUs that helps ensure the installation
+      of the right firmware is installed.
+      Verified for installation if the value matches both in the
+      Image Repository and Director Repository.
+      Conforms to uptane.formats.HARDWARE_ID_SCHEMA.
+      This is used to prevent a compromised director from causing an
+      ECU to download an image not intended for it.
 
     self.release_counter
-      An integer to track the version number of the image installed. Conforms to uptane.formats.RELEASE_COUNTER_SCHEMA. This is used to prevent a compromised director from causing an ECU to download an outdated image or an older one with known vulnerabilities. 
+      An integer value to track the version number of the images installed.
+      Ensures that an older image than the one currently installed is
+      not installed.
+      Conforms to uptane.formats.RELEASE_COUNTER_SCHEMA.
+      This is used to prevent a compromised director from causing an ECU
+      to download an outdated image or an older one with known vulnerabilities.
 
     self.primary_key
       The signing key for this Secondary ECU. This key will be used to sign
@@ -417,8 +428,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
     """
     tuf.formats.RELPATH_SCHEMA.check_match(target_filepath)
-    
-    
+
     validated_target_info = self.updater.target(
         target_filepath, multi_custom=True)
 
@@ -457,8 +467,9 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
           'initialization of this primary object?')
 
     director_target = validated_target_info[self.director_repo_name]
-    hardware_id_release_counter = set() # To check if the hardwareIDs and release counters are matching in all the repos other than director
-    director_hardware_id_release_counter = set() # To check with that of the other repos
+    temp_release_counter = None
+    temp_hardware_id = None
+
     for repository_name in validated_target_info.keys():
       current_target = validated_target_info[repository_name]
 
@@ -469,49 +480,34 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
       custom_target_metadata = \
           validated_target_info[repository_name]['fileinfo']['custom']
-
-      for custom_field in ['hardware_id', 'release_counter']:
-
-        if custom_field not in custom_target_metadata:
-
-          raise uptane.Error('{} repo failed to include the {} field \
-              in the custom field of the target. \nTarget metadata was:\
-              {}'.format(repository_name, custom_field, repr(current_target)))
-          # Using a set to keep track of the values of hardware ID and release counter. Since all repos should have the same value for release acounter and hardware ID, the set length should never be greater than 2.
-        if repository_name == self.director_repo_name:
-          director_hardware_id_release_counter.add(
-              custom_target_metadata[custom_field])
-        else:
-          hardware_id_release_counter.add(custom_target_metadata[custom_field])
-
-        if len(hardware_id_release_counter) > 2:
-          # Assuming that the director is the only repository that can be compromised
-          raise uptane.Error("Internal organization repos have mismatching \
-              values in a target with the field {}. The target is {}".format(
-              custom_field, repr(current_target)))
-
-
-    if hardware_id_release_counter != director_hardware_id_release_counter:
-      Bad_element_director = director_hardware_id_release_counter.difference(
-          hardware_id_release_counter)
-
-      if len(Bad_element_director) == 1:
-        if type(list(Bad_element_director)[0]) == int:
-          raise uptane.ImageRollBack('Bad value for the field release_counter \
-             that did not correspond the value in the other repos. Value \
-             did not match between the director and the other repos. \
-             The value of director target is {}'.format(repr(director_target)))
-        else:
+      current_target_hardware_id = custom_target_metadata['hardware_id']
+      current_target_release_counter = custom_target_metadata['release_counter']
+      if 'hardware_id' in custom_target_metadata:
+        if temp_hardware_id == None:
+          temp_hardware_id = current_target_hardware_id
+        elif temp_hardware_id != current_target_hardware_id:
           raise uptane.HardwareIDMismatch('Bad value for the field \
               hardware_ID in the that did not correspond the value in \
               the other repos. Value did not match between the director \
               and the other repos. The value of director target is {}'.format(
               repr(director_target)))
+      else:
+        raise uptane.Error('{} repo failed to include the hardware ID field \
+            in the custom field of the target. \nTarget metadata was:\
+            {}'.format(repository_name, repr(current_target)))
 
-      elif len(Bad_element_director) == 2:
-        raise uptane.BadHardwareIDReleaseCounter("Both the values of "
-          "hardwareID and release counters did not satisfy the "
-          "requirements.The target was" + repr(current_target))
+      if 'release_counter' in custom_target_metadata:
+        if temp_release_counter == None:
+          temp_release_counter = current_target_release_counter
+        elif temp_release_counter != current_target_release_counter:
+          raise uptane.ImageRollBack('Bad value for the field release_counter \
+             that did not correspond the value in the other repos. Value \
+             did not match between the director and the other repos. \
+             The value of director target is {}'.format(repr(director_target)))
+      else:
+        raise uptane.Error('{} repo failed to include the release counter \
+            field in the custom field of the target. \nTarget metadata was:\
+            {}'.format(repository_name, repr(current_target)))
 
     # Defensive coding: this should already have been checked.
     tuf.formats.TARGETFILE_SCHEMA.check_match(
@@ -550,7 +546,6 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     """
     log.debug('Refreshing top level metadata from all repositories.')
     self.refresh_toplevel_metadata_from_repositories()
-    new_self_release_counter = -1
 
     # Get the list of targets the director expects us to download and update to.
     # Note that at this line, this target info is not yet validated with the

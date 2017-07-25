@@ -645,8 +645,6 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
             'fileinfo!' + ENDCOLORS)
         continue
 
-      # Checking the target info for the primary itself. Disregarding if the hardware ID or release counters do not satisfy the requirements
-
       # Save the target info as an update assigned to that ECU.
       self.assigned_targets[assigned_ecu_serial] = target
 

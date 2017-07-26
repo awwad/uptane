@@ -12,7 +12,7 @@ import logging, time # both for logging
 
  # Configure TUF to use DER format instead of Python dictionaries / JSON.
 import tuf.conf
-tuf.conf.METADATA_FORMAT = 'der'
+tuf.conf.METADATA_FORMAT = 'json'
 
 # FIXME: I actually think other modules rely on the `os` imported here and
 # not just for getcwd

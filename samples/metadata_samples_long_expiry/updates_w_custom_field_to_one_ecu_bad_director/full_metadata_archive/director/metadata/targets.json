@@ -1,0 +1,56 @@
+{
+ "signatures": [
+  {
+   "keyid": "630cf584f392430b2119a4395e39624e86f5e5c5374507a789be5cf35bf090d6",
+   "method": "ed25519",
+   "sig": "254e6fbe49ec5180799ba7197f647bb83f2826bccf450999782f8d23021dc26a862e6de6713452e5119f2d70afb8fd08eb6fbe761b14909aeb441835ef1f400b"
+  }
+ ],
+ "signed": {
+  "_type": "Targets",
+  "delegations": {
+   "keys": {},
+   "roles": []
+  },
+  "expires": "2017-10-26T01:50:56Z",
+  "targets": {
+   "/BCU1.1.txt": {
+    "custom": {
+     "ecu_serial": "BCUdemocar",
+     "hardware_id": "bcu",
+     "release_counter": 0
+    },
+    "hashes": {
+     "sha256": "1eb6fa5c6bb606c5326d6ef0ff05f5fcefde4e50c7daea530978090778b38bf4",
+     "sha512": "9727058c2ba828fdd2fc5ae02f52c10e47404283f92df3539989e2ada3cf7e85a9772faed1bd0bad3fc2bd8f6e5d15b976b8e832dd46874be72b994bc57a62a0"
+    },
+    "length": 18
+   },
+   "/BCU1.2.txt": {
+    "custom": {
+     "ecu_serial": "BCUdemocar",
+     "hardware_id": "bad_bcu",
+     "release_counter": 0
+    },
+    "hashes": {
+     "sha256": "42914dc1509923fc83b6945cbaaec193a22077ae3bb799e84b900570715fcb5a",
+     "sha512": "f213f63b79b05e3ea2045ffe198ab75a993ca5b2709a2e1eac5f18a1a6be1b5eb6af9964b78d388b404414e296b046228f9b68eb75db684eed75b509518a77a5"
+    },
+    "length": 18
+   },
+   "/TCU1.1.txt": {
+    "custom": {
+     "ecu_serial": "TCUdemocar",
+     "hardware_id": "tcu",
+     "release_counter": 1
+    },
+    "hashes": {
+     "sha256": "56d7cd56a85e34e40d005e1f79c0e95d6937d5528ac0b301dbe68d57e03a5c21",
+     "sha512": "94d7419b8606103f363aa17feb875575a978df8e88038ea284ff88d90e534eaa7218040384b19992cc7866f5eca803e1654c9ccdf3b250d6198b3c4731216db4"
+    },
+    "length": 17
+   }
+  },
+  "version": 1
+ }
+}

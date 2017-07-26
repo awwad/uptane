@@ -62,7 +62,7 @@ CLIENT_DIRECTORY = None
 _vin = '111'
 _ecu_serial = '11111'
 _hardware_id = 'Infotainment111'
-_release_counter = 1
+_release_counter = 0
 # firmware_filename = 'infotainment_firmware.txt'
 
 
@@ -368,10 +368,10 @@ def update_cycle():
 
         else:
           raise
-  except uptane.BadReleaseCounterValue:
+  except uptane.ImageRollBack:
     print_banner(BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG,
               text='The Director has instructed us to download an image'
-              ' that has a bad release counter and does not match with ' 
+              ' that has a bad release counter and does not match with '
               ' other repositories. This image has'
               ' been rejected.', sound=TADA)
   except uptane.HardwareIDMismatch:
@@ -380,12 +380,6 @@ def update_cycle():
               ' that is not meant for the stated ECU. HardwareIDdoes not'
               ' match with other repositorie. This image has'
               ' been rejected.', sound=TADA)
-  except uptane.BadHardwareIDReleaseCounter:
-    print_banner(BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG,
-              text='The Director has instructed us to download an image'
-              ' that is not meant for the stated ECU. HardwareIDdoes and'
-              ' release counters do not match with other repositorie.'
-              ' This image has been rejected.', sound=TADA)
 
 
   # All targets have now been downloaded.
@@ -440,11 +434,6 @@ def submit_vehicle_manifest_to_director(signed_vehicle_manifest=None):
       str(demo.DIRECTOR_SERVER_PORT))
 
   print("Submitting the Primary's manifest to the Director.")
-  #print("Signed vehicle manifest", signed_vehicle_manifest)
-  #print(primary_ecu)
-
-  
-
   server.submit_vehicle_manifest(
       primary_ecu.vin,
       primary_ecu.ecu_serial,

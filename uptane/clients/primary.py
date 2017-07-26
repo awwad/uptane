@@ -236,7 +236,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     primary_key,
     time,
     timeserver_public_key,
-    hardware_id,   
+    hardware_id,
     release_counter = 0,  # Sample image has version 0
     my_secondaries=[]):
 
@@ -301,6 +301,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     self.primary_key = primary_key
     self.my_secondaries = my_secondaries
     self.director_repo_name = director_repo_name
+    self.primary_exceptions = dict()
 
     self.temp_full_metadata_archive_fname = os.path.join(
         full_client_dir, 'metadata', 'temp_full_metadata_archive.zip')
@@ -427,6 +428,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
         incorrectly set to not require metadata from the Director.
 
     """
+    print("TARGET_FILEPATH\n", target_filepath)
     tuf.formats.RELPATH_SCHEMA.check_match(target_filepath)
 
     validated_target_info = self.updater.target(
@@ -477,6 +479,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
         raise uptane.Error('{} repo failed to include the custom field in a \
             target. \nTarget metadata was: {}'.format(repository_name, \
             repr(current_target)))
+        continue
 
       custom_target_metadata = \
           validated_target_info[repository_name]['fileinfo']['custom']
@@ -491,10 +494,12 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
               the other repos. Value did not match between the director \
               and the other repos. The value of director target is {}'.format(
               repr(director_target)))
+          continue
       else:
         raise uptane.Error('{} repo failed to include the hardware ID field \
             in the custom field of the target. \nTarget metadata was:\
             {}'.format(repository_name, repr(current_target)))
+        continue
 
       if 'release_counter' in custom_target_metadata:
         if temp_release_counter == None:
@@ -504,10 +509,12 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
              that did not correspond the value in the other repos. Value \
              did not match between the director and the other repos. \
              The value of director target is {}'.format(repr(director_target)))
+          continue
       else:
         raise uptane.Error('{} repo failed to include the release counter \
             field in the custom field of the target. \nTarget metadata was:\
             {}'.format(repository_name, repr(current_target)))
+        continue
 
     # Defensive coding: this should already have been checked.
     tuf.formats.TARGETFILE_SCHEMA.check_match(
@@ -579,7 +586,11 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     # This will contain a list of tuf.formats.TARGETFILE_SCHEMA objects.
     verified_targets = []
     for targetinfo in directed_targets:
-      target_filepath = targetinfo['filepath']
+      target_filepath = targetinfo['filepath'].encode(
+          'ascii', 'ignore')
+      target_ecu = targetinfo \
+          ['fileinfo']['custom']['ecu_serial'].encode(
+            'ascii', 'ignore')
       try:
         # targetinfos = self.get_validated_target_info(target_filepath)
         # for repo in targetinfos:
@@ -596,16 +607,66 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
             'untrustworthy Image Repository, or the Director and Image '
             'Repository may be out of sync.' + ENDCOLORS)
 
+        temp_exception_dict={target_ecu : uptane.HardwareIDMismatch}
+
+        self.primary_exceptions[target_filepath] = \
+            temp_exception_dict
+        print(self.primary_exceptions)
+
         # The following is code intended for a demonstration, inserted here
         # into the reference implementation as a temporary measure.
         print_banner(BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG,
             text='The Director has instructed us to download a file that does '
             ' does not exactly match the Image Repository metadata. '
             'File: ' + repr(target_filepath), sound=TADA)
+
         import time
         time.sleep(3)
         # End demo code.
+      except uptane.HardwareIDMismatch:
+        log.warning(RED + 'Dorector has instructed us to download a target (' +
+            target_filepath + ') that is not validated by the combination of '
+            'Image + Director Repositories. That update IS BEING SKIPPED. It '
+            'the hardware IDs do not match between image and director '
+            'repositories. Try again, but if this happens often, you may be '
+            'connecting to an untrustworthy Director, or there may be an '
+            'untrustworthy Image Repository, or the Director and Image '
+            'Repository may be out of sync.' + ENDCOLORS)
 
+        temp_exception_dict={target_ecu : uptane.HardwareIDMismatch}
+
+        self.primary_exceptions[target_filepath] = \
+            temp_exception_dict
+        print(self.primary_exceptions)
+
+        print_banner(BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG,
+              text='The Director has instructed us to download an image'
+              ' that is not meant for the stated ECU. HardwareIDdoes not'
+              ' match with other repositorie. This image has'
+              ' been rejected.', sound=TADA)
+
+      except uptane.ImageRollBack:
+        log.warning(RED + 'Dorector has instructed us to download a target (' +
+            target_filepath + ') that is not validated by the combination of '
+            'Image + Director Repositories. That update IS BEING SKIPPED. It '
+            'the release counters do not match between image and director '
+            'repositories. Try again, but if this happens often, you may be '
+            'connecting to an untrustworthy Director, or there may be an '
+            'untrustworthy Image Repository, or the Director and Image '
+            'Repository may be out of sync.' + ENDCOLORS)
+
+        temp_exception_dict={target_ecu : uptane.ImageRollBack}
+
+        self.primary_exceptions[target_filepath] = \
+            temp_exception_dict
+
+        print(self.primary_exceptions)
+
+        print_banner(BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG,
+              text='The Director has instructed us to download an image'
+              ' that has a bad release counter and does not match with '
+              ' other repositories. This image has'
+              ' been rejected.', sound=TADA)
     # # Grab a filepath from each of the dicts of target file infos. (Each dict
     # # corresponds to one file, and the filepaths in all the infos in that dict
     # # will be the same - only the 'custom' field can differ within a given

@@ -614,10 +614,8 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
             'untrustworthy Image Repository, or the Director and Image '
             'Repository may be out of sync.' + ENDCOLORS)
 
-        temp_exception_dict={target_ecu : uptane.HardwareIDMismatch}
-
-        self.primary_exceptions[target_filepath] = \
-            temp_exception_dict
+        self.log_primary_exceptions(
+          target_filepath, target_ecu, tuf.UnknownTargetError)
 
         # The following is code intended for a demonstration, inserted here
         # into the reference implementation as a temporary measure.
@@ -639,10 +637,8 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
             'untrustworthy Image Repository, or the Director and Image '
             'Repository may be out of sync.' + ENDCOLORS)
 
-        temp_exception_dict={target_ecu : uptane.HardwareIDMismatch}
-
-        self.primary_exceptions[target_filepath] = \
-            temp_exception_dict
+        self.log_primary_exceptions(
+          target_filepath, target_ecu, uptane.HardwareIDMismatch)
 
         #Commenting out the following because unsure if banners should
         # be in the reference implementation of pimraries or not
@@ -662,11 +658,11 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
             'untrustworthy Image Repository, or the Director and Image '
             'Repository may be out of sync.' + ENDCOLORS)
 
-        temp_exception_dict={target_ecu : uptane.ImageRollBack}
+        self.log_primary_exceptions(
+          target_filepath, target_ecu, uptane.ImageRollBack)
 
-        self.primary_exceptions[target_filepath] = \
-            temp_exception_dict
-
+        #Commenting out the following because unsure if banners should
+        # be in the reference implementation of pimraries or not
         #print_banner(BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG,
         #      text='The Director has instructed us to download an image'
         #      ' that has a bad release counter and does not match with '
@@ -825,6 +821,13 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     self.save_distributable_metadata_files()
 
 
+
+
+  def log_primary_exceptions(self, image_name, ecu_serial, error):
+    """
+    Adds errors and exceptions handled to the primary.
+    """
+    self.primary_exceptions[image_name] = {ecu_serial: error}
 
 
 

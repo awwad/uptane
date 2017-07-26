@@ -436,7 +436,6 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
         incorrectly set to not require metadata from the Director.
 
     """
-    print("TARGET_FILEPATH\n", target_filepath)
     tuf.formats.RELPATH_SCHEMA.check_match(target_filepath)
 
     validated_target_info = self.updater.target(
@@ -619,7 +618,6 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
         self.primary_exceptions[target_filepath] = \
             temp_exception_dict
-        print(self.primary_exceptions)
 
         # The following is code intended for a demonstration, inserted here
         # into the reference implementation as a temporary measure.
@@ -645,7 +643,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
         self.primary_exceptions[target_filepath] = \
             temp_exception_dict
-        print(self.primary_exceptions)
+
         #Commenting out the following because unsure if banners should
         # be in the reference implementation of pimraries or not
         #print_banner(BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG,
@@ -668,8 +666,6 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
         self.primary_exceptions[target_filepath] = \
             temp_exception_dict
-
-        print(self.primary_exceptions)
 
         #print_banner(BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG,
         #      text='The Director has instructed us to download an image'

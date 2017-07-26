@@ -12,7 +12,7 @@ import logging, time # both for logging
 
  # Configure TUF to use DER format instead of Python dictionaries / JSON.
 import tuf.conf
-tuf.conf.METADATA_FORMAT = 'json'
+tuf.conf.METADATA_FORMAT = 'der'
 
 # FIXME: I actually think other modules rely on the `os` imported here and
 # not just for getcwd
@@ -53,13 +53,6 @@ class HardwareIDMismatch(Error):
 class ImageRollBack(Error):
   """
   Received an image to download with the Release Counter value lower than the one already installed.
-  """
-  pass
-
-
-class BadHardwareIDReleaseCounter(Error):
-  """
-  Received an image to download with a mismatching hardwareID and release counter value with respect to other repositories.
   """
   pass
 

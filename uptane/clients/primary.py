@@ -145,6 +145,14 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
       The list of nonces sent to us from Secondaries and not yet sent to the
       Timeserver.
 
+    self.primary_exceptions
+      A dictionary to track errors ECU encounter while trying to install 
+      images. The mapping is in the following format:
+      Image : ECU : Error
+      Example ==>
+      {'/BCU1.1.txt': {'BCUdemocar': <class 'uptane.ImageRollBack'>},
+      '/BCU1.2.txt': {'BCUdemocar': <class 'uptane.HardwareIDMismatch'>}}
+
     self.nonces_sent:
       The list of nonces sent to the Timeserver by our Secondaries, which we
       have already sent to the Timeserver. Will be checked against the
@@ -638,12 +646,13 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
         self.primary_exceptions[target_filepath] = \
             temp_exception_dict
         print(self.primary_exceptions)
-
-        print_banner(BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG,
-              text='The Director has instructed us to download an image'
-              ' that is not meant for the stated ECU. HardwareIDdoes not'
-              ' match with other repositorie. This image has'
-              ' been rejected.', sound=TADA)
+        #Commenting out the following because unsure if banners should
+        # be in the reference implementation of pimraries or not
+        #print_banner(BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG,
+        #      text='The Director has instructed us to download an image'
+        #      ' that is not meant for the stated ECU. HardwareIDdoes not'
+        #      ' match with other repositorie. This image has'
+        #      ' been rejected.', sound=TADA)
 
       except uptane.ImageRollBack:
         log.warning(RED + 'Dorector has instructed us to download a target (' +
@@ -662,11 +671,12 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
         print(self.primary_exceptions)
 
-        print_banner(BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG,
-              text='The Director has instructed us to download an image'
-              ' that has a bad release counter and does not match with '
-              ' other repositories. This image has'
-              ' been rejected.', sound=TADA)
+        #print_banner(BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG,
+        #      text='The Director has instructed us to download an image'
+        #      ' that has a bad release counter and does not match with '
+        #      ' other repositories. This image has'
+        #      ' been rejected.', sound=TADA)
+
     # # Grab a filepath from each of the dicts of target file infos. (Each dict
     # # corresponds to one file, and the filepaths in all the infos in that dict
     # # will be the same - only the 'custom' field can differ within a given

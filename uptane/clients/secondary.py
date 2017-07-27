@@ -533,6 +533,12 @@ class Secondary(object):
               with mismatching hardwareID. Diregarding/not downloading \
               target for saving. The target is {}'.format(self.ecu_serial, \
               repr(target))+ ENDCOLORS)
+
+          raise uptane.HardwareIDMismatch("The director has instructed the ECU \
+              to download an image the hardware_id of which does not match that \
+              of the ecu. ImageRepo Value was {}. Director value is {} \
+              Image rejected".format(self.hardware_id, \
+              target['fileinfo']['custom']['hardware_id']))
           continue
 
       elif self.release_counter > \
@@ -550,6 +556,7 @@ class Secondary(object):
               the current. Original Value was {}. New value is {} \
               Image rejected".format(self.release_counter, \
               target['fileinfo']['custom']['release_counter']))
+          continue
 
       # Fully validate the target info for our target(s).
       try:
@@ -611,7 +618,12 @@ class Secondary(object):
     self._expand_metadata_archive(metadata_archive_fname)
 
     # This entails using the local metadata files as a repository.
-    self.fully_validate_metadata()
+    try:
+      self.fully_validate_metadata()
+    except uptane.ImageRollBack:
+      log.warning(RED + "Image rollback attack detected. Conitnuing" + ENDCOLORS)
+    except uptane.HardwareIDMismatch:
+      log.warning(RED + "HardwareID Mismatch attack detected. Conitnuing" + ENDCOLORS)
 
 
 

@@ -3,7 +3,7 @@
   {
    "keyid": "94c836f0c45168f0a437eef0e487b910f58db4d462ae457b5730a4487130f290",
    "method": "ed25519",
-   "sig": "8ca1ac61d7dd8155ec911123cad87361147a630765d1f4c611901ed3a24a28e6a1dcc5f0fe42e0881a9dd1b34e146a758ea857c439f1ebe1bfa4ec871d56fd02"
+   "sig": "19bb77cc61cfc681023ff9170721187ae66ca95112290a640a46a9126e29ebb62f7fae75044ffa0b0163112464e43df1affb0692c60c2a9e887a5c26581c9005"
   }
  ],
  "signed": {
@@ -12,7 +12,7 @@
    "gz"
   ],
   "consistent_snapshot": false,
-  "expires": "2018-07-27T00:11:51Z",
+  "expires": "2018-07-28T03:34:06Z",
   "keys": {
    "6fcd9a928358ad8ca7e946325f57ec71d50cb5977a8d02c5ab0de6765fef040a": {
     "keyid_hash_algorithms": [

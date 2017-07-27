@@ -20,7 +20,7 @@ import shutil
 import hashlib
 
 from six.moves.urllib.error import URLError
-
+from io import open #Python2  support
 import tuf
 import tuf.formats
 import tuf.conf
@@ -33,6 +33,8 @@ import uptane.encoding.asn1_codec as asn1_codec
 
 # For temporary convenience:
 import demo # for generate_key, import_public_key, import_private_key
+import json
+import canonicaljson
 
 TEST_DATA_DIR = os.path.join(uptane.WORKING_DIR, 'tests', 'test_data')
 TEST_DIRECTOR_METADATA_DIR = os.path.join(TEST_DATA_DIR, 'director_metadata')
@@ -49,6 +51,12 @@ TEMP_CLIENT_DIRS = [
     os.path.join(TEST_DATA_DIR, 'temp_test_secondary1'),
     os.path.join(TEST_DATA_DIR, 'temp_test_secondary2')]
 
+#Source to copy all the local metadata to the TEMP_CLIENT_DIR
+SOURCE_FOR_LOCAL_METADATA = os.path.join(uptane.WORKING_DIR, 'samples', 'metadata_samples_long_expiry', 'updates_w_custom_field_to_one_ecu_bad_director', 'full_metadata_archive')
+#Source to copy all the target files to TEMP_CLIENT_DIR
+SOURCE_FOR_LOCAL_TARGETS = os.path.join(uptane.WORKING_DIR,'demo', "images")
+TEST_PINNING_TEMPLATE_FNAME = os.path.join(TEST_DATA_DIR, "pinned_template.json")
+
 # I'll initialize these in the __init__ test, and use this for the simple
 # non-damaging tests so as to avoid creating objects all over again.
 secondary_instances = [None, None, None]
@@ -58,6 +66,10 @@ secondary_instances = [None, None, None]
 nonce = 5
 vins = ['democar', 'democar', '000']
 ecu_serials = ['TCUdemocar', '00000', '00000']
+
+_hardware_id = 'tcu'
+_release_counter = 0
+
 
 # Set starting firmware fileinfo (that this ECU had coming from the factory)
 # It will serve as the initial firmware state for the Secondary clients.
@@ -72,7 +84,9 @@ factory_firmware_fileinfo = {
 expected_updated_fileinfo = {
     'filepath': '/TCU1.1.txt',
     'fileinfo': {
-        'custom': {'ecu_serial': 'TCUdemocar'},
+        'custom': {"ecu_serial": "TCUdemocar",
+                   "hardware_id": "tcu",
+                   "release_counter": 1},
         'hashes': {
             'sha512': '94d7419b8606103f363aa17feb875575a978df8e88038ea284ff88d90e534eaa7218040384b19992cc7866f5eca803e1654c9ccdf3b250d6198b3c4731216db4',
             'sha256': '56d7cd56a85e34e40d005e1f79c0e95d6937d5528ac0b301dbe68d57e03a5c21'},
@@ -83,7 +97,8 @@ def destroy_temp_dir():
   # Clean up anything that may currently exist in the temp test directories.
   for client_dir in TEMP_CLIENT_DIRS:
     if os.path.exists(client_dir):
-      shutil.rmtree(client_dir)
+      #shutil.rmtree(client_dir)
+      pass
 
 
 
@@ -132,6 +147,16 @@ class TestSecondary(unittest.TestCase):
     cls.initial_time = tuf.formats.unix_timestamp_to_datetime(
         int(time.time())).isoformat() + 'Z'
     tuf.formats.ISO8601_DATETIME_SCHEMA.check_match(cls.initial_time)
+
+    for repository in ["director", "imagerepo"]:
+      shutil.copytree(
+          os.path.join(SOURCE_FOR_LOCAL_METADATA,repository),
+          os.path.join(client_dir,repository))
+
+    shutil.copytree(
+        SOURCE_FOR_LOCAL_TARGETS,
+        os.path.join(client_dir, 'director', 'targets'))
+
 
     # Set up client directories for the two Secondaries, containing the
     # initial root.json and root.der (both, for good measure) metadata files
@@ -188,6 +213,8 @@ class TestSecondary(unittest.TestCase):
           ecu_key=TestSecondary.secondary_ecu_key,
           time=TestSecondary.initial_time,
           timeserver_public_key=TestSecondary.key_timeserver_pub,
+          release_counter = _release_counter,
+          hardware_id = _hardware_id,
           firmware_fileinfo=factory_firmware_fileinfo,
           director_public_key=None,
           partial_verifying=False)
@@ -207,6 +234,8 @@ class TestSecondary(unittest.TestCase):
           ecu_key=TestSecondary.secondary_ecu_key,
           time=TestSecondary.initial_time,
           timeserver_public_key=TestSecondary.key_timeserver_pub,
+          release_counter = _release_counter,
+          hardware_id = _hardware_id,
           firmware_fileinfo=factory_firmware_fileinfo,
           director_public_key=None,
           partial_verifying=False)
@@ -221,6 +250,8 @@ class TestSecondary(unittest.TestCase):
           ecu_key=TestSecondary.secondary_ecu_key,
           time=TestSecondary.initial_time,
           timeserver_public_key=TestSecondary.key_timeserver_pub,
+          release_counter = _release_counter,
+          hardware_id = _hardware_id,
           firmware_fileinfo=factory_firmware_fileinfo,
           director_public_key=None,
           partial_verifying=False)
@@ -235,6 +266,8 @@ class TestSecondary(unittest.TestCase):
           ecu_key=TestSecondary.secondary_ecu_key,
           time=TestSecondary.initial_time,
           timeserver_public_key=TestSecondary.key_timeserver_pub,
+          release_counter = _release_counter,
+          hardware_id = _hardware_id,
           firmware_fileinfo=factory_firmware_fileinfo,
           director_public_key=None,
           partial_verifying=False)
@@ -249,6 +282,8 @@ class TestSecondary(unittest.TestCase):
           ecu_key=TestSecondary.secondary_ecu_key,
           time=TestSecondary.initial_time,
           timeserver_public_key=TestSecondary.key_timeserver_pub,
+          release_counter = _release_counter,
+          hardware_id = _hardware_id,
           firmware_fileinfo=factory_firmware_fileinfo,
           director_public_key=None,
           partial_verifying=False)
@@ -259,6 +294,8 @@ class TestSecondary(unittest.TestCase):
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vins[0],
           ecu_serial=ecu_serials[0],
+          release_counter = _release_counter,
+          hardware_id = _hardware_id,
           ecu_key={''},
           time=TestSecondary.initial_time,
           timeserver_public_key=TestSecondary.key_timeserver_pub,
@@ -274,6 +311,8 @@ class TestSecondary(unittest.TestCase):
           vin=vins[0],
           ecu_serial=ecu_serials[0],
           ecu_key=TestSecondary.secondary_ecu_key,
+          release_counter = _release_counter,
+          hardware_id = _hardware_id,
           time='potato',
           timeserver_public_key=TestSecondary.key_timeserver_pub,
           firmware_fileinfo=factory_firmware_fileinfo,
@@ -290,6 +329,8 @@ class TestSecondary(unittest.TestCase):
           ecu_key=TestSecondary.secondary_ecu_key,
           time=TestSecondary.initial_time,
           timeserver_public_key=TestSecondary.key_timeserver_pub,
+          release_counter = _release_counter,
+          hardware_id = _hardware_id,
           firmware_fileinfo=factory_firmware_fileinfo,
           director_public_key={''},
           partial_verifying=False)
@@ -308,6 +349,8 @@ class TestSecondary(unittest.TestCase):
           ecu_key=TestSecondary.secondary_ecu_key,
           time=TestSecondary.initial_time,
           timeserver_public_key=TestSecondary.key_timeserver_pub,
+          release_counter = _release_counter,
+          hardware_id = _hardware_id,
           firmware_fileinfo=factory_firmware_fileinfo,
           director_public_key=TestSecondary.key_directortargets_pub,
           partial_verifying=False)
@@ -320,6 +363,8 @@ class TestSecondary(unittest.TestCase):
           ecu_key=TestSecondary.secondary_ecu_key,
           time=TestSecondary.initial_time,
           timeserver_public_key=TestSecondary.key_timeserver_pub,
+          release_counter = _release_counter,
+          hardware_id = _hardware_id,
           firmware_fileinfo=factory_firmware_fileinfo,
           director_public_key=None,
           partial_verifying=True)
@@ -335,6 +380,8 @@ class TestSecondary(unittest.TestCase):
           ecu_key=TestSecondary.secondary_ecu_key,
           time=TestSecondary.initial_time,
           timeserver_public_key=TestSecondary.initial_time, # INVALID
+          release_counter = _release_counter,
+          hardware_id = _hardware_id,
           firmware_fileinfo=factory_firmware_fileinfo,
           director_public_key=None,
           partial_verifying=False)
@@ -351,6 +398,7 @@ class TestSecondary(unittest.TestCase):
     # hack of swapping tuf.conf.repository_directories back and forth to make
     # it work for these tests.
 
+<<<<<<< HEAD
 
     # Initialize three clients and perform checks on each of them.
     for i in range(0, len(TEMP_CLIENT_DIRS)):
@@ -367,6 +415,8 @@ class TestSecondary(unittest.TestCase):
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vin,
           ecu_serial=ecu_serial,
+          release_counter = _release_counter,
+          hardware_id = _hardware_id,
           ecu_key=TestSecondary.secondary_ecu_key,
           time=TestSecondary.initial_time,
           timeserver_public_key=TestSecondary.key_timeserver_pub,
@@ -407,7 +457,7 @@ class TestSecondary(unittest.TestCase):
       # them). Do this for both clients.
       # The location of the files will be as follows, after the sample
       # metadata archive is expanded (in test 40 below):
-
+      print(client_dir)
       image_repo_mirror = ['file://' + client_dir + '/unverified/imagerepo']
       director_mirror = ['file://' + client_dir + '/unverified/director']
       if vin == '000':
@@ -612,7 +662,8 @@ class TestSecondary(unittest.TestCase):
     # Location of the sample Primary-produced metadata archive
     sample_archive_fname = os.path.join(
         uptane.WORKING_DIR, 'samples', 'metadata_samples_long_expiry',
-        'update_to_one_ecu', 'full_metadata_archive.zip')
+        'updates_w_custom_field_to_one_ecu_bad_director',
+        'full_metadata_archive.zip')
 
     assert os.path.exists(sample_archive_fname), 'Cannot test ' \
         'process_metadata; unable to find expected sample metadata archive' + \
@@ -652,7 +703,8 @@ class TestSecondary(unittest.TestCase):
       # Make sure the archive of unverified metadata was expanded
       for repo in ['director', 'imagerepo']:
         for role in ['root', 'snapshot', 'targets', 'timestamp']:
-          self.assertTrue(os.path.exists(client_dir + '/unverified/' + repo +
+          self.assertTrue(os.path.exists(
+              client_dir + '/unverified/full_metadata_archive/' + repo +
               '/metadata/' + role + '.' + tuf.conf.METADATA_FORMAT))
 
 

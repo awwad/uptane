@@ -31,6 +31,7 @@ import tuf.repository_tool as rt
 import tuf.client.updater
 import json
 import canonicaljson
+import atexit
 
 import os # For paths and makedirs
 import shutil # For copyfile
@@ -51,9 +52,12 @@ LIBUPTANE_LIBRARY_FNAME = os.path.join(
 
 
 
+
+
 # Globals
 CLIENT_DIRECTORY_PREFIX = 'temp_primary'
-client_directory = None
+CLIENT_DIRECTORY = None
+TEMP_PINNED_FILE = ''
 #_client_directory_name = 'temp_primary' # name for this Primary's directory
 _vin = '111'
 _ecu_serial = '11111'
@@ -93,24 +97,26 @@ def clean_slate(
     c_interface=False):
   """
   """
-
+  
   global primary_ecu
-  global client_directory
+  global CLIENT_DIRECTORY
   global _vin
   global _ecu_serial
   global listener_thread
   global use_can_interface
+  global TEMP_DIRECTORY
+  atexit.register(clean_up) # To delete the temp pinned file and folder after
+  # the script ends
 
   _vin = vin
   _ecu_serial = ecu_serial
   use_can_interface = c_interface
 
   # if client_directory_name is not None:
-  #   client_directory = client_directory_name
+  #   CLIENT_DIRECTORY = client_directory_name
   # else:
-  client_directory = os.path.join(
+  CLIENT_DIRECTORY = os.path.join(
       uptane.WORKING_DIR, CLIENT_DIRECTORY_PREFIX + demo.get_random_string(5))
-
   # Load the public timeserver key.
   key_timeserver_pub = demo.import_public_key('timeserver')
 
@@ -121,14 +127,14 @@ def clean_slate(
 
   # Load the private key for this Primary ECU.
   load_or_generate_key(use_new_keys)
-
-
+  
+  
   # Craft the directory structure for the client directory, including the
   # creation of repository metadata directories, current and previous, putting
   # the pinning.json file in place, etc.
   try:
     uptane.common.create_directory_structure_for_client(
-        client_directory, create_primary_pinning_file(),
+        CLIENT_DIRECTORY, create_primary_pinning_file(),
         {demo.IMAGE_REPO_NAME: demo.IMAGE_REPO_ROOT_FNAME,
         demo.DIRECTOR_REPO_NAME: os.path.join(demo.DIRECTOR_REPO_DIR, vin,
         'metadata', 'root' + demo.METADATA_EXTENSION)})
@@ -139,14 +145,14 @@ def clean_slate(
 
   # Configure tuf with the client's metadata directories (where it stores the
   # metadata it has collected from each repository, in subdirectories).
-  tuf.conf.repository_directory = client_directory
+  tuf.conf.repository_directory = CLIENT_DIRECTORY
 
 
 
   # Initialize a Primary ECU, making a client directory and copying the root
   # file from the repositories.
   primary_ecu = primary.Primary(
-      full_client_dir=os.path.join(uptane.WORKING_DIR, client_directory),
+      full_client_dir=os.path.join(uptane.WORKING_DIR, CLIENT_DIRECTORY),
       director_repo_name=demo.DIRECTOR_REPO_NAME,
       vin=_vin,
       ecu_serial=_ecu_serial,
@@ -208,11 +214,13 @@ def create_primary_pinning_file():
 
   Returns the filename of the created file.
   """
+  global TEMP_PINNED_FILE
 
   pinnings = json.load(open(demo.DEMO_PRIMARY_PINNING_FNAME, 'r'))
 
   fname_to_create = os.path.join(
       demo.DEMO_DIR, 'pinned.json_primary_' + demo.get_random_string(5))
+  TEMP_PINNED_FILE = fname_to_create
 
   assert 1 == len(pinnings['repositories'][demo.DIRECTOR_REPO_NAME]['mirrors']), 'Config error.'
 
@@ -764,6 +772,7 @@ def listen():
     assert last_error is not None, 'Programming error'
     raise last_error
 
+
   #server.register_introspection_functions()
 
   # Register functions that can be called via XML-RPC, allowing Secondaries to
@@ -830,3 +839,15 @@ def looping_update():
     except Exception as e:
       print(repr(e))
     time.sleep(1)
+
+
+def clean_up():
+  """
+  Deletes the pinned file and temp directory created by the demo
+  """
+  if os.path.isfile(TEMP_PINNED_FILE):
+    os.remove(TEMP_PINNED_FILE)
+
+  if os.path.isdir(CLIENT_DIRECTORY):
+    shutil.rmtree(CLIENT_DIRECTORY)
+

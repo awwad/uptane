@@ -82,6 +82,8 @@ def clean_slate(
   global nonce
   global CLIENT_DIRECTORY
   global attacks_detected
+  atexit.register(clean_up) # To delete the temp pinned file and folder
+  # after the script ends
 
   _vin = vin
   _ecu_serial = ecu_serial
@@ -115,8 +117,7 @@ def clean_slate(
   clock = clock.isoformat() + 'Z'
   tuf.formats.ISO8601_DATETIME_SCHEMA.check_match(clock)
 
-  atexit.register(clean_up) # To delete the temp pinned file and folder after
-  # the script ends
+
 
   # Create directory structure for the client and copy the root files from the
   # repositories.

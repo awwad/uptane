@@ -424,7 +424,9 @@ def register_self_with_director():
 
   print('Registering Primary ECU Serial and Key with Director.')
   server.register_ecu_serial(
-      primary_ecu.ecu_serial, primary_ecu.primary_key, _vin, True)
+      primary_ecu.ecu_serial,
+      uptane.common.public_key_from_canonical(primary_ecu.primary_key),
+      _vin, True)
   print(GREEN + 'Primary has been registered with the Director.' + ENDCOLORS)
 
 

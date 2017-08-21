@@ -475,7 +475,8 @@ def create_directory_structure_for_client(
       pinning_fname, #os.path.join(WORKING_DIR, 'pinned.json'),
       os.path.join(client_dir, 'metadata', 'pinned.json'))
 
-  pinnings = json.load(open(pinning_fname, 'r'))
+  with open(pinning_fname) as fobj:
+    pinnings = json.load(fobj)
 
   for repo_name in pinnings['repositories']:
     os.makedirs(os.path.join(client_dir, 'metadata', repo_name, 'current'))

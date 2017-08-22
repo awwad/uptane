@@ -5,11 +5,9 @@
 <Purpose>
   Unit testing for uptane/clients/primary.py
 
-  Currently, running this test requires that the demo Director and demo OEM
-  Repo be running.
-
+<Copyright>
+  See LICENSE for licensing information.
 """
-from __future__ import print_function
 from __future__ import unicode_literals
 
 import uptane # Import before TUF modules; may change tuf.conf values.
@@ -48,24 +46,11 @@ TEST_IMAGE_REPO_ROOT_FNAME = os.path.join(
 TEST_PINNING_FNAME = os.path.join(TEST_DATA_DIR, 'pinned.json')
 TEMP_CLIENT_DIR = os.path.join(TEST_DATA_DIR, 'temp_test_primary')
 
-# I'll initialize this in one of the early tests, and use this for the simple
-# non-damaging tests so as to avoid creating objects all over again.
-primary_instance = None
-
 # Changing some of these values would require producing new signed sample data
 # from the Timeserver or a Secondary.
 nonce = 5
 vin = '000'
 primary_ecu_serial = '00000'
-
-# Initialize these in setUpModule below.
-primary_ecu_key = None
-key_timeserver_pub = None
-key_timeserver_pri = None
-clock = None
-process_timeserver = None
-process_director = None
-process_oemrepo = None
 
 
 
@@ -73,57 +58,6 @@ def destroy_temp_dir():
   # Clean up anything that may currently exist in the temp test directory.
   if os.path.exists(TEMP_CLIENT_DIR):
     shutil.rmtree(TEMP_CLIENT_DIR)
-
-
-
-
-
-def setUpModule():
-  """
-  This is run once for the full module, before all tests.
-  It prepares some globals, including a single Primary ECU client instance.
-  When finished, it will also start up an OEM Repository Server,
-  Director Server, and Time Server. Currently, it requires them to be already
-  running.
-  """
-  global primary_ecu_key
-  global key_timeserver_pub
-  global key_timeserver_pri
-  global clock
-
-  destroy_temp_dir()
-
-  # Load the private key for this Primary ECU.
-  key_pub = demo.import_public_key('primary')
-  key_pri = demo.import_private_key('primary')
-  primary_ecu_key = uptane.common.canonical_key_from_pub_and_pri(
-      key_pub, key_pri)
-
-  # Load the public timeserver key.
-  key_timeserver_pub = demo.import_public_key('timeserver')
-  key_timeserver_pri = demo.import_private_key('timeserver')
-
-  # Generate a trusted initial time for the Primary.
-  clock = tuf.formats.unix_timestamp_to_datetime(int(time.time()))
-  clock = clock.isoformat() + 'Z'
-  tuf.formats.ISO8601_DATETIME_SCHEMA.check_match(clock)
-
-  # Currently in development.
-
-  # Start the timeserver, director, and oem repo for this test,
-  # using subprocesses, and saving those processes as:
-  #process_timeserver
-  #process_director
-  #process_oemrepo
-  # to be stopped in tearDownModule below.
-
-
-
-
-
-def tearDownModule():
-  """This is run once for the full module, after all tests."""
-  destroy_temp_dir()
 
 
 
@@ -138,15 +72,60 @@ class TestPrimary(unittest.TestCase):
   Several of them build on the results of previous tests. This is an unusual
   pattern but saves code and works at least for now.
   """
+  # Class variables
+  ecu_key = None
+  key_timeserver_pub = None
+  key_timeserver_pri = None
+  initial_time = None
+  # I'll initialize instance in the first test, and use it for later tests so
+  # as to avoid repeated initialization.
+  instance = None
+
+
+
+  @classmethod
+  def setUpClass(cls):
+    """
+    This is run once for the class, before all tests. Since there is only one
+    class, this runs once. It prepares some variables and stores them in the
+    class.
+    """
+
+    destroy_temp_dir()
+
+    # Load the private key for this Primary ECU.
+    cls.ecu_key = uptane.common.canonical_key_from_pub_and_pri(
+        demo.import_public_key('primary'),
+        demo.import_private_key('primary'))
+
+    # Load the public timeserver key.
+    cls.key_timeserver_pub = demo.import_public_key('timeserver')
+    cls.key_timeserver_pri = demo.import_private_key('timeserver')
+
+    # Generate a trusted initial time for the Primary.
+    cls.initial_time = tuf.formats.unix_timestamp_to_datetime(
+        int(time.time())).isoformat() + 'Z'
+    tuf.formats.ISO8601_DATETIME_SCHEMA.check_match(cls.initial_time)
+
+
+
+
+  @classmethod
+  def tearDownClass(cls):
+    """
+    This is run once for the class, after all tests. Since there is only one
+    class, this runs once.
+    """
+    destroy_temp_dir()
+
+
+
 
   def test_01_init(self):
     """
     Note that this doesn't test the root files provided, as those aren't used
     at all in the initialization; for that, we'll have to test the update cycle.
     """
-
-    global primary_instance
-
 
     # Set up a client directory first.
     uptane.common.create_directory_structure_for_client(
@@ -166,93 +145,93 @@ class TestPrimary(unittest.TestCase):
 
     # Invalid VIN:
     with self.assertRaises(tuf.FormatError):
-      p = primary.Primary(
+      primary.Primary(
           full_client_dir=TEMP_CLIENT_DIR,
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=5,  # INVALID
           ecu_serial=primary_ecu_serial,
-          primary_key=primary_ecu_key,
-          time=clock,
-          timeserver_public_key=key_timeserver_pub,
+          primary_key=TestPrimary.ecu_key,
+          time=TestPrimary.initial_time,
+          timeserver_public_key=TestPrimary.key_timeserver_pub,
           my_secondaries=[])
 
     # Invalid ECU Serial
     with self.assertRaises(tuf.FormatError):
-      p = primary.Primary(
+      primary.Primary(
           full_client_dir=TEMP_CLIENT_DIR,
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vin,
           ecu_serial=500, # INVALID
-          primary_key=primary_ecu_key,
-          time=clock,
-          timeserver_public_key=key_timeserver_pub,
+          primary_key=TestPrimary.ecu_key,
+          time=TestPrimary.initial_time,
+          timeserver_public_key=TestPrimary.key_timeserver_pub,
           my_secondaries=[])
 
     # Invalid ECU Key
     with self.assertRaises(tuf.FormatError):
-      p = primary.Primary(
+      primary.Primary(
           full_client_dir=TEMP_CLIENT_DIR,
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vin,
           ecu_serial=primary_ecu_serial,
           primary_key={''}, # INVALID
-          time=clock,
-          timeserver_public_key=key_timeserver_pub,
+          time=TestPrimary.initial_time,
+          timeserver_public_key=TestPrimary.key_timeserver_pub,
           my_secondaries=[])
 
     # Invalid time:
     with self.assertRaises(tuf.FormatError):
-      p = primary.Primary(
+      primary.Primary(
           full_client_dir=TEMP_CLIENT_DIR,
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vin,
           ecu_serial=primary_ecu_serial,
-          primary_key=primary_ecu_key,
+          primary_key=TestPrimary.ecu_key,
           time='potato', # INVALID
-          timeserver_public_key=key_timeserver_pub,
+          timeserver_public_key=TestPrimary.key_timeserver_pub,
           my_secondaries=[])
 
     # Invalid timeserver key
     with self.assertRaises(tuf.FormatError):
-      p = primary.Primary(
+      primary.Primary(
           full_client_dir=TEMP_CLIENT_DIR,
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vin,
           ecu_serial=primary_ecu_serial,
-          primary_key=primary_ecu_key, time=clock,
-          timeserver_public_key=clock, # INVALID
+          primary_key=TestPrimary.ecu_key, time=TestPrimary.initial_time,
+          timeserver_public_key=TestPrimary.initial_time, # INVALID
           my_secondaries=[])
 
-
-    print(TEMP_CLIENT_DIR)
 
     # Try creating a Primary, expecting it to work.
     # Initializes a Primary ECU, making a client directory and copying the root
     # file from the repositories.
     # Save the result for future tests, to save time and code.
-    primary_instance = primary.Primary(
+    TestPrimary.instance = primary.Primary(
         full_client_dir=TEMP_CLIENT_DIR,
         director_repo_name=demo.DIRECTOR_REPO_NAME,
         vin=vin,
         ecu_serial=primary_ecu_serial,
-        primary_key=primary_ecu_key,
-        time=clock,
-        timeserver_public_key=key_timeserver_pub)
+        primary_key=TestPrimary.ecu_key,
+        time=TestPrimary.initial_time,
+        timeserver_public_key=TestPrimary.key_timeserver_pub)
 
 
     # Check the fields initialized in the instance to make sure they're correct.
 
-    self.assertEqual([], primary_instance.nonces_to_send)
-    self.assertEqual([], primary_instance.nonces_sent)
-    self.assertEqual(vin, primary_instance.vin)
-    self.assertEqual(primary_ecu_serial, primary_instance.ecu_serial)
-    self.assertEqual(primary_ecu_key, primary_instance.primary_key)
-    self.assertEqual(dict(), primary_instance.ecu_manifests)
+    self.assertEqual([], TestPrimary.instance.nonces_to_send)
+    self.assertEqual([], TestPrimary.instance.nonces_sent)
+    self.assertEqual(vin, TestPrimary.instance.vin)
+    self.assertEqual(primary_ecu_serial, TestPrimary.instance.ecu_serial)
+    self.assertEqual(TestPrimary.ecu_key, TestPrimary.instance.primary_key)
+    self.assertEqual(dict(), TestPrimary.instance.ecu_manifests)
     self.assertEqual(
-        primary_instance.full_client_dir, TEMP_CLIENT_DIR)
-    self.assertIsInstance(primary_instance.updater, tuf.client.updater.Updater)
-    tuf.formats.ANYKEY_SCHEMA.check_match(primary_instance.timeserver_public_key)
-    self.assertEqual([], primary_instance.my_secondaries)
+        TestPrimary.instance.full_client_dir, TEMP_CLIENT_DIR)
+    self.assertIsInstance(
+        TestPrimary.instance.updater, tuf.client.updater.Updater)
+    tuf.formats.ANYKEY_SCHEMA.check_match(
+        TestPrimary.instance.timeserver_public_key)
+    self.assertEqual([], TestPrimary.instance.my_secondaries)
 
 
 
@@ -260,11 +239,11 @@ class TestPrimary(unittest.TestCase):
 
   def test_05_register_new_secondary(self):
 
-    self.assertEqual([], primary_instance.my_secondaries)
+    self.assertEqual([], TestPrimary.instance.my_secondaries)
 
-    primary_instance.register_new_secondary('1352')
+    TestPrimary.instance.register_new_secondary('1352')
 
-    self.assertIn('1352', primary_instance.my_secondaries)
+    self.assertIn('1352', TestPrimary.instance.my_secondaries)
 
 
 
@@ -272,16 +251,20 @@ class TestPrimary(unittest.TestCase):
 
   def test_10_register_ecu_manifest(self):
 
-    primary_instance.register_new_secondary('ecu11111')
+    TestPrimary.instance.register_new_secondary('ecu11111')
 
     # TODO: Test providing bad data.
 
+    # TODO: Update this test to use either a JSON or an ASN.1/DER ECU Manifest
+    # depending on tuf.conf.METADATA_FORMAT instead of always using a JSON
+    # manifest.
+
     # Starting with an empty ecu manifest dictionary.
-    self.assertEqual(dict(), primary_instance.ecu_manifests)
+    self.assertEqual(dict(), TestPrimary.instance.ecu_manifests)
 
     # Make sure we're starting with no nonces sent or to send.
-    self.assertEqual([], primary_instance.nonces_to_send)
-    self.assertEqual([], primary_instance.nonces_sent)
+    self.assertEqual([], TestPrimary.instance.nonces_to_send)
+    self.assertEqual([], TestPrimary.instance.nonces_sent)
 
     sample_ecu_manifest = {
         "signatures": [{
@@ -300,7 +283,7 @@ class TestPrimary(unittest.TestCase):
 
     # Try using the wrong vin.
     with self.assertRaises(uptane.Error):
-      primary_instance.register_ecu_manifest(
+      TestPrimary.instance.register_ecu_manifest(
           vin='13105941', # unexpected VIN
           ecu_serial='ecu11111', nonce=nonce,
           signed_ecu_manifest=sample_ecu_manifest,
@@ -309,7 +292,7 @@ class TestPrimary(unittest.TestCase):
     # Try changing the Secondary's ECU Serial so that the ECU Serial argument
     # doesn't match the ECU Serial in the manifest.
     with self.assertRaises(uptane.UnknownECU):
-      primary_instance.register_ecu_manifest(
+      TestPrimary.instance.register_ecu_manifest(
           vin=vin, # unexpected VIN
           ecu_serial='e689681291f', # unexpected ECU Serial
           nonce=nonce,
@@ -320,7 +303,7 @@ class TestPrimary(unittest.TestCase):
     with self.assertRaises(uptane.UnknownECU):
       sample_ecu_manifest2 = copy.deepcopy(sample_ecu_manifest)
       sample_ecu_manifest2['signed']['ecu_serial'] = '12345678'
-      primary_instance.register_ecu_manifest(
+      TestPrimary.instance.register_ecu_manifest(
           vin=vin, # unexpected VIN
           ecu_serial='12345678', # unexpected ECU Serial
           nonce=nonce,
@@ -330,21 +313,21 @@ class TestPrimary(unittest.TestCase):
 
     # TODO: Other possible tests here.
 
-    # Do it correctly and expect it to work.
-    primary_instance.register_ecu_manifest(
+    # Initialize correctly this time.
+    TestPrimary.instance.register_ecu_manifest(
         vin=vin, ecu_serial='ecu11111', nonce=nonce,
         signed_ecu_manifest=sample_ecu_manifest,
         force_pydict=True)
 
     # Make sure the provided manifest is now in the Primary's ecu manifests
     # dictionary.
-    self.assertIn('ecu11111', primary_instance.ecu_manifests)
+    self.assertIn('ecu11111', TestPrimary.instance.ecu_manifests)
     self.assertIn(
-        sample_ecu_manifest, primary_instance.ecu_manifests['ecu11111'])
+        sample_ecu_manifest, TestPrimary.instance.ecu_manifests['ecu11111'])
 
     # Make sure the nonce provided was noted in the right place.
-    self.assertIn(nonce, primary_instance.nonces_to_send)
-    self.assertEqual([], primary_instance.nonces_sent)
+    self.assertIn(nonce, TestPrimary.instance.nonces_to_send)
+    self.assertEqual([], TestPrimary.instance.nonces_sent)
 
 
 
@@ -352,16 +335,17 @@ class TestPrimary(unittest.TestCase):
 
   def test_15_get_nonces_to_send_and_rotate(self):
 
-    self.assertIn(nonce, primary_instance.nonces_to_send)
+    self.assertIn(nonce, TestPrimary.instance.nonces_to_send)
 
     # Cycle nonces and make sure the return value is as expected from the
     # previous test (a list of one specific nonce).
-    self.assertEqual([nonce], primary_instance.get_nonces_to_send_and_rotate())
+    self.assertEqual(
+        [nonce], TestPrimary.instance.get_nonces_to_send_and_rotate())
 
     # Ensure that that nonce is now listed as sent and that the list of nonces
     # to send is now empty.
-    self.assertEqual([nonce], primary_instance.nonces_sent)
-    self.assertEqual([], primary_instance.nonces_to_send)
+    self.assertEqual([nonce], TestPrimary.instance.nonces_sent)
+    self.assertEqual([], TestPrimary.instance.nonces_to_send)
 
 
 
@@ -381,9 +365,10 @@ class TestPrimary(unittest.TestCase):
     if tuf.conf.METADATA_FORMAT == 'der':
       # Convert this time attestation to the expected ASN.1/DER format.
       time_attestation = asn1_codec.convert_signed_metadata_to_der(
-          original_time_attestation, private_key=key_timeserver_pri, resign=True)
+          original_time_attestation,
+          private_key=TestPrimary.key_timeserver_pri, resign=True)
 
-    primary_instance.validate_time_attestation(time_attestation)
+    TestPrimary.instance.validate_time_attestation(time_attestation)
 
 
     # Prepare to try again with a bad signature.
@@ -406,7 +391,7 @@ class TestPrimary(unittest.TestCase):
 
     # Now actually perform the bad signature test.
     with self.assertRaises(tuf.BadSignatureError):
-      primary_instance.validate_time_attestation(time_attestation__badsig)
+      TestPrimary.instance.validate_time_attestation(time_attestation__badsig)
 
 
     self.assertNotEqual(500, nonce, msg='Programming error: bad and good '
@@ -423,10 +408,11 @@ class TestPrimary(unittest.TestCase):
       # Convert this time attestation to the expected ASN.1/DER format.
       time_attestation__wrongnonce = asn1_codec.convert_signed_metadata_to_der(
           time_attestation__wrongnonce,
-          private_key=key_timeserver_pri, resign=True)
+          private_key=TestPrimary.key_timeserver_pri, resign=True)
 
     with self.assertRaises(uptane.BadTimeAttestation):
-      primary_instance.validate_time_attestation(time_attestation__wrongnonce)
+      TestPrimary.instance.validate_time_attestation(
+          time_attestation__wrongnonce)
 
 
     # TODO: Consider other tests here.
@@ -437,7 +423,7 @@ class TestPrimary(unittest.TestCase):
 
   def test_25_generate_signed_vehicle_manifest(self):
 
-    vehicle_manifest = primary_instance.generate_signed_vehicle_manifest()
+    vehicle_manifest = TestPrimary.instance.generate_signed_vehicle_manifest()
 
     # If the vehicle manifest is in DER format, check its format and then
     # convert back to JSON so that we can inspect it further.
@@ -464,7 +450,7 @@ class TestPrimary(unittest.TestCase):
 
     # Check the signature on the vehicle manifest.
     self.assertTrue(uptane.common.verify_signature_over_metadata(
-        primary_ecu_key,
+        TestPrimary.ecu_key,
         vehicle_manifest['signatures'][0], # TODO: Deal with 1-sig assumption?
         vehicle_manifest['signed'],
         datatype='vehicle_manifest'))
@@ -476,7 +462,11 @@ class TestPrimary(unittest.TestCase):
     # Testing this requires that we have an OEM Repository and Director server
     # running, with particulars (e.g. address and port) specified in
     # demo/pinned.json.
-    # TODO: Determine if this test should spin up servers.
+    #
+    # TODO: Write this in a way that draws on saved sample metadata.
+    #       Don't expect an actual server to be running.
+    #       This will probably entail modification to the pinned.json file to
+    #       point it to a local directory instead of a remote server.
 
     # Check that in the fresh temp directory for this test Primary client,
     # there aren't any metadata files except root.json yet.
@@ -488,11 +478,9 @@ class TestPrimary(unittest.TestCase):
         sorted(os.listdir(TEST_IMAGE_REPO_METADATA_DIR)))
 
     try:
-      primary_instance.refresh_toplevel_metadata_from_repositories()
+      TestPrimary.instance.refresh_toplevel_metadata_from_repositories()
     except (URLError, tuf.NoWorkingMirrorError) as e:
-      print('Unable to open connection to repositories. (This test requires '
-          'that the demo Director and demo Image Repository be running.) '
-          'Skipping test.')
+      pass
     else:
       # Check the resulting top-level metadata files in the client directory.
       # Expect root, snapshot, targets, and timestamp for both director and
@@ -513,13 +501,11 @@ class TestPrimary(unittest.TestCase):
 
 
   def test_35_get_target_list_from_director(self):
-    # Testing this requires that we have a Director server up and running.
-    # That seems outside of the scope of this test and more of a subject for
-    # integration tests.
-    # TODO: Decide whether or not to spin up a Director server within this
-    # test.
-
-    #directed_targets = primary_instance.test_35_get_target_list_from_director
+    # TODO: Write this in a way that draws on saved sample Director metadata.
+    #       Don't expect an actual server to be running.
+    #       This will probably entail modification to the pinned.json file to
+    #       point it to a local directory instead of a remote server.
+    #directed_targets = TestPrimary.instance.test_35_get_target_list_from_director
     pass
 
 
@@ -527,11 +513,10 @@ class TestPrimary(unittest.TestCase):
 
 
   def test_40_get_validated_target_info(self):
-    # Testing this requires that we have a Director server up and running.
-    # That seems outside of the scope of this test and more of a subject for
-    # integration tests.
-    # TODO: Decide whether or not to spin up a Director server within this
-    # test.
+    # TODO: Write this in a way that draws on saved sample metadata from the
+    #       Director and Image Repo. Don't expect an actual server to be
+    #       running. This will probably entail modification to the pinned.json
+    #       file to point it to a local directory instead of a remote server.
     pass
 
 

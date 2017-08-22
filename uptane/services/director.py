@@ -163,6 +163,7 @@ class Director:
       ecuid: uptane.formats.ECU_SERIAL_SCHEMA
       manifest: uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA
     """
+    uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial)
     uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
         signed_ecu_manifest)
 

@@ -258,7 +258,7 @@ class Secondary(object):
           'only the ')
 
 
-    # Create a TAP-4-compliant updater object. This will read pinning.json
+    # Create a TAP-4-compliant updater object. This will read pinned.json
     # and create single-repository updaters within it to handle connections to
     # each repository.
     self.updater = tuf.client.updater.Updater('updater')

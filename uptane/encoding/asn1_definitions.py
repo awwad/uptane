@@ -7,6 +7,10 @@
 # How to generate this file when changes are made to the ASN.1 definitions in
 # asn1_definitions.asn1:
 #
+# 0. Install the correct versions of pyasn1 and asn1ate: 
+#    pip install git+git://github.com/kimgr/asn1ate.git@67769c1cbfde04a3f78d3c30feab3ddca50fb145#egg=asn1ate 
+#    pip install pyasn1==0.2.2 
+# 
 # 1. generate the consolidated ASN.1 definitions in Python using asn1c,
 #    putting them in file intermediate_asn1_definitions.asn1:
 #    $ asn1c -EF asn1_definitions.asn1 > intermediate_asn1_definitions.asn1
@@ -568,6 +572,7 @@ class TargetRoleFileInfos(univ.SequenceOf):
 
 
 TargetRoleFileInfos.componentType = TargetRoleFileInfo()
+TargetRoleFileInfos.subtypeSpec=constraint.ValueSizeConstraint(1, 1024)
 
 
 class SnapshotMetadata(univ.Sequence):

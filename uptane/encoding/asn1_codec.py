@@ -78,8 +78,8 @@ def convert_signed_der_to_dersigned_json(der_data, datatype='time_attestation'):
   Convert the given der_data to a Python dictionary representation consistent
   with Uptane's typical JSON encoding.
 
-  The 'signed' portion will be a JSON-style (essentially Python dict)
-  translation of the der data's 'signed' portion. Likewise for the 'signatures'
+  The 'signed' portion will be a JSON-compatible Python dict translation
+  of der_data's 'signed' portion. Likewise for the 'signatures'
   portion. The result will be a dict containing a 'signatures' section that has
   signatures over not what is in the 'signed' section, but rather over a
   different format and encoding of what is in the 'signed' section. Please take
@@ -104,10 +104,17 @@ def convert_signed_der_to_dersigned_json(der_data, datatype='time_attestation'):
       # these requirements above.
 
   <Returns>
-    # TODO: FILL IN
+    A JSON-compatible Python dictionary representing the data from der_data,
+    including signatures that are still over the DER data.
 
   <Exceptions>
-    # TODO: FILL IN
+    tuf.FormatError
+      If der_data does not seem to be valid DER data (regardless of the type).
+
+    uptane.Error
+      If datatype is not a data type that Uptane supports converting into
+      ASN.1/DER.
+
     uptane.ASN1DERDecodingError
       If der_data cannot be decoded as the given datatype (if pyasn1 raises an
       error in the decode process).
@@ -239,13 +246,6 @@ def convert_signed_metadata_to_der(
 
       Each of the above also conforms to tuf.formats.SIGNABLE_SCHEMA.
 
-      NOTE! Currently, support in this module only exists for
-      SIGNABLE_TIMESERVER_ATTESTATION_SCHEMA. ECU and Vehicle Manifests are
-      not expected to be converted into ASN.1/DER currently. (They are
-      consumed only by the Primary and Director, not by any Secondary.)
-
-      # TODO: Update when support exists for all three.
-
     datatype:
       String chosen from SUPPORTED_ASN1_METADATA_MODULES.
       Specifies the type of data provided in der_data, whether a Time
@@ -255,7 +255,8 @@ def convert_signed_metadata_to_der(
     resign
       ("re-sign"). Normally False, resulting in the signatures in
       signed_metadata being formatted as ASN.1 and encoded as DER, but otherwise
-      preserved.
+      preserved (for example, they may still be signatures over JSON - the
+      signature values themselves are unchanged).
       If resign is instead True, any signatures provided are
       discarded, and a new signature is generated. This new signature will be
       over the DER encoding of the data provided in signed_metadata['signed'].
@@ -264,8 +265,7 @@ def convert_signed_metadata_to_der(
       over that DER encoding.
       If the given signatures are already over DER encoding before reaching
       this point (as may happen in the current design), then you will not
-      need this to be True....
-      # TODO: <~> Revise above comment after you're finished.
+      need this to be True.
 
     private_key
       This should be left out (None) unless resign is True, in which case

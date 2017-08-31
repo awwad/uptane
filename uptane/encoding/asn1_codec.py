@@ -33,6 +33,7 @@ try:
   import pyasn1.codec.der.decoder as p_der_decoder
   import pyasn1.type.tag as p_type_tag
   import pyasn1.type.univ as p_type_univ
+  import pyasn1.error
 
   # ASN.1 data specification modules that convert ASN.1 to JSON and back.
   import uptane.encoding.timeserver_asn1_coder as timeserver_asn1_coder
@@ -107,6 +108,9 @@ def convert_signed_der_to_dersigned_json(der_data, datatype='time_attestation'):
 
   <Exceptions>
     # TODO: FILL IN
+    uptane.ASN1DERDecodingError
+      If der_data cannot be decoded as the given datatype (if pyasn1 raises an
+      error in the decode process).
   """
 
   if not PYASN1_EXISTS:
@@ -148,7 +152,17 @@ def convert_signed_der_to_dersigned_json(der_data, datatype='time_attestation'):
   #     implicitTag=p_type_tag.Tag(p_type_tag.tagClassContext,
   #     p_type_tag.tagFormatConstructed,
   #     0))
-  asn_metadata = p_der_decoder.decode(der_data, asn1Spec=exemplar_object)[0]
+  # TODO: Determine if there are any other error types to add to the except
+  # clause below to cover whatever errors we expect pyasn1 to raise when trying
+  # to convert data. That error class covers ValueConstraintError and
+  # SubstrateUnderrunError, but I'm not sure if pyasn1 wouldn't raise other
+  # errors....
+  try:
+    asn_metadata = p_der_decoder.decode(der_data, asn1Spec=exemplar_object)[0]
+  except pyasn1.error.PyAsn1Error as e:
+    raise uptane.FailedToDecodeASN1DER('Unable to decode the provided '
+        'der_data as datatype ' + repr(datatype) + '. The pyasn1-raised error '
+        'follows: ' + repr(e))
 
   # asn_metadata here now has three components, indexed by integer 0, 1, 2.
   # 0 is the signed component (Signed())
@@ -332,7 +346,18 @@ def convert_signed_metadata_to_der(
   if resign:
 
     # Encode the ASN.1 as DER first using pyasn1.
-    der_signed = p_der_encoder.encode(asn_signed)
+    # TODO: Determine if there are any other error types to add to the except
+    # clause below to cover whatever errors we expect pyasn1 to raise when
+    # trying to encode data. That error class covers ValueConstraintError and
+    # SubstrateUnderrunError, but I'm not sure if pyasn1 wouldn't raise other
+    # errors....
+    try:
+      der_signed = p_der_encoder.encode(asn_signed)
+    except pyasn1.error.PyAsn1Error as e:
+      raise uptane.FailedToEncodeASN1DER('Unable to encode the provided '
+          'der_data as datatype ' + repr(datatype) + '. The pyasn1-raised '
+          'error follows: ' + repr(e))
+
 
     # This hashing is redundant and temporary. Eventually, the hash will
     # consistently be performed in securesystemslib/keys.py in the

@@ -63,7 +63,7 @@ else:
 def ensure_valid_metadata_type_for_asn1(metadata_type):
   if metadata_type not in SUPPORTED_ASN1_METADATA_MODULES:
     # TODO: Choose/make better exception class.
-    raise tuf.Error('This is not one of the metadata types configured for '
+    raise uptane.Error('This is not one of the metadata types configured for '
         'translation from JSON to DER-encoded ASN1. Type of given metadata: ' +
         repr(metadata_type) + '; types accepted: ' +
         repr(list(SUPPORTED_ASN1_METADATA_MODULES)))
@@ -114,7 +114,7 @@ def convert_signed_der_to_dersigned_json(der_data, datatype='time_attestation'):
   """
 
   if not PYASN1_EXISTS:
-    raise tuf.Error('Request was made to load a DER file, but the required '
+    raise uptane.Error('Request was made to load a DER file, but the required '
         'pyasn1 library failed to import.')
 
   # Make sure it's a supported type of metadata for ASN.1 to Python dict
@@ -298,13 +298,13 @@ def convert_signed_metadata_to_der(
   # private_key has been provided.
   tuf.formats.BOOLEAN_SCHEMA.check_match(resign)
   if resign != (private_key is not None):
-    raise tuf.Error('Inconsistent arguments: a private key should be provided '
-        'to convert_signed_json_to_signed_der if and only if the resign '
-        'argument is True.')
+    raise uptane.Error('Inconsistent arguments: a private key should be '
+        'provided to convert_signed_json_to_signed_der if and only if the '
+        'resign argument is True.')
 
   if only_signed and resign:
-    raise tuf.Error('Inconsistent arguments: request to re-sign metadata in a '
-        'new encoding and then throw those same new signatures away.')
+    raise uptane.Error('Inconsistent arguments: request to re-sign metadata '
+        'in a new encoding and then throw those same new signatures away.')
 
 
   if private_key is not None:

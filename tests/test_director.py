@@ -436,15 +436,17 @@ class TestDirector(unittest.TestCase):
     else:
       assert tuf.conf.METADATA_FORMAT == 'der' # Or test code is broken/old
 
-      # Send a corrupted manifest. (Not sure what kind of error to expect....)
-      manifest = '\x99\x99\x99\x99\x99' + manifest[5:]
-      TestDirector.instance.register_vehicle_manifest(
-          'democar', 'INFOdemocar', manifest)
+      # Send a corrupted manifest. Expect decoding error.
+      manifest = b'\x99\x99\x99\x99\x99' + manifest[5:]
+      with self.assertRaises(uptane.FailedToDecodeASN1DER):
+        TestDirector.instance.register_vehicle_manifest(
+            'democar', 'INFOdemocar', manifest)
 
-      # Send an empty manifest. (Not sure what kind of error to expect....)
+      # Send an empty manifest. Expect decoding error.
       manifest = bytes()
-      TestDirector.instance.register_vehicle_manifest(
-          'democar', 'INFOdemocar', manifest)
+      with self.assertRaises(uptane.FailedToDecodeASN1DER):
+        TestDirector.instance.register_vehicle_manifest(
+            'democar', 'INFOdemocar', manifest)
 
 
     # Prepare a manifest with a bad signature.
@@ -455,19 +457,22 @@ class TestDirector(unittest.TestCase):
       manifest_bad['signatures'][0]['sig'] = \
           '1234567890abcdef9f1b74d72eb500e4ff0f443f824b83405e2b21264778d1610e0a5f2663b90eda8ab05a28b5b64fc15514020985d8a93576fe33b287e1380f'
 
+      # Try registering the bad-signature manifest.
+      with self.assertRaises(tuf.BadSignatureError):
+        TestDirector.instance.register_vehicle_manifest(
+            'democar', 'INFOdemocar', manifest_bad)
+
+
     else:
       assert tuf.conf.METADATA_FORMAT == 'der' # Or test code is broken/old.
 
       # TODO: Add a test using a bad signature. Note that there is already a
       # test below for the *wrong* signature, but it would be good to test
       # both for the wrong signature and for a corrupt signature.
+      # So send a properly-encoded manifest with a signature that is produced
+      # by the right key, but which does not match the data in the manifest.
 
       pass
-
-    # Try registering the bad-signature manifest.
-    with self.assertRaises(tuf.BadSignatureError):
-      TestDirector.instance.register_vehicle_manifest(
-          'democar', 'INFOdemocar', manifest_bad)
 
 
     # Prepare a manifest with the *wrong* signature - a signature from the

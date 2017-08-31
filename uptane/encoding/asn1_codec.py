@@ -124,6 +124,8 @@ def convert_signed_der_to_dersigned_json(der_data, datatype='time_attestation'):
     raise uptane.Error('Request was made to load a DER file, but the required '
         'pyasn1 library failed to import.')
 
+  uptane.formats.DER_DATA_SCHEMA.check_match(der_data)
+
   # Make sure it's a supported type of metadata for ASN.1 to Python dict
   # translation. (Throw an exception if not.)
   ensure_valid_metadata_type_for_asn1(datatype)

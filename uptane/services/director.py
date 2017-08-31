@@ -548,18 +548,3 @@ class Director:
 
     self.vehicle_repositories[vin].targets.add_target(
         target_filepath, custom={'ecu_serial': ecu_serial})
-
-
-
-
-
-  def analyze_vehicle(self, vin):
-    """
-    Make note of any unusual properties of the vehicle data and manifests.
-    For example, try to detect freeze attacks and mix-and-match attacks.
-    """
-    pass
-
-
-
-

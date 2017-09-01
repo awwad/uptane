@@ -236,12 +236,6 @@ class TestDirector(unittest.TestCase):
 
     vin = 'democar'
 
-    # Expect no registered ECUs or manifests yet.
-    self.assertFalse(inventory.ecu_public_keys)
-    self.assertFalse(inventory.vehicle_manifests[vin])
-    self.assertFalse(inventory.ecu_manifests)
-    self.assertIsNone(inventory.primary_ecus_by_vin[vin])
-
     primary_serial = 'INFOdemocar'
     secondary_serial = 'TCUdemocar'
 
@@ -258,6 +252,11 @@ class TestDirector(unittest.TestCase):
         False]                 # is_primary
 
 
+    # Expect no registered ECUs or manifests yet.
+    self.assertFalse(inventory.ecu_public_keys)
+    self.assertFalse(inventory.vehicle_manifests[vin])
+    self.assertFalse(inventory.ecu_manifests)
+    self.assertIsNone(inventory.primary_ecus_by_vin[vin])
     # Expect these calls to fail due to invalid argument format.
     # Note that none of the arguments should be integers.
     for i in range(4):

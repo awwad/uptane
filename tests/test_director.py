@@ -313,6 +313,10 @@ class TestDirector(unittest.TestCase):
     self.assertFalse(inventory.get_ecu_manifests(primary_serial))
     self.assertIsNone(inventory.get_last_ecu_manifest(primary_serial))
 
+    # Try registering the Primary again, expecting a Spoofing error.
+    with self.assertRaises(uptane.Spoofing):
+      TestDirector.instance.register_ecu_serial(*GOOD_PRIMARY_ARGS)
+
 
     # Register a Secondary.
     TestDirector.instance.register_ecu_serial(*GOOD_SECONDARY_ARGS)
@@ -331,6 +335,23 @@ class TestDirector(unittest.TestCase):
     # This should be empty, but should not raise an UnknownECU error now.
     self.assertFalse(inventory.get_ecu_manifests(secondary_serial))
     self.assertIsNone(inventory.get_last_ecu_manifest(secondary_serial))
+
+    # Try registering the Secondary again. Normally, we expect a Spoofing error
+    # as with the Primary, but for now, the registration attempt is simply
+    # ignored instead of raising an exception, for hacky demo reasons. /:
+    # TODO: Restore normal behavior to already-registered ECU registration
+    # attempts and then adjust this test.
+    n_ecu_keys = len(inventory.ecu_public_keys)
+    # If this next line fails, there's likely a coding error in this test code.
+    self.assertEqual(
+        keys_pub['secondary'], inventory.get_ecu_public_key(secondary_serial))
+    TestDirector.instance.register_ecu_serial(*GOOD_SECONDARY_ARGS)
+    self.assertEqual(n_ecu_keys, len(inventory.ecu_public_keys))
+    # Now, if this fails, the second registration attempt has succeeded, and it
+    # should NOT have! Registered keys should not be accidentally overwritten
+    # with new keys.
+    self.assertEqual(
+        keys_pub['secondary'], inventory.get_ecu_public_key(secondary_serial))
 
 
     # Due to a workaround for the demo website, the next checks will not work,

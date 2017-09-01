@@ -424,6 +424,16 @@ class TestDirector(unittest.TestCase):
     with self.assertRaises(uptane.Spoofing):
       TestDirector.instance.register_vehicle_manifest(
           'democar', 'TCUdemocar', manifest)
+    with self.assertRaises(uptane.Spoofing):
+      TestDirector.instance.register_vehicle_manifest(
+          'democar', 'nonexistent_ecu_serial', manifest)
+
+    # Try reporting an unknown VIN.
+    with self.assertRaises(uptane.UnknownVehicle):
+      TestDirector.instance.register_vehicle_manifest(
+          'nonexistent_vin', 'INFOdemocar', manifest)
+
+
 
     # Send a partial or badly formatted manifest.
     if tuf.conf.METADATA_FORMAT == 'json':

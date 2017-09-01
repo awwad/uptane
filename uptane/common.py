@@ -214,8 +214,10 @@ def sign_over_metadata(
   <Exceptions>
     tuf.FormatError, if 'key_dict' is improperly formatted.
 
-    tuf.UnsupportedLibraryError, if an unsupported or unavailable library is
-    detected.
+    tuf.UnsupportedLibraryError, if an unsupported or unavailable cryptography
+    library is chosen.
+
+    uptane.Error, if the given metadata format is not 'json' or 'der'
 
     TypeError, if 'key_dict' contains an invalid keytype.
 
@@ -247,8 +249,8 @@ def sign_over_metadata(
         {'signed': data, 'signatures': []}, only_signed=True, datatype=datatype)
     data = hashlib.sha256(data).digest()
 
-  else:
-    raise tuf.Error('Unsupported metadata format: ' + repr(metadata_format))
+  else: # pragma no cover
+    raise uptane.Error('Unsupported metadata format: ' + repr(metadata_format))
 
 
   return tuf.keys.create_signature(key_dict, data)
@@ -374,7 +376,7 @@ def verify_signature_over_metadata(
         {'signed': data, 'signatures': []}, only_signed=True, datatype=datatype)
     data = hashlib.sha256(data).digest()
 
-  else:
+  else: # pragma no cover
     raise tuf.Error('Unsupported metadata format: ' + repr(metadata_format))
 
 

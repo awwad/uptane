@@ -257,6 +257,21 @@ class TestDirector(unittest.TestCase):
     self.assertFalse(inventory.vehicle_manifests[vin])
     self.assertFalse(inventory.ecu_manifests)
     self.assertIsNone(inventory.primary_ecus_by_vin[vin])
+    with self.assertRaises(uptane.UnknownECU):
+      inventory.get_ecu_public_key(primary_serial)
+    with self.assertRaises(uptane.UnknownECU):
+      inventory.get_ecu_public_key(secondary_serial)
+    with self.assertRaises(uptane.UnknownECU):
+      inventory.get_ecu_manifests(primary_serial)
+    with self.assertRaises(uptane.UnknownECU):
+      inventory.get_ecu_manifests(secondary_serial)
+    with self.assertRaises(uptane.UnknownECU):
+      inventory.get_last_ecu_manifest(primary_serial)
+    with self.assertRaises(uptane.UnknownECU):
+      inventory.get_last_ecu_manifest(secondary_serial)
+
+
+
     # Expect these calls to fail due to invalid argument format.
     # Note that none of the arguments should be integers.
     for i in range(4):
@@ -291,6 +306,12 @@ class TestDirector(unittest.TestCase):
     self.assertIn(primary_serial, inventory.ecu_public_keys)
     self.assertEqual(
         keys_pub['primary'], inventory.ecu_public_keys[primary_serial])
+    self.assertEqual(
+        keys_pub['primary'], inventory.get_ecu_public_key(primary_serial))
+
+    # This should be empty, but should not raise an UnknownECU error now.
+    self.assertFalse(inventory.get_ecu_manifests(primary_serial))
+    self.assertIsNone(inventory.get_last_ecu_manifest(primary_serial))
 
 
     # Register a Secondary.
@@ -304,6 +325,12 @@ class TestDirector(unittest.TestCase):
     self.assertIn(secondary_serial, inventory.ecu_public_keys)
     self.assertEqual(
         keys_pub['secondary'], inventory.ecu_public_keys[secondary_serial])
+    self.assertEqual(
+        keys_pub['secondary'], inventory.get_ecu_public_key(secondary_serial))
+
+    # This should be empty, but should not raise an UnknownECU error now.
+    self.assertFalse(inventory.get_ecu_manifests(secondary_serial))
+    self.assertIsNone(inventory.get_last_ecu_manifest(secondary_serial))
 
 
     # Due to a workaround for the demo website, the next checks will not work,

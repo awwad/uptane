@@ -16,6 +16,7 @@ import unittest
 import os.path
 import shutil
 import copy
+import json
 
 import tuf
 import tuf.formats
@@ -414,6 +415,7 @@ class TestDirector(unittest.TestCase):
         'democar', 'INFOdemocar', manifest)
 
 
+
     # TODO: Make sure that the vehicle manifest now shows up in the
     # inventorydb, that the various get functions return its data, and that
     # the ECU Manifest within now shows up in the inventorydb.
@@ -485,6 +487,7 @@ class TestDirector(unittest.TestCase):
       pass
 
 
+
     # Prepare a manifest with the *wrong* signature - a signature from the
     # wrong key that is otherwise correctly signed.
     if tuf.conf.METADATA_FORMAT == 'json':
@@ -505,6 +508,76 @@ class TestDirector(unittest.TestCase):
     with self.assertRaises(tuf.BadSignatureError):
       TestDirector.instance.register_vehicle_manifest(
           'democar', 'INFOdemocar', manifest_bad)
+
+
+
+    # Send Vehicle Manifest containing an ECU Manifest with an unknown
+    # ECU Serial. Expect no error, and expect the Vehicle Manifest to be
+    # registered, but the particular ECU Manifest to not be registered.
+
+    # First, make sure the ECU Serial in question is not registered.
+    with self.assertRaises(uptane.UnknownECU):
+      inventory.check_ecu_registered('unknown_ecu')
+
+    if tuf.conf.METADATA_FORMAT == 'json':
+      manifest_bad = json.load(open(os.path.join(TEST_DATA_DIR,
+          'flawed_manifests', 'vm2_contains_one_unknown_ecu_manifest.json')))
+    else:
+      assert tuf.conf.METADATA_FORMAT == 'der' # Or test code is broken/old.
+      manifest_bad = open(os.path.join(TEST_DATA_DIR, 'flawed_manifests',
+          'vm2_contains_one_unknown_ecu_manifest.der'), 'rb').read()
+
+    TestDirector.instance.register_vehicle_manifest(
+        'democar', 'INFOdemocar', manifest_bad)
+
+    # Now check to make sure the data for an unknown ECU wasn't saved as its
+    # own ECU Manifest.
+    self.assertNotIn('unknown_ecu',
+        inventory.get_all_ecu_manifests_from_vehicle('democar'))
+    with self.assertRaises(uptane.UnknownECU):
+      inventory.get_last_ecu_manifest('unknown_ecu')
+    with self.assertRaises(uptane.UnknownECU):
+      inventory.get_ecu_manifests('unknown_ecu')
+
+    # Check to make sure the vehicle manifest itself was saved, though.
+    self.assertIn('unknown_ecu', inventory.get_last_vehicle_manifest(
+        'democar')['signed']['ecu_version_manifests'])
+
+
+
+    # Provide a vehicle manifest that is correctly signed by the Primary, but
+    # which contains a single ECU Manifest, that ECU Manifest being signed by
+    # the wrong key.
+    # Ensure that the Vehicle Manifest is saved, but that the ECU Manifest it
+    # contains is not saved on its own as a valid ECU Manifest.
+    previous_vehicle_manifest = inventory.get_last_vehicle_manifest('democar')
+    previous_ecu_manifest = inventory.get_last_ecu_manifest('TCUdemocar')
+    n_vms_before = len(inventory.get_vehicle_manifests('democar'))
+    n_ems_before = len(inventory.get_ecu_manifests('TCUdemocar'))
+
+    if tuf.conf.METADATA_FORMAT == 'json':
+      manifest_bad = json.load(open(os.path.join(TEST_DATA_DIR,
+          'flawed_manifests', 'vm3_ecu_manifest_signed_with_wrong_key.json')))
+    else:
+      assert tuf.conf.METADATA_FORMAT == 'der' # Or test code is broken/old.
+      manifest_bad = open(os.path.join(TEST_DATA_DIR, 'flawed_manifests',
+          'vm3_ecu_manifest_signed_with_wrong_key.der'), 'rb').read()
+
+    TestDirector.instance.register_vehicle_manifest(
+        'democar', 'INFOdemocar', manifest_bad)
+
+    # If the latest vehicle manifest is no longer the same as the latest before
+    # the test, then a vehicle manifest has been correctly saved.
+    self.assertNotEqual(previous_vehicle_manifest,
+        inventory.get_last_vehicle_manifest('democar'))
+    # But we must also be sure that the bad manifest has not been saved.
+    self.assertEqual(previous_ecu_manifest,
+        inventory.get_last_ecu_manifest('TCUdemocar'))
+    # Redundant test in case of code changes:
+    self.assertEqual(
+        n_vms_before + 1, len(inventory.get_vehicle_manifests('democar')))
+    self.assertEqual(
+        n_ems_before, len(inventory.get_ecu_manifests('TCUdemocar')))
 
 
 

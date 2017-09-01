@@ -410,15 +410,50 @@ class TestDirector(unittest.TestCase):
         manifest = fobj.read()
 
 
+
+    # Make sure we're starting off with no registered ECU or vehicle manifests,
+    # for any vehicles or ECUs, before the next tests.
+    # (If you move ECU Manifest tests before Vehicle Manifest tests, of course,
+    # the ECU Manifest check here will have to move elsewhere, as the dict
+    # of ECU Manifests registered probably won't be empty.)
+    for ecu_serial in inventory.ecu_manifests:
+      self.assertFalse(inventory.ecu_manifests[ecu_serial])
+    for vin in inventory.vehicle_manifests:
+      self.assertFalse(inventory.vehicle_manifests[vin])
+
+
+
+    # TODO: Register a vehicle manifest with NO ECU Manifests (unlike the one
+    # above) and run these tests after it:
+    # self.assertIn('democar', inventory.vehicle_manifests)
+    # self.assertTrue(inventory.get_vehicle_manifests('democar'))
+    # # No ECU Manifests have been registered yet, since the
+    # self.assertIsNone(inventory.get_last_ecu_manifest('TCUdemocar'))
+    # # This next one is a little subtle: even if there were no ECU Manifests
+    # # submitted in any vehicle manifests yet, the dictionary of ECU Manifests
+    # # provided should still not be totally empty if a Vehicle Manifest has been
+    # # received: it will look something like this, listing an empty list of
+    # # ECU Manifests for each ECU in the car:
+    # # {'ecu1_in_car': [], 'ecu2_in_car': [], ...}
+    # self.assertTrue(inventory.get_all_ecu_manifests_from_vehicle('democar'))
+
+
+
     # Try a normal vehicle manifest submission, expecting success.
     TestDirector.instance.register_vehicle_manifest(
         'democar', 'INFOdemocar', manifest)
 
-
-
-    # TODO: Make sure that the vehicle manifest now shows up in the
+    # Make sure that the vehicle manifest now shows up in the
     # inventorydb, that the various get functions return its data, and that
     # the ECU Manifest within now shows up in the inventorydb.
+    self.assertIn('democar', inventory.vehicle_manifests)
+    self.assertTrue(inventory.get_vehicle_manifests('democar'))
+
+    # TODO: Check that the value of the Vehicle Manifest retrieved from the
+    # inventory db is equivalent to the Vehicle Manifest submitted. This is
+    # fairly easy for JSON, but a little trickier for ASN.1/DER, because it is
+    # stored in the inventory db as JSON-compatible (not as DER, because there
+    # is no longer a particularly good reason to store it as DER at that point).
 
 
 
@@ -587,6 +622,45 @@ class TestDirector(unittest.TestCase):
     # Manifest and any valid ECU Manifests, and reject the untrustworthy
     # ECU Manifest. Call get functions to confirm.
 
+
+
+    # Send a Vehicle Manifest containing an ECU Manifest that has an attack
+    # detected report.
+    previous_vehicle_manifest = inventory.get_last_vehicle_manifest('democar')
+    previous_ecu_manifest = inventory.get_last_ecu_manifest('TCUdemocar')
+    n_vms_before = len(inventory.get_vehicle_manifests('democar'))
+    n_ems_before = len(inventory.get_ecu_manifests('TCUdemocar'))
+
+    if tuf.conf.METADATA_FORMAT == 'json':
+      manifest = json.load(open(os.path.join(TEST_DATA_DIR,
+          'flawed_manifests', 'vm4_attack_detected_in_ecu_manifest.json')))
+    else:
+      assert tuf.conf.METADATA_FORMAT == 'der' # Or test code is broken/old.
+      manifest = open(os.path.join(TEST_DATA_DIR, 'flawed_manifests',
+          'vm4_attack_detected_in_ecu_manifest.der'), 'rb').read()
+
+    TestDirector.instance.register_vehicle_manifest(
+        'democar', 'INFOdemocar', manifest)
+
+    self.assertNotEqual(previous_vehicle_manifest,
+        inventory.get_last_vehicle_manifest('democar'))
+    # But we must also be sure that the bad manifest has not been saved.
+    self.assertNotEqual(previous_ecu_manifest,
+        inventory.get_last_ecu_manifest('TCUdemocar'))
+    # Redundant test in case of code changes:
+    self.assertEqual(
+        n_vms_before + 1, len(inventory.get_vehicle_manifests('democar')))
+    self.assertEqual(
+        n_ems_before + 1, len(inventory.get_ecu_manifests('TCUdemocar')))
+
+    # Expect the attack report string in the registered manifests.
+    self.assertEqual('some attack detected',
+        inventory.get_last_vehicle_manifest('democar')['signed']
+        ['ecu_version_manifests']['TCUdemocar'][0]['signed']
+        ['attacks_detected'])
+
+    self.assertEqual('some attack detected', inventory.get_last_ecu_manifest(
+        'TCUdemocar')['signed']['attacks_detected'])
 
 
 

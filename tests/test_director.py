@@ -191,6 +191,10 @@ class TestDirector(unittest.TestCase):
     self.assertFalse(inventory.vehicle_manifests)
     self.assertFalse(inventory.ecu_manifests)
 
+    # The VIN should be unknown to the inventory db.
+    with self.assertRaises(uptane.UnknownVehicle):
+      inventory.get_last_vehicle_manifest(vin)
+
     # Register a new vehicle and expect success.
     # This also creates a TUF repository to provide Director metadata for
     # that vehicle.
@@ -200,6 +204,8 @@ class TestDirector(unittest.TestCase):
     # Check resulting contents of inventorydb.
     self.assertIn(vin, inventory.ecus_by_vin)
     self.assertIn(vin, inventory.primary_ecus_by_vin)
+    # The VIN is now known, but there should be no Vehicle Manifests yet
+    self.assertIsNone(inventory.get_last_vehicle_manifest(vin))
 
     # Check resulting contents of Director - specifically, the new repository
     # for the vehicle.

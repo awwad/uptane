@@ -104,10 +104,7 @@ def clean_slate(
   global _ecu_serial
   global listener_thread
   global use_can_interface
-  global TEMP_DIRECTORY
-  atexit.register(clean_up) # To delete the temp pinned file and folder after
-  # the script ends
-
+  
   _vin = vin
   _ecu_serial = ecu_serial
   use_can_interface = c_interface
@@ -127,8 +124,6 @@ def clean_slate(
 
   # Load the private key for this Primary ECU.
   load_or_generate_key(use_new_keys)
-  
-  
   # Craft the directory structure for the client directory, including the
   # creation of repository metadata directories, current and previous, putting
   # the pinning.json file in place, etc.
@@ -138,6 +133,8 @@ def clean_slate(
         {demo.IMAGE_REPO_NAME: demo.IMAGE_REPO_ROOT_FNAME,
         demo.DIRECTOR_REPO_NAME: os.path.join(demo.DIRECTOR_REPO_DIR, vin,
         'metadata', 'root' + demo.METADATA_EXTENSION)})
+    atexit.register(clean_up_temp_folder)
+
   except IOError:
     raise Exception(RED + 'Unable to create Primary client directory '
         'structure. Does the Director Repo for the vehicle exist yet?' +
@@ -220,7 +217,8 @@ def create_primary_pinning_file():
 
   fname_to_create = os.path.join(
       demo.DEMO_DIR, 'pinned.json_primary_' + demo.get_random_string(5))
-  TEMP_PINNED_FILE = fname_to_create
+
+  atexit.register(clean_up_temp_file, fname_to_create) # To delete the temp pinned file and folder after
 
   assert 1 == len(pinnings['repositories'][demo.DIRECTOR_REPO_NAME]['mirrors']), 'Config error.'
 
@@ -841,13 +839,19 @@ def looping_update():
     time.sleep(1)
 
 
-def clean_up():
+
+def clean_up_temp_file(filename):
   """
   Deletes the pinned file and temp directory created by the demo
   """
-  if os.path.isfile(TEMP_PINNED_FILE):
-    os.remove(TEMP_PINNED_FILE)
+  if os.path.isfile(filename):
+    os.remove(filename)
 
+
+
+def clean_up_temp_folder():
+  """
+  Deletes the temp directory created by the demo
+  """
   if os.path.isdir(CLIENT_DIRECTORY):
     shutil.rmtree(CLIENT_DIRECTORY)
-

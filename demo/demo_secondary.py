@@ -82,7 +82,6 @@ def clean_slate(
   global nonce
   global CLIENT_DIRECTORY
   global attacks_detected
-  
 
   _vin = vin
   _ecu_serial = ecu_serial
@@ -125,7 +124,9 @@ def clean_slate(
       {demo.IMAGE_REPO_NAME: demo.IMAGE_REPO_ROOT_FNAME,
       demo.DIRECTOR_REPO_NAME: os.path.join(demo.DIRECTOR_REPO_DIR, vin,
       'metadata', 'root' + demo.METADATA_EXTENSION)})
-  atexit.register(clean_up_temp_folder)
+  atexit.register(clean_up_temp_folder) 
+  # To delete the temp_secondary folder 
+  # after script ends
 
   # Configure tuf with the client's metadata directories (where it stores the
   # metadata it has collected from each repository, in subdirectories).
@@ -189,8 +190,7 @@ def create_secondary_pinning_file():
   fname_to_create = os.path.join(
       demo.DEMO_DIR, 'pinned.json_secondary_' + demo.get_random_string(5))
   atexit.register(clean_up_temp_file, fname_to_create) 
-  # To delete the temp pinned file 
-  # and folder after the script ends
+  # To delete the temp pinned file after the script ends
   for repo_name in pinnings['repositories']:
 
     assert 1 == len(pinnings['repositories'][repo_name]['mirrors']), 'Config error.'
@@ -621,8 +621,34 @@ def enforce_jail(fname, expected_containing_dir):
 
 
 
+
+def clean_up_temp_file(filename):
+  """
+  Deletes the pinned file and temp directory created by the demo
+  """
+  if os.path.isfile(filename):
+    os.remove(filename)
+
+
+
+
+
+def clean_up_temp_folder():
+  """
+  Deletes the temp directory created by the demo
+  """
+  if os.path.isdir(CLIENT_DIRECTORY):
+    shutil.rmtree(CLIENT_DIRECTORY)
+
+
+
+
+
 def try_banners():
   preview_all_banners()
+
+
+
 
 
 def looping_update():
@@ -636,18 +662,5 @@ def looping_update():
 
 
 
-def clean_up_temp_file(filename):
-  """
-  Deletes the pinned file and temp directory created by the demo
-  """
-  if os.path.isfile(filename):
-    os.remove(filename)
 
 
-
-def clean_up_temp_folder():
-  """
-  Deletes the temp directory created by the demo
-  """
-  if os.path.isdir(CLIENT_DIRECTORY):
-    shutil.rmtree(CLIENT_DIRECTORY)

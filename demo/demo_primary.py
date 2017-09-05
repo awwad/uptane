@@ -97,14 +97,12 @@ def clean_slate(
     c_interface=False):
   """
   """
-  
   global primary_ecu
   global CLIENT_DIRECTORY
   global _vin
   global _ecu_serial
   global listener_thread
   global use_can_interface
-  
   _vin = vin
   _ecu_serial = ecu_serial
   use_can_interface = c_interface
@@ -218,7 +216,8 @@ def create_primary_pinning_file():
   fname_to_create = os.path.join(
       demo.DEMO_DIR, 'pinned.json_primary_' + demo.get_random_string(5))
 
-  atexit.register(clean_up_temp_file, fname_to_create) # To delete the temp pinned file and folder after
+  atexit.register(clean_up_temp_file, fname_to_create) 
+  # To delete the temp pinned file after script ends
 
   assert 1 == len(pinnings['repositories'][demo.DIRECTOR_REPO_NAME]['mirrors']), 'Config error.'
 
@@ -825,19 +824,6 @@ def listen():
 
 
 
-def try_banners():
-  preview_all_banners()
-
-
-
-def looping_update():
-  while True:
-    try:
-      update_cycle()
-    except Exception as e:
-      print(repr(e))
-    time.sleep(1)
-
 
 
 def clean_up_temp_file(filename):
@@ -849,9 +835,30 @@ def clean_up_temp_file(filename):
 
 
 
+
+
 def clean_up_temp_folder():
   """
   Deletes the temp directory created by the demo
   """
   if os.path.isdir(CLIENT_DIRECTORY):
     shutil.rmtree(CLIENT_DIRECTORY)
+
+
+
+
+
+def try_banners():
+  preview_all_banners()
+
+
+
+
+
+def looping_update():
+  while True:
+    try:
+      update_cycle()
+    except Exception as e:
+      print(repr(e))
+    time.sleep(1)

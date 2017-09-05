@@ -52,6 +52,25 @@ class BadTimeAttestation(Error):
   """
   pass
 
+class FailedToDecodeASN1DER(Error):
+  """
+  Attempted to decode DER-encoded ASN.1 data and failed. It may be that the
+  data has been corrupted, or that the decoding is attempting to use the
+  wrong data type, or that the DER data is encoded with an outdated data
+  definition (an older, incompatible version of Uptane's asn1_definitions.py).
+  """
+  pass
+
+class FailedToEncodeASN1DER(Error):
+  """
+  Attempted to encode a Python dictionary as DER-encoded ASN.1 data and failed.
+  It may be that the data has been corrupted, or that the decoding is
+  attempting to use the wrong data type, or that the DER data is encoded with
+  an outdated data definition (an older, incompatible version of Uptane's
+  asn1_definitions.py).
+  """
+  pass
+
 
 # Logging configuration
 

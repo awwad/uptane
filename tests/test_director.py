@@ -747,6 +747,35 @@ class TestDirector(unittest.TestCase):
 
 
 
+  def test_60_register_vehicle(self):
+    """Tests inventorydb.register_vehicle()"""
+
+    vin = 'democar2'
+
+    # Make sure the vehicle is not known before the test.
+    with self.assertRaises(uptane.UnknownVehicle):
+      inventory.check_vin_registered(vin)
+    self.assertNotIn(vin, inventory.primary_ecus_by_vin)
+
+
+    inventory.register_vehicle(vin, 'tv_primary')
+
+    # Make sure the registration worked.
+    inventory.check_vin_registered(vin)
+    self.assertEqual('tv_primary', inventory.primary_ecus_by_vin[vin])
+
+    # Expect re-registering WITHOUT overwrite on to fail.
+    with self.assertRaises(uptane.Spoofing):
+      inventory.register_vehicle(vin, 'other_ecu', overwrite=False)
+    self.assertEqual('tv_primary', inventory.primary_ecus_by_vin[vin])
+
+    # Expect re-registering with overwrite to succeed.
+    inventory.register_vehicle(vin, 'tv_primary2', overwrite=True)
+    self.assertEqual('tv_primary2', inventory.primary_ecus_by_vin[vin])
+
+
+
+
 
 # Run unit test.
 if __name__ == '__main__':

@@ -57,7 +57,6 @@ LIBUPTANE_LIBRARY_FNAME = os.path.join(
 # Globals
 CLIENT_DIRECTORY_PREFIX = 'temp_primary'
 CLIENT_DIRECTORY = None
-TEMP_PINNED_FILE = ''
 #_client_directory_name = 'temp_primary' # name for this Primary's directory
 _vin = '111'
 _ecu_serial = '11111'

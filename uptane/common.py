@@ -91,15 +91,13 @@ def sign_signable(
 
   # The below was partially modeled after tuf.repository_lib.sign_metadata()
 
-  signatures = []
-
   for signing_key in keys_to_sign_with:
 
     tuf.formats.ANYKEY_SCHEMA.check_match(signing_key)
 
     # If we already have a signature with this keyid, skip.
-    if signing_key['keyid'] in [key['keyid'] for key in signatures]:
-      print('Already signed with this key.')
+    if signing_key['keyid'] in [sig['keyid'] for sig in signable['signatures']]:
+      # TODO: Consider adding logging to log this event.
       continue
 
     # If the given key was public, raise a FormatError.

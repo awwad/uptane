@@ -14,8 +14,6 @@ import logging, time # both for logging
 import tuf.conf
 tuf.conf.METADATA_FORMAT = 'der'
 
-# FIXME: I actually think other modules rely on the `os` imported here and
-# not just for getcwd
 import os # for getcwd only
 
 from six.moves import getcwd

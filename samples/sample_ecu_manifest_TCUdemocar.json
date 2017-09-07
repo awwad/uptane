@@ -1,0 +1,25 @@
+{
+ "signatures": [
+  {
+   "keyid": "49309f114b857e4b29bfbff1c1c75df59f154fbc45539b2eb30c8a867843b2cb",
+   "method": "ed25519",
+   "sig": "609a31b7e6b67208c37478603d5e6bdfa6c926124a20424f249505368fe2125c192f651f47aa21ded1b2ffef1d835ff0293df31f6a81a279da3f1fe9b0bb530b"
+  }
+ ],
+ "signed": {
+  "attacks_detected": "",
+  "ecu_serial": "TCUdemocar",
+  "installed_image": {
+   "fileinfo": {
+    "hashes": {
+     "sha256": "6b9f987226610bfed08b824c93bf8b2f59521fce9a2adef80c495f363c1c9c44",
+     "sha512": "706c283972c5ae69864b199e1cdd9b4b8babc14f5a454d0fd4d3b35396a04ca0b40af731671b74020a738b5108a78deb032332c36d6ae9f31fae2f8a70f7e1ce"
+    },
+    "length": 37
+   },
+   "filepath": "/secondary_firmware.txt"
+  },
+  "previous_timeserver_time": "2017-06-16T18:10:03Z",
+  "timeserver_time": "2017-06-16T18:10:03Z"
+ }
+}

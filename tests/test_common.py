@@ -14,6 +14,7 @@ import uptane # Import before TUF modules; may change tuf.conf values.
 
 import unittest
 import os.path
+import shutil # for rmtree
 import copy
 import json
 
@@ -32,6 +33,16 @@ keys_pri = {}
 keys_pub = {}
 
 SAMPLES_DIR = os.path.join(uptane.WORKING_DIR, 'samples')
+TEST_DATA_DIR = os.path.join(uptane.WORKING_DIR, 'tests', 'test_data')
+TEST_DIRECTOR_METADATA_DIR = os.path.join(TEST_DATA_DIR, 'director_metadata')
+TEST_IMAGE_REPO_METADATA_DIR = os.path.join(
+    TEST_DATA_DIR, 'image_repo_metadata')
+TEST_DIRECTOR_ROOT_FNAME = os.path.join(
+    TEST_DIRECTOR_METADATA_DIR, 'root.' + tuf.conf.METADATA_FORMAT)
+TEST_IMAGE_REPO_ROOT_FNAME = os.path.join(
+    TEST_IMAGE_REPO_METADATA_DIR, 'root.' + tuf.conf.METADATA_FORMAT)
+TEST_PINNING_FNAME = os.path.join(TEST_DATA_DIR, 'pinned.json')
+TEMP_CLIENT_DIR = os.path.join(TEST_DATA_DIR, 'temp_test_common')
 
 
 
@@ -361,9 +372,70 @@ class TestCommon(unittest.TestCase):
 
   def test_create_directory_structure_for_client(self):
     """"""
-    # This is tested by test_primary and test_secondary.
-    # TODO: Test more thoroughly later.
-    pass
+    # This is tested functionally by test_primary and test_secondary.
+
+    if os.path.exists(TEMP_CLIENT_DIR):
+      shutil.rmtree(TEMP_CLIENT_DIR)
+
+    assert not os.path.exists(TEMP_CLIENT_DIR), 'Test code is flawed!'
+
+    # Set up a client directory.
+    uptane.common.create_directory_structure_for_client(
+        TEMP_CLIENT_DIR,
+        TEST_PINNING_FNAME,
+        {'imagerepo': TEST_IMAGE_REPO_ROOT_FNAME,
+        'director': TEST_DIRECTOR_ROOT_FNAME})
+
+    # Ensure that the expected files and directories have been created.
+    self.assertTrue(os.path.exists(TEMP_CLIENT_DIR))
+    self.assertTrue(os.path.exists(os.path.join(
+        TEMP_CLIENT_DIR, 'metadata', 'pinned.json')))
+    self.assertTrue(os.path.exists(os.path.join(
+        TEMP_CLIENT_DIR, 'metadata', 'director', 'current')))
+    self.assertTrue(os.path.exists(os.path.join(
+        TEMP_CLIENT_DIR, 'metadata', 'director', 'current', 'root.' +
+        tuf.conf.METADATA_FORMAT)))
+    self.assertTrue(os.path.exists(os.path.join(
+        TEMP_CLIENT_DIR, 'metadata', 'director', 'previous')))
+    self.assertTrue(os.path.exists(os.path.join(
+        TEMP_CLIENT_DIR, 'metadata', 'imagerepo', 'current')))
+    self.assertTrue(os.path.exists(os.path.join(
+        TEMP_CLIENT_DIR, 'metadata', 'imagerepo', 'current', 'root.' +
+        tuf.conf.METADATA_FORMAT)))
+    self.assertTrue(os.path.exists(os.path.join(
+        TEMP_CLIENT_DIR, 'metadata', 'imagerepo', 'previous')))
+
+    # TODO: Consider more unit testing (check other results of the call -
+    # perhaps that the contents of pinned.json can be parsed?).
+
+
+
+    # Set the same client directory up again to test being able to delete
+    # existing directory and start over.
+    uptane.common.create_directory_structure_for_client(
+        TEMP_CLIENT_DIR,
+        TEST_PINNING_FNAME,
+        {'imagerepo': TEST_IMAGE_REPO_ROOT_FNAME,
+        'director': TEST_DIRECTOR_ROOT_FNAME})
+
+    # Ensure that the expected files and directories continue to exist.
+    self.assertTrue(os.path.exists(TEMP_CLIENT_DIR))
+    self.assertTrue(os.path.exists(os.path.join(
+        TEMP_CLIENT_DIR, 'metadata', 'pinned.json')))
+    self.assertTrue(os.path.exists(os.path.join(
+        TEMP_CLIENT_DIR, 'metadata', 'director', 'current')))
+    self.assertTrue(os.path.exists(os.path.join(
+        TEMP_CLIENT_DIR, 'metadata', 'director', 'current', 'root.' +
+        tuf.conf.METADATA_FORMAT)))
+    self.assertTrue(os.path.exists(os.path.join(
+        TEMP_CLIENT_DIR, 'metadata', 'director', 'previous')))
+    self.assertTrue(os.path.exists(os.path.join(
+        TEMP_CLIENT_DIR, 'metadata', 'imagerepo', 'current')))
+    self.assertTrue(os.path.exists(os.path.join(
+        TEMP_CLIENT_DIR, 'metadata', 'imagerepo', 'current', 'root.' +
+        tuf.conf.METADATA_FORMAT)))
+    self.assertTrue(os.path.exists(os.path.join(
+        TEMP_CLIENT_DIR, 'metadata', 'imagerepo', 'previous')))
 
 
 

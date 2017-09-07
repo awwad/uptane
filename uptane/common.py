@@ -109,7 +109,7 @@ def sign_signable(
 
     # We should already be guaranteed to have a supported key type due to
     # the ANYKEY_SCHEMA.check_match call above. Defensive programming.
-    if signing_key['keytype'] not in SUPPORTED_KEY_TYPES:
+    if signing_key['keytype'] not in SUPPORTED_KEY_TYPES: # pragma no cover
       raise uptane.Error(
           'Unsupported key type: ' + repr(signing_key['keytype']))
 

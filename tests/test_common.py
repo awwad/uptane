@@ -3,7 +3,7 @@
   test_common.py
 
 <Purpose>
-  Unit testing for uptane/common.py
+  Unit and integration testing for uptane/common.py
 
 <Copyright>
   See LICENSE for licensing information.
@@ -14,12 +14,15 @@ import uptane # Import before TUF modules; may change tuf.conf values.
 
 import unittest
 import os.path
+import copy
+import json
 
 import tuf
 import tuf.formats
 import tuf.conf
 
 import uptane.common as common
+import uptane.encoding.asn1_codec as asn1_codec
 
 import demo # for generate_key, import_public_key, import_private_key
 
@@ -28,9 +31,7 @@ import demo # for generate_key, import_public_key, import_private_key
 keys_pri = {}
 keys_pub = {}
 
-# TEST_DATA_DIR = os.path.join(uptane.WORKING_DIR, 'tests', 'test_data')
-# TEST_DIRECTOR_DIR = os.path.join(TEST_DATA_DIR, 'temp_test_director')
-# SAMPLES_DIR = os.path.join(uptane.WORKING_DIR, 'samples')
+SAMPLES_DIR = os.path.join(uptane.WORKING_DIR, 'samples')
 
 
 
@@ -48,9 +49,10 @@ class TestCommon(unittest.TestCase):
     class.
     """
     # Load a public and corresponding private key to use in testing.
-    for key in ['secondary']:
+    for key in ['secondary', 'primary', 'timeserver']:
       keys_pri[key] = demo.import_private_key(key)
       keys_pub[key] = demo.import_public_key(key)
+      assert keys_pri[key]['keyid'] == keys_pub[key]['keyid'], 'Bad test data!'
 
 
 

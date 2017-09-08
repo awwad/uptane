@@ -441,6 +441,42 @@ class TestCommon(unittest.TestCase):
 
 
 
+  def test_scrub_filename(self):
+
+    self.assertEqual(os.path.abspath(os.path.join('d', 'f')),
+        common.scrub_filename('f', 'd'))
+    self.assertEqual(os.path.abspath(os.path.join('/d', 'f')),
+        common.scrub_filename('f', '/d'))
+    self.assertEqual(os.path.abspath(os.path.join('/d/e', 'f')),
+        common.scrub_filename('f', '/d/e'))
+
+    # TODO: Uncomment the following code once scrub_filename rewrite PR is
+    # merged that changes the errors raised by scrub_filename.
+    # # Test argument format.
+    # with self.assertRaises(tuf.FormatError):
+    #   common.scrub_filename(2, 1)
+    # with self.assertRaises(tuf.FormatError):
+    #   common.scrub_filename('a', 1)
+    # with self.assertRaises(tuf.FormatError):
+    #   common.scrub_filename(2, 'a')
+    # # Test for unacceptable characters in the filename.
+    # with self.assertRaises(uptane.Error):
+    #   common.scrub_filename('b~', 'a')
+    # with self.assertRaises(uptane.Error):
+    #   common.scrub_filename('/b', 'a')
+    # with self.assertRaises(uptane.Error):
+    #   common.scrub_filename('$b', 'a')
+    # with self.assertRaises(uptane.Error):
+    #   common.scrub_filename('\\b', 'a')
+    # with self.assertRaises(uptane.Error):
+    #   common.scrub_filename('../b', 'a')
+    # with self.assertRaises(uptane.Error):
+    #   common.scrub_filename('..b', 'a')
+
+
+
+
+
 # Run unit test.
 if __name__ == '__main__':
   unittest.main()

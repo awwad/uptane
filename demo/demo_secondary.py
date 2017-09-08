@@ -34,6 +34,7 @@ from uptane import GREEN, RED, YELLOW, ENDCOLORS
 from demo.uptane_banners import *
 import tuf.keys
 import tuf.repository_tool as rt
+import atexit
 #import tuf.client.updater
 
 import os # For paths and makedirs
@@ -47,7 +48,7 @@ from six.moves import xmlrpc_client
 
 # Globals
 CLIENT_DIRECTORY_PREFIX = 'temp_secondary' # name for this secondary's directory
-client_directory = None
+CLIENT_DIRECTORY = None
 _vin = '111'
 _ecu_serial = '22222'
 _primary_host = demo.PRIMARY_SERVER_HOST
@@ -78,7 +79,7 @@ def clean_slate(
   global _primary_host
   global _primary_port
   global nonce
-  global client_directory
+  global CLIENT_DIRECTORY
   global attacks_detected
 
   _vin = vin
@@ -90,7 +91,7 @@ def clean_slate(
   if primary_port is not None:
     _primary_port = primary_port
 
-  client_directory = os.path.join(
+  CLIENT_DIRECTORY = os.path.join(
       uptane.WORKING_DIR, CLIENT_DIRECTORY_PREFIX + demo.get_random_string(5))
 
   # Load the public timeserver key.
@@ -114,19 +115,21 @@ def clean_slate(
   tuf.formats.ISO8601_DATETIME_SCHEMA.check_match(clock)
 
 
-
-
   # Create directory structure for the client and copy the root files from the
-  # repositories.
+  # repositories. First, schedule the deletion of this directory to occur when
+  # the script ends (so that it's deleted even if an error occurs here).
+  atexit.register(clean_up_temp_folder)
   uptane.common.create_directory_structure_for_client(
-      client_directory, create_secondary_pinning_file(),
+      CLIENT_DIRECTORY, create_secondary_pinning_file(),
       {demo.IMAGE_REPO_NAME: demo.IMAGE_REPO_ROOT_FNAME,
       demo.DIRECTOR_REPO_NAME: os.path.join(demo.DIRECTOR_REPO_DIR, vin,
       'metadata', 'root' + demo.METADATA_EXTENSION)})
 
+
+
   # Configure tuf with the client's metadata directories (where it stores the
   # metadata it has collected from each repository, in subdirectories).
-  tuf.conf.repository_directory = client_directory # This setting should probably be called client_directory instead, post-TAP4.
+  tuf.conf.repository_directory = CLIENT_DIRECTORY # This setting should probably be called CLIENT_DIRECTORY instead, post-TAP4.
 
 
 
@@ -134,7 +137,7 @@ def clean_slate(
   # This also generates a nonce to use in the next time query, sets the initial
   # firmware fileinfo, etc.
   secondary_ecu = secondary.Secondary(
-      full_client_dir=client_directory,
+      full_client_dir=CLIENT_DIRECTORY,
       director_repo_name=demo.DIRECTOR_REPO_NAME,
       vin=_vin,
       ecu_serial=_ecu_serial,
@@ -179,20 +182,20 @@ def create_secondary_pinning_file():
 
   Returns the filename of the created file.
   """
-
   pinnings = json.load(
       open(demo.DEMO_SECONDARY_PINNING_FNAME, 'r', encoding='utf-8'))
 
   fname_to_create = os.path.join(
       demo.DEMO_DIR, 'pinned.json_secondary_' + demo.get_random_string(5))
-
+  atexit.register(clean_up_temp_file, fname_to_create)
+  # To delete the temp pinned file after the script ends
   for repo_name in pinnings['repositories']:
 
     assert 1 == len(pinnings['repositories'][repo_name]['mirrors']), 'Config error.'
 
     mirror = pinnings['repositories'][repo_name]['mirrors'][0]
 
-    mirror = mirror.replace('<full_client_dir>', client_directory)
+    mirror = mirror.replace('<full_client_dir>', CLIENT_DIRECTORY)
 
     pinnings['repositories'][repo_name]['mirrors'][0] = mirror
 
@@ -406,7 +409,7 @@ def update_cycle():
     return
 
   # Write the downloaded image binary data to disk.
-  unverified_targets_dir = os.path.join(client_directory, 'unverified_targets')
+  unverified_targets_dir = os.path.join(CLIENT_DIRECTORY, 'unverified_targets')
   if not os.path.exists(unverified_targets_dir):
     os.mkdir(unverified_targets_dir)
   with open(os.path.join(unverified_targets_dir, image_fname), 'wb') as fobj:
@@ -453,7 +456,7 @@ def update_cycle():
   # Inspect the contents of 'image_fname' and search for the string: "evil
   # content".  If this single string is found in any of the images downloaded,
   # print a BANNER_COMPROMISED banner.
-  image_filepath = os.path.join(client_directory, 'unverified_targets', image_fname)
+  image_filepath = os.path.join(CLIENT_DIRECTORY, 'unverified_targets', image_fname)
 
   with open(image_filepath, 'rb') as file_object:
     if file_object.read() == b'evil content':
@@ -476,11 +479,11 @@ def update_cycle():
   # place or something, here is where to do it.)
   # 1. Move the downloaded image from the unverified targets subdirectory to
   #    the root of the client directory.
-  if os.path.exists(os.path.join(client_directory, image_fname)):
-    os.remove(os.path.join(client_directory, image_fname))
+  if os.path.exists(os.path.join(CLIENT_DIRECTORY, image_fname)):
+    os.remove(os.path.join(CLIENT_DIRECTORY, image_fname))
   os.rename(
-      os.path.join(client_directory, 'unverified_targets', image_fname),
-      os.path.join(client_directory, image_fname))
+      os.path.join(CLIENT_DIRECTORY, 'unverified_targets', image_fname),
+      os.path.join(CLIENT_DIRECTORY, image_fname))
 
   # 2. Set the fileinfo in the secondary_ecu object to the target info for the
   #    new firmware.
@@ -497,7 +500,7 @@ def update_cycle():
     print('The contents of the newly-installed firmware with filename ' +
         repr(expected_target_info['filepath']) + ' are:')
     print('---------------------------------------------------------')
-    print(open(os.path.join(client_directory, image_fname)).read())
+    print(open(os.path.join(CLIENT_DIRECTORY, image_fname)).read())
     print('---------------------------------------------------------')
 
 
@@ -616,8 +619,34 @@ def enforce_jail(fname, expected_containing_dir):
 
 
 
+
+def clean_up_temp_file(filename):
+  """
+  Deletes the pinned file and temp directory created by the demo
+  """
+  if os.path.isfile(filename):
+    os.remove(filename)
+
+
+
+
+
+def clean_up_temp_folder():
+  """
+  Deletes the temp directory created by the demo
+  """
+  if os.path.isdir(CLIENT_DIRECTORY):
+    shutil.rmtree(CLIENT_DIRECTORY)
+
+
+
+
+
 def try_banners():
   preview_all_banners()
+
+
+
 
 
 def looping_update():

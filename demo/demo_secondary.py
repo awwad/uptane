@@ -49,7 +49,6 @@ from six.moves import xmlrpc_client
 # Globals
 CLIENT_DIRECTORY_PREFIX = 'temp_secondary' # name for this secondary's directory
 CLIENT_DIRECTORY = None
-TEMP_PINNED_FILE = None
 _vin = '111'
 _ecu_serial = '22222'
 _primary_host = demo.PRIMARY_SERVER_HOST
@@ -183,7 +182,6 @@ def create_secondary_pinning_file():
 
   Returns the filename of the created file.
   """
-  global TEMP_PINNED_FILE
   pinnings = json.load(
       open(demo.DEMO_SECONDARY_PINNING_FNAME, 'r', encoding='utf-8'))
 

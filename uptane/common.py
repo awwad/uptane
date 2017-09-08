@@ -44,6 +44,11 @@ def sign_signable(
     signable:
       An object with a 'signed' dictionary and a 'signatures' list:
       conforms to tuf.formats.SIGNABLE_SCHEMA
+      This may already include signatures, in which case signatures are added.
+      Signatures from the same key (that is, two signatures listing the same
+      keyid) will never be produced with this function (whether because a
+      key is provided twice in keys_to_sign_with, or because a key in
+      keys_to_sign_with has already signed this signable).
 
     keys_to_sign_with:
       A list whose elements must conform to tuf.formats.ANYKEY_SCHEMA.
@@ -96,9 +101,18 @@ def sign_signable(
 
     tuf.formats.ANYKEY_SCHEMA.check_match(signing_key)
 
+    # Populate a list of the keyids that have already signed, to prevent
+    # duplicate signatures.
+    keyids_that_already_signed = []
+    for sig in signable['signatures']:
+      if sig['keyid'] not in keyids_that_already_signed:
+        keyids_that_already_signed.append(sig['keyid'])
+
     # If we already have a signature with this keyid, skip.
-    if signing_key['keyid'] in [sig['keyid'] for sig in signable['signatures']]:
-      # TODO: Consider adding logging to log this event.
+    if signing_key['keyid'] in keyids_that_already_signed:
+      uptane.logger.debug('Skipping signing by key with keyid ' +
+          repr(signing_key['keyid']) + ' because there is already a signature '
+          'using that keyid.')
       continue
 
     # If the given key was public, raise a FormatError.
@@ -117,6 +131,7 @@ def sign_signable(
     signable['signatures'].append(sign_over_metadata(
         signing_key, signable['signed'], datatype=datatype,
         metadata_format=metadata_format))
+    keyids_that_already_signed.append(signing_key['keyid'])
 
   uptane.formats.ANY_SIGNABLE_UPTANE_METADATA_SCHEMA.check_match(signable)
 

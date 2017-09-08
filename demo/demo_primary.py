@@ -123,7 +123,10 @@ def clean_slate(
   load_or_generate_key(use_new_keys)
   # Craft the directory structure for the client directory, including the
   # creation of repository metadata directories, current and previous, putting
-  # the pinning.json file in place, etc.
+  # the pinning.json file in place, etc. First, schedule the deletion of this
+  # directory to occur when the script ends (so that it's deleted even if an
+  # error occurs here).
+  atexit.register(clean_up_temp_folder)
   try:
     uptane.common.create_directory_structure_for_client(
         CLIENT_DIRECTORY, create_primary_pinning_file(),
@@ -215,8 +218,8 @@ def create_primary_pinning_file():
   fname_to_create = os.path.join(
       demo.DEMO_DIR, 'pinned.json_primary_' + demo.get_random_string(5))
 
-  atexit.register(clean_up_temp_file, fname_to_create) 
-  # To delete the temp pinned file after script ends
+  # Trigger deletion of temp_secondary* folder after demo script ends
+  atexit.register(clean_up_temp_file, fname_to_create)
 
   assert 1 == len(pinnings['repositories'][demo.DIRECTOR_REPO_NAME]['mirrors']), 'Config error.'
 

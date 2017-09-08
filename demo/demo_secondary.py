@@ -115,17 +115,17 @@ def clean_slate(
   tuf.formats.ISO8601_DATETIME_SCHEMA.check_match(clock)
 
 
-
   # Create directory structure for the client and copy the root files from the
-  # repositories.
+  # repositories. First, schedule the deletion of this directory to occur when
+  # the script ends (so that it's deleted even if an error occurs here).
+  atexit.register(clean_up_temp_folder)
   uptane.common.create_directory_structure_for_client(
       CLIENT_DIRECTORY, create_secondary_pinning_file(),
       {demo.IMAGE_REPO_NAME: demo.IMAGE_REPO_ROOT_FNAME,
       demo.DIRECTOR_REPO_NAME: os.path.join(demo.DIRECTOR_REPO_DIR, vin,
       'metadata', 'root' + demo.METADATA_EXTENSION)})
-  atexit.register(clean_up_temp_folder) 
-  # To delete the temp_secondary folder 
-  # after script ends
+
+
 
   # Configure tuf with the client's metadata directories (where it stores the
   # metadata it has collected from each repository, in subdirectories).
@@ -187,7 +187,7 @@ def create_secondary_pinning_file():
 
   fname_to_create = os.path.join(
       demo.DEMO_DIR, 'pinned.json_secondary_' + demo.get_random_string(5))
-  atexit.register(clean_up_temp_file, fname_to_create) 
+  atexit.register(clean_up_temp_file, fname_to_create)
   # To delete the temp pinned file after the script ends
   for repo_name in pinnings['repositories']:
 
@@ -657,8 +657,3 @@ def looping_update():
       print(repr(e))
       pass
     time.sleep(1)
-
-
-
-
-

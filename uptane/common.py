@@ -78,7 +78,8 @@ def sign_signable(
     tuf.FormatError if the provided key is not the correct format or lacks a
     private element.
 
-    uptane.Error if the key type is not in the SUPPORTED_KEY_TYPES for Uptane.
+    uptane.Error if the key type is not in the SUPPORTED_KEY_TYPES for Uptane
+    or tuf.conf.METADATA_FORMAT is neither 'json' nor 'der'.
 
   <Side Effects>
     Adds a signature to the provided signable.
@@ -109,7 +110,7 @@ def sign_signable(
 
     # We should already be guaranteed to have a supported key type due to
     # the ANYKEY_SCHEMA.check_match call above. Defensive programming.
-    if signing_key['keytype'] not in SUPPORTED_KEY_TYPES: # pragma no cover
+    if signing_key['keytype'] not in SUPPORTED_KEY_TYPES: # pragma: no cover
       raise uptane.Error(
           'Unsupported key type: ' + repr(signing_key['keytype']))
 
@@ -249,8 +250,9 @@ def sign_over_metadata(
         {'signed': data, 'signatures': []}, only_signed=True, datatype=datatype)
     data = hashlib.sha256(data).digest()
 
-  else: # pragma no cover
-    raise uptane.Error('Unsupported metadata format: ' + repr(metadata_format))
+  else: # pragma: no cover
+    raise uptane.Error('Unsupported metadata format: ' + repr(metadata_format) +
+        '; the supported formats are: "der" and "json".')
 
 
   return tuf.keys.create_signature(key_dict, data)
@@ -351,6 +353,8 @@ def verify_signature_over_metadata(
     tuf.UnknownMethodError.  Raised if the signing method used by
     'signature' is not one supported.
 
+    uptane.Error, if tuf.conf.METADATA_FORMAT is neither 'json' nor 'der'.
+
   <Side Effects>
     The cryptography library specified in 'tuf.conf' is called to do the actual
     verification. When in 'der' mode, argument data is converted into ASN.1/DER
@@ -376,8 +380,9 @@ def verify_signature_over_metadata(
         {'signed': data, 'signatures': []}, only_signed=True, datatype=datatype)
     data = hashlib.sha256(data).digest()
 
-  else: # pragma no cover
-    raise tuf.Error('Unsupported metadata format: ' + repr(metadata_format))
+  else: # pragma: no cover
+    raise uptane.Error('Unsupported metadata format: ' + repr(metadata_format) +
+        '; the supported formats are: "der" and "json".')
 
 
   return tuf.keys.verify_signature(key_dict, signature, data)

@@ -503,27 +503,49 @@ def create_directory_structure_for_client(
 
 def scrub_filename(fname, expected_containing_dir):
   """
-  DO NOT ASSUME THAT THIS TEMPORARY FUNCTION IS SECURE.
+  DO NOT ASSUME THAT THIS FUNCTION IS SECURE.
 
-  Performs basic scrubbing to try to ensure that the filename provided is
-  actually just a plain filename (no pathing), so that it cannot specify a file
-  that is not in the provided directory.
+  <Purpose>
+    Returns a scrubbed version of os.path.join(expected_containing_dir, fname),
+    the filepath identifying where fname would be if you placed fname in
+    expected_containing_dir.
 
-  May break (exception trigger-happy) if there's a softlink somewhere in the
-  working directory path.
+    Performs basic scrubbing to try to ensure that the filename provided is
+    actually just a plain filename (no pathing), so that the filepath returned
+    by this function cannot specify a file that is not in the provided
+    directory.
 
-  Returns an absolute path that was confirmed to be inside
-  expected_containing_dir.
+    May break (exception trigger-happy) if there's a softlink somewhere in the
+    working directory path.
+
+  <Exceptions>
+    uptane.Error
+      if the filename provided contains disallowed strings ('..', '/', '$',
+      '~', '\\') or if, when fname is joined to expected_containing_dir, the
+      resulting path would not point to within expected_containing_dir.
+
+    tuf.FormatError
+      if fname or expected_containing_dir are not path strings
+
+  <Returns>
+    Returns an absolute path that was confirmed to be inside
+    expected_containing_dir.
   """
-  # Assert no tricksy characters. (Improvised, not to be trusted)
-  assert '..' not in fname and '/' not in fname and '$' not in fname and \
-      '~' not in fname and b'\\' not in fname.encode('unicode-escape'), \
-      'Unacceptable string: ' + fname
+
+  tuf.formats.RELPATH_SCHEMA.check_match(fname)
+  tuf.formats.RELPATH_SCHEMA.check_match(expected_containing_dir)
+
+  # Detect potential jailbreaking characters. (Improvised, not to be trusted)
+  for badstr in ['..', '/', '$', '~', '\\']:
+    if badstr in fname:
+      raise uptane.Error('Unscrubbable filename: ' + repr(fname) + '; '
+          '/, $, ~, .., and \\ characters are not allowed.')
 
   # Make sure it's in the expected directory.
   abs_fname = os.path.abspath(os.path.join(expected_containing_dir, fname))
-  if not abs_fname.startswith(os.path.abspath(expected_containing_dir)):
-    raise ValueError('Expected a plain filename. Was given one that had '
+  if not abs_fname.startswith(   # pragma: no cover
+    os.path.abspath(expected_containing_dir)):
+    raise uptane.Error('Expected a plain filename. Was given one that had '
         'pathing specified that put it in a different, unexpected directory. '
         'Filename was: ' + fname)
 

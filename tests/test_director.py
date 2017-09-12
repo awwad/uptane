@@ -191,6 +191,10 @@ class TestDirector(unittest.TestCase):
     self.assertFalse(inventory.vehicle_manifests)
     self.assertFalse(inventory.ecu_manifests)
 
+    # The VIN should be unknown to the inventory db.
+    with self.assertRaises(uptane.UnknownVehicle):
+      inventory.get_last_vehicle_manifest(vin)
+
     # Register a new vehicle and expect success.
     # This also creates a TUF repository to provide Director metadata for
     # that vehicle.
@@ -200,6 +204,8 @@ class TestDirector(unittest.TestCase):
     # Check resulting contents of inventorydb.
     self.assertIn(vin, inventory.ecus_by_vin)
     self.assertIn(vin, inventory.primary_ecus_by_vin)
+    # The VIN is now known, but there should be no Vehicle Manifests yet
+    self.assertIsNone(inventory.get_last_vehicle_manifest(vin))
 
     # Check resulting contents of Director - specifically, the new repository
     # for the vehicle.
@@ -230,12 +236,6 @@ class TestDirector(unittest.TestCase):
 
     vin = 'democar'
 
-    # Expect no registered ECUs or manifests yet.
-    self.assertFalse(inventory.ecu_public_keys)
-    self.assertFalse(inventory.vehicle_manifests[vin])
-    self.assertFalse(inventory.ecu_manifests)
-    self.assertIsNone(inventory.primary_ecus_by_vin[vin])
-
     primary_serial = 'INFOdemocar'
     secondary_serial = 'TCUdemocar'
 
@@ -250,6 +250,26 @@ class TestDirector(unittest.TestCase):
         keys_pub['secondary'], # ecu_key
         vin,                   # vin
         False]                 # is_primary
+
+
+    # Expect no registered ECUs or manifests yet.
+    self.assertFalse(inventory.ecu_public_keys)
+    self.assertFalse(inventory.vehicle_manifests[vin])
+    self.assertFalse(inventory.ecu_manifests)
+    self.assertIsNone(inventory.primary_ecus_by_vin[vin])
+    with self.assertRaises(uptane.UnknownECU):
+      inventory.get_ecu_public_key(primary_serial)
+    with self.assertRaises(uptane.UnknownECU):
+      inventory.get_ecu_public_key(secondary_serial)
+    with self.assertRaises(uptane.UnknownECU):
+      inventory.get_ecu_manifests(primary_serial)
+    with self.assertRaises(uptane.UnknownECU):
+      inventory.get_ecu_manifests(secondary_serial)
+    with self.assertRaises(uptane.UnknownECU):
+      inventory.get_last_ecu_manifest(primary_serial)
+    with self.assertRaises(uptane.UnknownECU):
+      inventory.get_last_ecu_manifest(secondary_serial)
+
 
 
     # Expect these calls to fail due to invalid argument format.
@@ -286,6 +306,16 @@ class TestDirector(unittest.TestCase):
     self.assertIn(primary_serial, inventory.ecu_public_keys)
     self.assertEqual(
         keys_pub['primary'], inventory.ecu_public_keys[primary_serial])
+    self.assertEqual(
+        keys_pub['primary'], inventory.get_ecu_public_key(primary_serial))
+
+    # This should be empty, but should not raise an UnknownECU error now.
+    self.assertFalse(inventory.get_ecu_manifests(primary_serial))
+    self.assertIsNone(inventory.get_last_ecu_manifest(primary_serial))
+
+    # Try registering the Primary again, expecting a Spoofing error.
+    with self.assertRaises(uptane.Spoofing):
+      TestDirector.instance.register_ecu_serial(*GOOD_PRIMARY_ARGS)
 
 
     # Register a Secondary.
@@ -294,25 +324,49 @@ class TestDirector(unittest.TestCase):
     # Test result of Secondary registration in inventory.
     # (The next two checks are redundant and defend possible future changes.)
     self.assertIn(vin, inventory.ecus_by_vin)
+
     self.assertIn(secondary_serial, inventory.ecus_by_vin[vin])
 
     self.assertIn(secondary_serial, inventory.ecu_public_keys)
+
     self.assertEqual(
         keys_pub['secondary'], inventory.ecu_public_keys[secondary_serial])
 
+    self.assertEqual(
+        keys_pub['secondary'], inventory.get_ecu_public_key(secondary_serial))
 
-    # Due to a workaround for the demo website, the next checks will not work,
-    # so we skip them. Currently, re-registering the same ECU is simply
-    # ignored.
-    # TODO: Resolve this issue: allow Spoofing errors to rise if an attempt is
-    #       made to register an ECU Serial that is already registered, instead
-    #       of ignoring the attempt.
-    # # Expect these attempts to re-register the same ECUs to raise spoofing
-    # # errors.
-    # with self.assertRaises(uptane.Spoofing):
-    #   TestDirector.instance.register_ecu_serial(*GOOD_PRIMARY_ARGS)
-    # with self.assertRaises(uptane.Spoofing):
-    #   TestDirector.instance.register_ecu_serial(*GOOD_SECONDARY_ARGS)
+    # There should be no ECU Manifests listed for the freshly-registered
+    # ECU, but because the ECU is registered, we should not get an UnknownECU
+    # error now:
+    self.assertFalse(inventory.get_ecu_manifests(secondary_serial))
+    self.assertIsNone(inventory.get_last_ecu_manifest(secondary_serial))
+
+
+    # Try registering the Secondary again. We expect a Spoofing error
+    # as with the Primary. We'll also make sure the registration didn't happen
+    # regardless of the error, for historical reasons.
+    n_ecu_keys = len(inventory.ecu_public_keys)
+    # If this next line fails, there's likely a coding error in this test code.
+    self.assertEqual(
+        keys_pub['secondary'], inventory.get_ecu_public_key(secondary_serial))
+
+    with self.assertRaises(uptane.Spoofing):
+      TestDirector.instance.register_ecu_serial(*GOOD_SECONDARY_ARGS)
+
+    self.assertEqual(n_ecu_keys, len(inventory.ecu_public_keys))
+    # Now, if this fails, the second registration attempt has succeeded, and it
+    # should NOT have! Registered keys should not be accidentally overwritten
+    # with new keys.
+    self.assertEqual(
+        keys_pub['secondary'], inventory.get_ecu_public_key(secondary_serial))
+
+
+    # Expect these attempts to re-register the same ECUs to raise spoofing
+    # errors.
+    with self.assertRaises(uptane.Spoofing):
+      TestDirector.instance.register_ecu_serial(*GOOD_PRIMARY_ARGS)
+    with self.assertRaises(uptane.Spoofing):
+      TestDirector.instance.register_ecu_serial(*GOOD_SECONDARY_ARGS)
 
 
 
@@ -690,6 +744,58 @@ class TestDirector(unittest.TestCase):
 
   def test_40_add_target_for_ecu(self):
     pass
+
+
+
+
+
+  def test_60_register_vehicle(self):
+    """Tests inventorydb.register_vehicle(), along with check_vin_registered()
+    and helper function _check_registration_is_sane()."""
+
+    vin = 'democar2'
+
+    # Make sure the vehicle is not known before the test.
+    with self.assertRaises(uptane.UnknownVehicle):
+      inventory.check_vin_registered(vin)
+    self.assertNotIn(vin, inventory.primary_ecus_by_vin)
+
+
+    # Try various invalid arguments.
+    with self.assertRaises(tuf.FormatError):
+      inventory.register_vehicle(5, 'other_ecu', overwrite=False)
+
+    with self.assertRaises(tuf.FormatError):
+      inventory.register_vehicle(vin, 5, overwrite=False)
+
+    with self.assertRaises(tuf.FormatError):
+      inventory.register_vehicle(vin, 'other_ecu', overwrite='not boolean')
+
+
+    # Register correctly, expecting success.
+    inventory.register_vehicle(vin, 'tv_primary')
+
+
+    # Make sure the registration worked, also directly testing the helper
+    # function that check_vin_registered uses.
+    inventory.check_vin_registered(vin)
+    self.assertEqual('tv_primary', inventory.primary_ecus_by_vin[vin])
+    inventory._check_registration_is_sane(vin)
+
+    # Expect re-registering WITHOUT overwrite on to fail.
+    with self.assertRaises(uptane.Spoofing):
+      inventory.register_vehicle(vin, 'other_ecu', overwrite=False)
+    self.assertEqual('tv_primary', inventory.primary_ecus_by_vin[vin])
+
+    # Expect re-registering with overwrite to succeed.
+    inventory.register_vehicle(vin, 'tv_primary2', overwrite=True)
+    self.assertEqual('tv_primary2', inventory.primary_ecus_by_vin[vin])
+
+
+    # See that _check_registration_is_sane tests its VIN argument, by providing
+    # an incorrectly formatted VIN.
+    with self.assertRaises(tuf.FormatError):
+      inventory._check_registration_is_sane(42)
 
 
 

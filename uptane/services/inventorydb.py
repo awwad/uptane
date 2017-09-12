@@ -287,6 +287,7 @@ def register_ecu(is_primary, vin, ecu_serial, public_key, overwrite=True):
   uptane.formats.VIN_SCHEMA.check_match(vin)
   uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial)
   tuf.formats.ANYKEY_SCHEMA.check_match(public_key)
+  tuf.formats.BOOLEAN_SCHEMA.check_match(overwrite)
 
   assert (ecu_serial in ecu_public_keys) == (ecu_serial in ecu_manifests), \
       'Programming error: ECU registration is not consistent.'
@@ -302,15 +303,8 @@ def register_ecu(is_primary, vin, ecu_serial, public_key, overwrite=True):
           'associated with a Primary ECU.')
 
     if ecu_serial in ecu_public_keys:
-
-      # Demo website hack.
-      # TODO: Get rid of this hack and resume raising the Spoofing error.
-      print('The given ECU Serial, ' + repr(ecu_serial) +
+      raise uptane.Spoofing('The given ECU Serial, ' + repr(ecu_serial) +
           ', is already associated with a public key.')
-      return
-
-      # raise uptane.Spoofing('The given ECU Serial, ' + repr(ecu_serial) +
-      #     ', is already associated with a public key.')
 
 
   # Register the VIN if it is unknown.
@@ -344,6 +338,11 @@ def register_ecu(is_primary, vin, ecu_serial, public_key, overwrite=True):
 def register_vehicle(vin, primary_ecu_serial=None, overwrite=True):
 
   _check_registration_is_sane(vin)
+
+  if primary_ecu_serial is not None:
+    uptane.formats.ECU_SERIAL_SCHEMA.check_match(primary_ecu_serial)
+
+  tuf.formats.BOOLEAN_SCHEMA.check_match(overwrite)
 
   if not overwrite and vin in ecus_by_vin:
     raise uptane.Spoofing('The given VIN, ' + repr(vin) + ', is already '
@@ -381,11 +380,8 @@ def _check_registration_is_sane(vin):
 
   uptane.formats.VIN_SCHEMA.check_match(vin)
 
-  # # A VIN may be in either none or all three of these dictionaries, and nowhere
-  # # in between, or there is a bug.
-  # if vin in vehicle_manifests != vin in ecus_by_vin or vin in ecus_by_vin != \
-  #     vin in primary_ecus_by_vin:
-
+  # A VIN may be in either none or all three of these dictionaries, and nowhere
+  # in between, or there is a bug.
   assert (vin in vehicle_manifests) == (vin in ecus_by_vin) == (
       vin in primary_ecus_by_vin), 'Programming error.'
 
@@ -394,6 +390,8 @@ def _check_registration_is_sane(vin):
 
 
 def check_ecu_registered(ecu_serial):
+
+  uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial)
 
   if ecu_serial not in ecu_public_keys:
     raise uptane.UnknownECU('The given ECU serial, ' + repr(ecu_serial) +

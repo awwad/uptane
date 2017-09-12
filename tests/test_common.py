@@ -70,9 +70,18 @@ class TestCommon(unittest.TestCase):
 
 
   def test_signing(self):
-    """Tests sign_over_metadata() and sign_signable() using sample data from
-    samples/. Also tests verify_signature_over_metadata(). These functions
-    are also tested in the course of testing other modules."""
+    """
+    Tests:
+     - sign_over_metadata()
+     - sign_signable()
+     - verify_signature_over_metadata()
+
+    using sample data from samples/. sign_signable() wraps sign_over_metadata(),
+    and verify_signature_over_metadata() is tested together with them so that
+    they can be tested against each other.
+
+    These functions are also tested in the course of testing other modules.
+    """
 
     # Load sample data, either JSON or ASN.1/DER depending on METADATA_FORMAT.
     if tuf.conf.METADATA_FORMAT == 'json':
@@ -233,8 +242,6 @@ class TestCommon(unittest.TestCase):
     duped_vehicle_manifest = copy.deepcopy(fresh_vehicle_manifest)
     common.sign_signable(duped_vehicle_manifest, [keys_pri['primary']],
         datatype='vehicle_manifest')
-    # if len(fresh_vehicle_manifest['signatures']) != len(duped_vehicle_manifest['signatures']):
-    #   import ipdb; ipdb.set_trace()
 
     self.assertEqual(
         len(fresh_vehicle_manifest['signatures']),
@@ -317,10 +324,15 @@ class TestCommon(unittest.TestCase):
 
 
   def test_canonical_key_funcs(self):
-    """"""
-    # This is also tested by test_primary and test_secondary.
+    """
+    Tests:
+      - public_key_from_canonical()
+      - canonical_key_from_pub_and_pri()
 
-    # Temps for line length:
+    Also tests them against each other.
+    """
+
+    # Employ temporary variables for these for readability and shorter lines.
     pubkey = keys_pub['secondary']
     prikey = keys_pri['secondary']
 
@@ -371,8 +383,12 @@ class TestCommon(unittest.TestCase):
 
 
   def test_create_directory_structure_for_client(self):
-    """"""
-    # This is tested functionally by test_primary and test_secondary.
+    """
+    Tests common.create_directory_structure_for_client()
+
+    create_directory_structure_for_client() is also tested functionally by
+    test_primary and test_secondary.
+    """
 
     if os.path.exists(TEMP_CLIENT_DIR):
       shutil.rmtree(TEMP_CLIENT_DIR)

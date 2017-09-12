@@ -302,15 +302,8 @@ def register_ecu(is_primary, vin, ecu_serial, public_key, overwrite=True):
           'associated with a Primary ECU.')
 
     if ecu_serial in ecu_public_keys:
-
-      # Demo website hack.
-      # TODO: Get rid of this hack and resume raising the Spoofing error.
-      print('The given ECU Serial, ' + repr(ecu_serial) +
+      raise uptane.Spoofing('The given ECU Serial, ' + repr(ecu_serial) +
           ', is already associated with a public key.')
-      return
-
-      # raise uptane.Spoofing('The given ECU Serial, ' + repr(ecu_serial) +
-      #     ', is already associated with a public key.')
 
 
   # Register the VIN if it is unknown.

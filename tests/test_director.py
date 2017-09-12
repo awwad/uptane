@@ -748,8 +748,10 @@ class TestDirector(unittest.TestCase):
 
 
 
+
   def test_60_register_vehicle(self):
-    """Tests inventorydb.register_vehicle()"""
+    """Tests inventorydb.register_vehicle(), along with check_vin_registered()
+    and helper function _check_registration_is_sane()."""
 
     vin = 'democar2'
 
@@ -759,11 +761,26 @@ class TestDirector(unittest.TestCase):
     self.assertNotIn(vin, inventory.primary_ecus_by_vin)
 
 
+    # Try various invalid arguments.
+    with self.assertRaises(tuf.FormatError):
+      inventory.register_vehicle(5, 'other_ecu', overwrite=False)
+
+    with self.assertRaises(tuf.FormatError):
+      inventory.register_vehicle(vin, 5, overwrite=False)
+
+    with self.assertRaises(tuf.FormatError):
+      inventory.register_vehicle(vin, 'other_ecu', overwrite='not boolean')
+
+
+    # Register correctly, expecting success.
     inventory.register_vehicle(vin, 'tv_primary')
 
-    # Make sure the registration worked.
+
+    # Make sure the registration worked, also directly testing the helper
+    # function that check_vin_registered uses.
     inventory.check_vin_registered(vin)
     self.assertEqual('tv_primary', inventory.primary_ecus_by_vin[vin])
+    inventory._check_registration_is_sane(vin)
 
     # Expect re-registering WITHOUT overwrite on to fail.
     with self.assertRaises(uptane.Spoofing):
@@ -773,6 +790,12 @@ class TestDirector(unittest.TestCase):
     # Expect re-registering with overwrite to succeed.
     inventory.register_vehicle(vin, 'tv_primary2', overwrite=True)
     self.assertEqual('tv_primary2', inventory.primary_ecus_by_vin[vin])
+
+
+    # See that _check_registration_is_sane tests its VIN argument, by providing
+    # an incorrectly formatted VIN.
+    with self.assertRaises(tuf.FormatError):
+      inventory._check_registration_is_sane(42)
 
 
 

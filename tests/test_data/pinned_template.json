@@ -1,0 +1,16 @@
+{
+  "repositories": {
+    "imagerepo": {
+      "mirrors": ["file:///<full_client_dir>/tests/test_data/temp_test_primary/imagerepo"]
+    },
+    "director": {
+      "mirrors": ["file:///<full_client_dir>/tests/test_data/temp_test_primary/director"]
+    }
+  },
+  "delegations": [
+    {
+      "paths": ["*"],
+      "repositories": ["imagerepo", "director"]
+    }
+  ]
+}

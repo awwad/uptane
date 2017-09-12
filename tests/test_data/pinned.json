@@ -1,16 +1,1 @@
-{
-  "repositories": {
-    "imagerepo": {
-      "mirrors": ["http://localhost:30301"]
-    },
-    "director": {
-      "mirrors": ["http://localhost:30401/111"]
-    }
-  },
-  "delegations": [
-    {
-      "paths": ["*"],
-      "repositories": ["imagerepo", "director"]
-    }
-  ]
-}
+{"delegations":[{"paths":["*"],"repositories":["imagerepo","director"]}],"repositories":{"director":{"mirrors":["file:////home/shikhar/Desktop/uptane/tests/test_data/temp_test_primary/director"]},"imagerepo":{"mirrors":["file:////home/shikhar/Desktop/uptane/tests/test_data/temp_test_primary/imagerepo"]}}}

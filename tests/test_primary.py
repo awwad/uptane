@@ -33,6 +33,9 @@ import uptane.encoding.asn1_codec as asn1_codec
 
 # For temporary convenience:
 import demo # for generate_key, import_public_key, import_private_key
+import json
+import canonicaljson
+import codecs
 
 
 TEST_DATA_DIR = os.path.join(uptane.WORKING_DIR, 'tests', 'test_data')
@@ -43,8 +46,13 @@ TEST_DIRECTOR_ROOT_FNAME = os.path.join(
     TEST_DIRECTOR_METADATA_DIR, 'root.' + tuf.conf.METADATA_FORMAT)
 TEST_IMAGE_REPO_ROOT_FNAME = os.path.join(
     TEST_IMAGE_REPO_METADATA_DIR, 'root.' + tuf.conf.METADATA_FORMAT)
-TEST_PINNING_FNAME = os.path.join(TEST_DATA_DIR, 'pinned.json')
+TEST_TEMP_PINNING_FNAME = os.path.join(TEST_DATA_DIR, 'pinned.json') # Uses the TEST_PINNING_TEMPLATE_FNAME to point to the correct repositories and gets deleted once the tests are over 
+TEST_PINNING_TEMPLATE_FNAME = os.path.join(TEST_DATA_DIR, "pinned_template.json")
 TEMP_CLIENT_DIR = os.path.join(TEST_DATA_DIR, 'temp_test_primary')
+#Source to copy all the local metadata to the TEMP_CLIENT_DIR
+SOURCE_FOR_LOCAL_METADATA = os.path.join(uptane.WORKING_DIR, 'samples', 'metadata_samples_long_expiry', 'update_to_one_ecu', 'full_metadata_archive')
+#Source to copy all the target files to TEMP_CLIENT_DIR
+SOURCE_FOR_LOCAL_TARGETS = os.path.join(uptane.WORKING_DIR,'demo', "images")
 
 # Changing some of these values would require producing new signed sample data
 # from the Timeserver or a Secondary.
@@ -58,6 +66,37 @@ def destroy_temp_dir():
   # Clean up anything that may currently exist in the temp test directory.
   if os.path.exists(TEMP_CLIENT_DIR):
     shutil.rmtree(TEMP_CLIENT_DIR)
+
+
+
+
+
+def create_primary_pinning_file():
+  """ To change the pinned_template.json file to point to the right source for metadata"""
+
+  try:
+    with open(TEST_PINNING_TEMPLATE_FNAME, 'r', encoding = 'utf-8') as pinned_file:
+      pinnings = json.load(pinned_file)
+  except:
+    with codecs.open(TEST_PINNING_TEMPLATE_FNAME, 'r', encoding = 'utf-8') as pinned_file: #Support for Python 2
+      pinnings = json.load(pinned_file)
+
+  fname_to_create = TEST_TEMP_PINNING_FNAME
+
+  for repo_name in pinnings['repositories']:
+
+    assert 1 == len(pinnings['repositories'][repo_name]['mirrors']), 'Config error.'
+
+    mirror = pinnings['repositories'][repo_name]['mirrors'][0]
+
+    mirror = mirror.replace('<full_client_dir>', uptane.WORKING_DIR)
+
+    pinnings['repositories'][repo_name]['mirrors'][0] = mirror 
+
+  with open(fname_to_create, 'wb') as fobj:
+    fobj.write(canonicaljson.encode_canonical_json(pinnings))
+
+  return fname_to_create
 
 
 
@@ -110,6 +149,7 @@ class TestPrimary(unittest.TestCase):
 
 
 
+
   @classmethod
   def tearDownClass(cls):
     """
@@ -130,9 +170,21 @@ class TestPrimary(unittest.TestCase):
     # Set up a client directory first.
     uptane.common.create_directory_structure_for_client(
         TEMP_CLIENT_DIR,
-        TEST_PINNING_FNAME,
+        create_primary_pinning_file(),
         {'imagerepo': TEST_IMAGE_REPO_ROOT_FNAME,
         'director': TEST_DIRECTOR_ROOT_FNAME})
+
+    for repository in ["director", "imagerepo"]:
+    	shutil.copytree(
+    		os.path.join(SOURCE_FOR_LOCAL_METADATA,repository), 
+    		os.path.join(TEMP_CLIENT_DIR,repository))
+
+    shutil.copytree(
+    	SOURCE_FOR_LOCAL_TARGETS, 
+    	os.path.join(TEMP_CLIENT_DIR,'director','targets'))
+
+
+
 
 
     # TODO: Test with invalid pinning file
@@ -191,17 +243,54 @@ class TestPrimary(unittest.TestCase):
           timeserver_public_key=TestPrimary.key_timeserver_pub,
           my_secondaries=[])
 
+
     # Invalid timeserver key
     with self.assertRaises(tuf.FormatError):
       primary.Primary(
           full_client_dir=TEMP_CLIENT_DIR,
-          director_repo_name=demo.DIRECTOR_REPO_NAME,
+          director_repo_name=5, #INVALID
           vin=vin,
           ecu_serial=primary_ecu_serial,
           primary_key=TestPrimary.ecu_key, time=TestPrimary.initial_time,
           timeserver_public_key=TestPrimary.initial_time, # INVALID
           my_secondaries=[])
 
+    # Invalid format for Director Repository name
+    with self.assertRaises(uptane.Error):
+      p = primary.Primary(
+          full_client_dir=TEMP_CLIENT_DIR,
+          director_repo_name=5, #INVALID
+          vin=vin,
+          ecu_serial=primary_ecu_serial,
+          primary_key=TestPrimary.ecu_key, time=TestPrimary.initial_time,
+          timeserver_public_key = TestPrimary.key_timeserver_pub,
+          my_secondaries=[])
+
+    # Invalid name for Director repository
+    with self.assertRaises(uptane.Error):
+      p = primary.Primary(
+          full_client_dir=TEMP_CLIENT_DIR,
+          director_repo_name= "invalid", #INVALID
+          vin=vin,
+          ecu_serial=primary_ecu_serial,
+          primary_key=TestPrimary.ecu_key, time=TestPrimary.initial_time,
+          timeserver_public_key = TestPrimary.key_timeserver_pub,
+          my_secondaries=[])
+
+
+    # Invalid timeserver key
+    with self.assertRaises(tuf.FormatError):
+      p = primary.Primary(
+          full_client_dir=TEMP_CLIENT_DIR,
+          director_repo_name=demo.DIRECTOR_REPO_NAME,
+          vin=vin,
+          ecu_serial=primary_ecu_serial,
+          primary_key=TestPrimary.ecu_key,
+          time=TestPrimary.initial_time,
+          timeserver_public_key=TestPrimary.initial_time, # INVALID
+          my_secondaries=[])
+
+    
 
     # Try creating a Primary, expecting it to work.
     # Initializes a Primary ECU, making a client directory and copying the root
@@ -534,9 +623,47 @@ class TestPrimary(unittest.TestCase):
     pass
 
 
+  def test_55_update_exists_for_ecu(self):
 
+    Registered_Unknown_Secondary = "potato" #Secondary that will be registered w/ primary as secondaries but will not listed by targets/director for any updates
+    Unregistered_Unknown_Secondary = "potato1" #Secondary that will be not registered w/ primary as secondaries and will not listed by targets/director for any updates
+    Registered_Known_Secondary = "TCUdemocar" #Secondary that will be registered w/ primary as secondaries and will be listed by targets/director for updates.
+    Registered_Unknown_Invalid_Secondary = 5 #Invalid ECU Serial for a secondary
 
+    # Registering valid names
+    TestPrimary.instance.register_new_secondary(Registered_Unknown_Secondary) 
+    TestPrimary.instance.register_new_secondary(Registered_Known_Secondary)
 
+    # Registering already registered names for testing lines in register_new_secondary()
+    TestPrimary.instance.register_new_secondary(Registered_Unknown_Secondary)
+    
+    # Trying to register an invalid name
+    with self.assertRaises(tuf.FormatError):
+      TestPrimary.instance.register_new_secondary(Registered_Unknown_Invalid_Secondary)
+
+    #Asserting that as long as name is in a valid format it will be registered by the primary as a secondary.
+    self.assertIn(Registered_Unknown_Secondary, TestPrimary.instance.my_secondaries)
+    self.assertIn(Registered_Known_Secondary, TestPrimary.instance.my_secondaries)
+    
+    with self.assertRaises(uptane.UnknownECU):
+      TestPrimary.instance._check_ecu_serial(Unregistered_Unknown_Secondary)
+    
+    # Running a primary update cycle so it process all the files required for a establishing update cycle    
+    TestPrimary.instance.primary_update_cycle()
+
+    #Trying to get updates for an unregistered unknown ECU 
+    with self.assertRaises(uptane.UnknownECU):
+      TestPrimary.instance.update_exists_for_ecu(Unregistered_Unknown_Secondary)
+
+    #Trying to get updates for a registered secondary that is not listed by targets for updates
+    self.assertFalse(TestPrimary.instance.update_exists_for_ecu(Registered_Unknown_Secondary))
+
+    #Trying to get updates for a registered secondary that is listed by targets for updates
+    self.assertTrue(TestPrimary.instance.update_exists_for_ecu(Registered_Known_Secondary))
+
+    # delete pinned.json file because new pinned.json will be created depending on the current working directory of uptane every time the tests are run
+    #os.remove(TEST_TEMP_PINNING_FNAME)
+      
 # Run unit test.
 if __name__ == '__main__':
   unittest.main()

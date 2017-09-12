@@ -71,6 +71,37 @@ def destroy_temp_dir():
 
 
 
+def create_primary_pinning_file():
+  """ To change the pinned_template.json file to point to the right source for metadata"""
+
+  try:
+    with open(TEST_PINNING_TEMPLATE_FNAME, 'r', encoding = 'utf-8') as pinned_file:
+      pinnings = json.load(pinned_file)
+  except:
+    with codecs.open(TEST_PINNING_TEMPLATE_FNAME, 'r', encoding = 'utf-8') as pinned_file: #Support for Python 2
+      pinnings = json.load(pinned_file)
+
+  fname_to_create = TEST_TEMP_PINNING_FNAME
+
+  for repo_name in pinnings['repositories']:
+
+    assert 1 == len(pinnings['repositories'][repo_name]['mirrors']), 'Config error.'
+
+    mirror = pinnings['repositories'][repo_name]['mirrors'][0]
+
+    mirror = mirror.replace('<full_client_dir>', uptane.WORKING_DIR)
+
+    pinnings['repositories'][repo_name]['mirrors'][0] = mirror 
+
+  with open(fname_to_create, 'wb') as fobj:
+    fobj.write(canonicaljson.encode_canonical_json(pinnings))
+
+  return fname_to_create
+
+
+
+
+
 class TestPrimary(unittest.TestCase):
   """
   "unittest"-style test class for the Primary module in the reference
@@ -117,35 +148,6 @@ class TestPrimary(unittest.TestCase):
 
 
 
-def create_primary_pinning_file():
-  """ To change the pinned_template.json file to point to the right source for metadata"""
-
-  try:
-  	with open(TEST_PINNING_TEMPLATE_FNAME, 'r', encoding = 'utf-8') as pinned_file:
-  		pinnings = json.load(pinned_file)
-  except:
-  	with codecs.open(TEST_PINNING_TEMPLATE_FNAME, 'r', encoding = 'utf-8') as pinned_file: #Support for Python 2
-  		pinnings = json.load(pinned_file)
-
-  fname_to_create = TEST_TEMP_PINNING_FNAME
-
-  for repo_name in pinnings['repositories']:
-
-    assert 1 == len(pinnings['repositories'][repo_name]['mirrors']), 'Config error.'
-
-    mirror = pinnings['repositories'][repo_name]['mirrors'][0]
-
-    mirror = mirror.replace('<full_client_dir>', uptane.WORKING_DIR)
-
-    pinnings['repositories'][repo_name]['mirrors'][0] = mirror 
-
-  with open(fname_to_create, 'wb') as fobj:
-    fobj.write(canonicaljson.encode_canonical_json(pinnings))
-
-  return fname_to_create
-
-
-TEST_PINNING_FNAME = create_primary_pinning_file()
 
 
   @classmethod
@@ -245,8 +247,6 @@ TEST_PINNING_FNAME = create_primary_pinning_file()
     # Invalid timeserver key
     with self.assertRaises(tuf.FormatError):
       primary.Primary(
-          primary_key=TestPrimary.ecu_key, time=TestPrimary.initial_time,
-          timeserver_public_key=TestPrimary.initial_time, # INVALID
           full_client_dir=TEMP_CLIENT_DIR,
           director_repo_name=5, #INVALID
           vin=vin,
@@ -262,8 +262,8 @@ TEST_PINNING_FNAME = create_primary_pinning_file()
           director_repo_name=5, #INVALID
           vin=vin,
           ecu_serial=primary_ecu_serial,
-          primary_key=primary_ecu_key, time=clock,
-          timeserver_public_key = key_timeserver_pub,
+          primary_key=TestPrimary.ecu_key, time=TestPrimary.initial_time,
+          timeserver_public_key = TestPrimary.key_timeserver_pub,
           my_secondaries=[])
 
     # Invalid name for Director repository
@@ -273,8 +273,8 @@ TEST_PINNING_FNAME = create_primary_pinning_file()
           director_repo_name= "invalid", #INVALID
           vin=vin,
           ecu_serial=primary_ecu_serial,
-          primary_key=primary_ecu_key, time=clock,
-          timeserver_public_key = key_timeserver_pub,
+          primary_key=TestPrimary.ecu_key, time=TestPrimary.initial_time,
+          timeserver_public_key = TestPrimary.key_timeserver_pub,
           my_secondaries=[])
 
 
@@ -285,9 +285,9 @@ TEST_PINNING_FNAME = create_primary_pinning_file()
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=vin,
           ecu_serial=primary_ecu_serial,
-          primary_key=primary_ecu_key,
-          time=clock,
-          timeserver_public_key=clock, # INVALID
+          primary_key=TestPrimary.ecu_key,
+          time=TestPrimary.initial_time,
+          timeserver_public_key=TestPrimary.initial_time, # INVALID
           my_secondaries=[])
 
     
@@ -631,35 +631,35 @@ TEST_PINNING_FNAME = create_primary_pinning_file()
     Registered_Unknown_Invalid_Secondary = 5 #Invalid ECU Serial for a secondary
 
     # Registering valid names
-    primary_instance.register_new_secondary(Registered_Unknown_Secondary) 
-    primary_instance.register_new_secondary(Registered_Known_Secondary)
+    TestPrimary.instance.register_new_secondary(Registered_Unknown_Secondary) 
+    TestPrimary.instance.register_new_secondary(Registered_Known_Secondary)
 
     # Registering already registered names for testing lines in register_new_secondary()
-    primary_instance.register_new_secondary(Registered_Unknown_Secondary)
+    TestPrimary.instance.register_new_secondary(Registered_Unknown_Secondary)
     
     # Trying to register an invalid name
     with self.assertRaises(tuf.FormatError):
-      primary_instance.register_new_secondary(Registered_Unknown_Invalid_Secondary)
+      TestPrimary.instance.register_new_secondary(Registered_Unknown_Invalid_Secondary)
 
     #Asserting that as long as name is in a valid format it will be registered by the primary as a secondary.
-    self.assertIn(Registered_Unknown_Secondary, primary_instance.my_secondaries)
-    self.assertIn(Registered_Known_Secondary, primary_instance.my_secondaries)
+    self.assertIn(Registered_Unknown_Secondary, TestPrimary.instance.my_secondaries)
+    self.assertIn(Registered_Known_Secondary, TestPrimary.instance.my_secondaries)
     
     with self.assertRaises(uptane.UnknownECU):
-      primary_instance._check_ecu_serial(Unregistered_Unknown_Secondary)
+      TestPrimary.instance._check_ecu_serial(Unregistered_Unknown_Secondary)
     
     # Running a primary update cycle so it process all the files required for a establishing update cycle    
-    primary_instance.primary_update_cycle()
+    TestPrimary.instance.primary_update_cycle()
 
     #Trying to get updates for an unregistered unknown ECU 
     with self.assertRaises(uptane.UnknownECU):
-      primary_instance.update_exists_for_ecu(Unregistered_Unknown_Secondary)
+      TestPrimary.instance.update_exists_for_ecu(Unregistered_Unknown_Secondary)
 
     #Trying to get updates for a registered secondary that is not listed by targets for updates
-    self.assertFalse(primary_instance.update_exists_for_ecu(Registered_Unknown_Secondary))
+    self.assertFalse(TestPrimary.instance.update_exists_for_ecu(Registered_Unknown_Secondary))
 
     #Trying to get updates for a registered secondary that is listed by targets for updates
-    self.assertTrue(primary_instance.update_exists_for_ecu(Registered_Known_Secondary))
+    self.assertTrue(TestPrimary.instance.update_exists_for_ecu(Registered_Known_Secondary))
 
     # delete pinned.json file because new pinned.json will be created depending on the current working directory of uptane every time the tests are run
     #os.remove(TEST_TEMP_PINNING_FNAME)

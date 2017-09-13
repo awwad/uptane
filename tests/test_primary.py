@@ -721,8 +721,12 @@ class TestPrimary(unittest.TestCase):
 
     attestation = TestPrimary.instance.get_last_timeserver_attestation()
 
-    uptane.formats.SIGNABLE_TIMESERVER_ATTESTATION_SCHEMA.check_match(
-        attestation)
+    if tuf.conf.METADATA_FORMAT == 'der':
+      uptane.formats.DER_DATA_SCHEMA.check_match(attestation)
+    else:
+      assert tuf.conf.METADATA_FORMAT == 'json', 'Coding error in test.'
+      uptane.formats.SIGNABLE_TIMESERVER_ATTESTATION_SCHEMA.check_match(
+          attestation)
 
 
 

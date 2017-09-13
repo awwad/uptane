@@ -663,7 +663,15 @@ class TestPrimary(unittest.TestCase):
 
     # delete pinned.json file because new pinned.json will be created depending on the current working directory of uptane every time the tests are run
     #os.remove(TEST_TEMP_PINNING_FNAME)
-      
+
+
+    # Run the update cycle again to test file/archive replacement when a cycle
+    # has already occurred.
+    TestPrimary.instance.primary_update_cycle()
+
+
+
+
 # Run unit test.
 if __name__ == '__main__':
   unittest.main()

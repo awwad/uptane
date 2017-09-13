@@ -823,7 +823,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
           most_recent_attestation)
       return most_recent_attestation
 
-    else:
+    else: # pragma: no cover
       raise uptane.Error('Unable to convert time attestation as configured. '
           'The settings supported for timeserver attestations are "json" and '
           '"der", but the value of tuf.conf.METADATA_FORMAT is: ' +

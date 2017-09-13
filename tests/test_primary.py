@@ -613,6 +613,13 @@ class TestPrimary(unittest.TestCase):
     self.assertTrue(primary_instance.update_exists_for_ecu(Registered_Known_Secondary))
 
 
+    # Run the update cycle again to test file/archive replacement when a cycle
+    # has already occurred.
+    TestPrimary.instance.primary_update_cycle()
+
+
+
+
 # Run unit test.
 if __name__ == '__main__':
   unittest.main()

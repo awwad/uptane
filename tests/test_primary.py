@@ -612,8 +612,45 @@ class TestPrimary(unittest.TestCase):
 
 
 
-  def test_45_get_image_for_ecu(self):
-    pass
+  def test_45_get_image_fname_for_ecu(self):
+
+    # TODO: More thorough tests.
+
+    self.assertIsNone(TestPrimary.instance.get_image_fname_for_ecu('unknown'))
+
+    image_fname = TestPrimary.instance.get_image_fname_for_ecu('TCUdemocar')
+
+    self.assertTrue(image_fname)
+
+    tuf.formats.RELPATH_SCHEMA.check_match(image_fname)
+
+
+
+
+
+  def test_46_get_full_metadata_archive_fname(self):
+
+    # TODO: More thorough tests.
+
+    archive_fname = TestPrimary.instance.get_full_metadata_archive_fname()
+
+    self.assertTrue(archive_fname)
+
+    tuf.formats.RELPATH_SCHEMA.check_match(archive_fname)
+
+
+
+
+
+  def test_47_get_partial_metadata_fname(self):
+
+    # TODO: More thorough tests.
+
+    fname = TestPrimary.instance.get_partial_metadata_fname()
+
+    self.assertTrue(fname)
+
+    tuf.formats.RELPATH_SCHEMA.check_match(fname)
 
 
 
@@ -668,6 +705,22 @@ class TestPrimary(unittest.TestCase):
     # Run the update cycle again to test file/archive replacement when a cycle
     # has already occurred.
     TestPrimary.instance.primary_update_cycle()
+
+
+
+
+
+
+
+  def test_70_get_last_timeserver_attestation(self):
+
+    # TODO: More thorough test.
+
+    attestation = TestPrimary.instance.get_last_timeserver_attestation()
+
+    uptane.formats.SIGNABLE_TIMESERVER_ATTESTATION_SCHEMA.check_match(
+        attestation)
+
 
 
 

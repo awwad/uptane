@@ -616,7 +616,8 @@ class TestPrimary(unittest.TestCase):
 
     # TODO: More thorough tests.
 
-    self.assertIsNone(TestPrimary.instance.get_image_fname_for_ecu('unknown'))
+    with self.assertRaises(uptane.UnknownECU):
+      TestPrimary.instance.get_image_fname_for_ecu('unknown')
 
     image_fname = TestPrimary.instance.get_image_fname_for_ecu('TCUdemocar')
 

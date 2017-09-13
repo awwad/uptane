@@ -290,7 +290,7 @@ class TestPrimary(unittest.TestCase):
           timeserver_public_key=TestPrimary.initial_time, # INVALID
           my_secondaries=[])
 
-    
+
 
     # Try creating a Primary, expecting it to work.
     # Initializes a Primary ECU, making a client directory and copying the root
@@ -673,7 +673,7 @@ class TestPrimary(unittest.TestCase):
 
     # Registering already registered names for testing lines in register_new_secondary()
     TestPrimary.instance.register_new_secondary(Registered_Unknown_Secondary)
-    
+
     # Trying to register an invalid name
     with self.assertRaises(tuf.FormatError):
       TestPrimary.instance.register_new_secondary(Registered_Unknown_Invalid_Secondary)
@@ -681,10 +681,10 @@ class TestPrimary(unittest.TestCase):
     #Asserting that as long as name is in a valid format it will be registered by the primary as a secondary.
     self.assertIn(Registered_Unknown_Secondary, TestPrimary.instance.my_secondaries)
     self.assertIn(Registered_Known_Secondary, TestPrimary.instance.my_secondaries)
-    
+
     with self.assertRaises(uptane.UnknownECU):
       TestPrimary.instance._check_ecu_serial(Unregistered_Unknown_Secondary)
-    
+
     # Running a primary update cycle so it process all the files required for a establishing update cycle    
     TestPrimary.instance.primary_update_cycle()
 
@@ -700,6 +700,7 @@ class TestPrimary(unittest.TestCase):
 
     # delete pinned.json file because new pinned.json will be created depending on the current working directory of uptane every time the tests are run
     #os.remove(TEST_TEMP_PINNING_FNAME)
+
 
 
     # Run the update cycle again to test file/archive replacement when a cycle

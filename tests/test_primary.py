@@ -563,55 +563,6 @@ class TestPrimary(unittest.TestCase):
 
 
 
-  def test_45_get_image_fname_for_ecu(self):
-
-    # TODO: More thorough tests.
-
-    with self.assertRaises(uptane.UnknownECU):
-      TestPrimary.instance.get_image_fname_for_ecu('unknown')
-
-    image_fname = TestPrimary.instance.get_image_fname_for_ecu('TCUdemocar')
-
-    self.assertTrue(image_fname)
-
-    tuf.formats.RELPATH_SCHEMA.check_match(image_fname)
-
-
-
-
-
-  def test_46_get_full_metadata_archive_fname(self):
-
-    # TODO: More thorough tests.
-
-    archive_fname = TestPrimary.instance.get_full_metadata_archive_fname()
-
-    self.assertTrue(archive_fname)
-
-    tuf.formats.RELPATH_SCHEMA.check_match(archive_fname)
-
-
-
-
-
-  def test_47_get_partial_metadata_fname(self):
-
-    # TODO: More thorough tests.
-
-    fname = TestPrimary.instance.get_partial_metadata_fname()
-
-    self.assertTrue(fname)
-
-    tuf.formats.RELPATH_SCHEMA.check_match(fname)
-
-
-
-
-
-  def test_50_get_metadata_for_ecu(self):
-    pass
-
-
   def test_55_update_exists_for_ecu(self):
 
     Registered_Unknown_Secondary = "potato" #Secondary that will be registered w/ primary as secondaries but will not listed by targets/director for any updates
@@ -655,6 +606,56 @@ class TestPrimary(unittest.TestCase):
     # has already occurred.
     TestPrimary.instance.primary_update_cycle()
 
+
+
+
+  def test_60_get_image_fname_for_ecu(self):
+
+    # TODO: More thorough tests.
+
+    with self.assertRaises(uptane.UnknownECU):
+      TestPrimary.instance.get_image_fname_for_ecu('unknown')
+
+    image_fname = TestPrimary.instance.get_image_fname_for_ecu('TCUdemocar')
+
+    self.assertTrue(image_fname)
+
+    tuf.formats.RELPATH_SCHEMA.check_match(image_fname)
+
+
+
+
+
+  def test_61_get_full_metadata_archive_fname(self):
+
+    # TODO: More thorough tests.
+
+    archive_fname = TestPrimary.instance.get_full_metadata_archive_fname()
+
+    self.assertTrue(archive_fname)
+
+    tuf.formats.RELPATH_SCHEMA.check_match(archive_fname)
+
+
+
+
+
+  def test_62_get_partial_metadata_fname(self):
+
+    # TODO: More thorough tests.
+
+    fname = TestPrimary.instance.get_partial_metadata_fname()
+
+    self.assertTrue(fname)
+
+    tuf.formats.RELPATH_SCHEMA.check_match(fname)
+
+
+
+
+
+  def test_65_get_metadata_for_ecu(self):
+    pass
 
 
 

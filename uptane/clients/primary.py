@@ -531,12 +531,12 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
         # The following is code intended for a demonstration, inserted here
         # into the reference implementation as a temporary measure.
-        print_banner(BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG,
+        print_banner(BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG, # pragma: no cover
             text='The Director has instructed us to download a file that does '
             ' does not exactly match the Image Repository metadata. '
             'File: ' + repr(target_filepath), sound=TADA)
-        import time
-        time.sleep(3)
+        import time # pragma: no cover
+        time.sleep(3) # pragma: no cover
         # End demo code.
 
     # # Grab a filepath from each of the dicts of target file infos. (Each dict
@@ -596,13 +596,13 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
       full_fname = os.path.join(full_targets_directory, filepath)
       enforce_jail(filepath, full_targets_directory)
 
-      # TODO: Remove this. It's here for convenience during dev & testing.
-      # Considerations on the ground by implementers / users of the reference
-      # implementation will decide what to do with target files after they've
-      # been used.
-      # Delete existing targets.
-      if os.path.exists(full_fname):
-        os.remove(full_fname)
+      # # TODO: Remove this. It's here for convenience during dev & testing.
+      # # Considerations on the ground by implementers / users of the reference
+      # # implementation will decide what to do with target files after they've
+      # # been used.
+      # # Delete existing targets.
+      # if os.path.exists(full_fname):
+      #   os.remove(full_fname)
 
       # Download each target.
       # Now that we have fileinfo for all targets listed by both the Director and
@@ -627,12 +627,12 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
           print('    ' + type(e.mirror_errors[mirror]).__name__ + ' from ' + mirror)
         print(ENDCOLORS)
 
-        print_banner(BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG,
+        print_banner(BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG, # pragma: no cover
             text='No image was found that exactly matches the signed metadata '
             'from the Director and Image Repositories. Not keeping '
             'untrustworthy files. ' + repr(target_filepath), sound=TADA)
-        import time
-        time.sleep(3)
+        import time # pragma: no cover
+        time.sleep(3) # pragma: no cover
 
 
         # # If this was our firmware, notify that we're not installing.

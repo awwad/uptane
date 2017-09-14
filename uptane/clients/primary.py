@@ -597,14 +597,6 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
       full_fname = os.path.join(full_targets_directory, filepath)
       enforce_jail(filepath, full_targets_directory)
 
-      # TODO: Remove this. It's here for convenience during dev & testing.
-      # Considerations on the ground by implementers / users of the reference
-      # implementation will decide what to do with target files after they've
-      # been used.
-      # Delete existing targets.
-      if os.path.exists(full_fname):
-        os.remove(full_fname)
-
       # Download each target.
       # Now that we have fileinfo for all targets listed by both the Director and
       # the Image Repository -- which should include file2.txt in this test --

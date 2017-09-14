@@ -141,11 +141,11 @@ class TestPrimary(unittest.TestCase):
 
     for repository in ["director", "imagerepo"]:
     	shutil.copytree(
-    		os.path.join(SOURCE_FOR_LOCAL_METADATA,repository), 
+    		os.path.join(SOURCE_FOR_LOCAL_METADATA,repository),
     		os.path.join(TEMP_CLIENT_DIR,repository))
 
     shutil.copytree(
-    	SOURCE_FOR_LOCAL_TARGETS, 
+    	SOURCE_FOR_LOCAL_TARGETS,
     	os.path.join(TEMP_CLIENT_DIR,'director','targets'))
 
 
@@ -571,12 +571,12 @@ class TestPrimary(unittest.TestCase):
     Registered_Unknown_Invalid_Secondary = 5 #Invalid ECU Serial for a secondary
 
     # Registering valid names
-    TestPrimary.instance.register_new_secondary(Registered_Unknown_Secondary) 
+    TestPrimary.instance.register_new_secondary(Registered_Unknown_Secondary)
     TestPrimary.instance.register_new_secondary(Registered_Known_Secondary)
 
     # Registering already registered names for testing lines in register_new_secondary()
     TestPrimary.instance.register_new_secondary(Registered_Unknown_Secondary)
-    
+
     # Trying to register an invalid name
     with self.assertRaises(tuf.FormatError):
       TestPrimary.instance.register_new_secondary(Registered_Unknown_Invalid_Secondary)
@@ -584,14 +584,14 @@ class TestPrimary(unittest.TestCase):
     #Asserting that as long as name is in a valid format it will be registered by the primary as a secondary.
     self.assertIn(Registered_Unknown_Secondary, TestPrimary.instance.my_secondaries)
     self.assertIn(Registered_Known_Secondary, TestPrimary.instance.my_secondaries)
-    
+
     with self.assertRaises(uptane.UnknownECU):
       TestPrimary.instance._check_ecu_serial(Unregistered_Unknown_Secondary)
-    
-    # Running a primary update cycle so it process all the files required for a establishing update cycle    
+
+    # Running a primary update cycle so it process all the files required for a establishing update cycle
     TestPrimary.instance.primary_update_cycle()
 
-    #Trying to get updates for an unregistered unknown ECU 
+    #Trying to get updates for an unregistered unknown ECU
     with self.assertRaises(uptane.UnknownECU):
       TestPrimary.instance.update_exists_for_ecu(Unregistered_Unknown_Secondary)
 

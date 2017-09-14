@@ -155,8 +155,6 @@ class TestPrimary(unittest.TestCase):
 
 
 
-
-
     # TODO: Test with invalid pinning file
     # TODO: Test with pinning file lacking a Director repo.
 
@@ -670,6 +668,7 @@ class TestPrimary(unittest.TestCase):
 
 
 
+
   def test_60_get_image_fname_for_ecu(self):
 
     # TODO: More thorough tests.
@@ -677,11 +676,18 @@ class TestPrimary(unittest.TestCase):
     with self.assertRaises(uptane.UnknownECU):
       TestPrimary.instance.get_image_fname_for_ecu('unknown')
 
+    # Expect an image.
     image_fname = TestPrimary.instance.get_image_fname_for_ecu('TCUdemocar')
 
     self.assertTrue(image_fname)
 
     tuf.formats.RELPATH_SCHEMA.check_match(image_fname)
+
+    # Fetch the image filename for an ECU that has had no update assigned it,
+    # expecting None.
+    self.assertIsNone(TestPrimary.instance.get_image_fname_for_ecu(
+        'secondary_without_updates'))
+
 
 
 

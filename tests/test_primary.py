@@ -46,6 +46,7 @@ TEST_IMAGE_REPO_ROOT_FNAME = os.path.join(
     TEST_IMAGE_REPO_METADATA_DIR, 'root.' + tuf.conf.METADATA_FORMAT)
 TEST_PINNING_FNAME = os.path.join(TEST_DATA_DIR, 'pinned.json')
 TEMP_CLIENT_DIR = os.path.join(TEST_DATA_DIR, 'temp_test_primary')
+
 #Source to copy all the local metadata to the TEMP_CLIENT_DIR
 SOURCE_FOR_LOCAL_METADATA = os.path.join(uptane.WORKING_DIR, 'samples', 'metadata_samples_long_expiry', 'update_to_one_ecu', 'full_metadata_archive')
 #Source to copy all the target files to TEMP_CLIENT_DIR
@@ -272,6 +273,29 @@ class TestPrimary(unittest.TestCase):
     tuf.formats.ANYKEY_SCHEMA.check_match(
         TestPrimary.instance.timeserver_public_key)
     self.assertEqual([], TestPrimary.instance.my_secondaries)
+
+
+
+
+    # Now, fix the updater's pinned metadata to point it to the appropriate
+    # local directory, since the pinned metadata we fed in was actually for the
+    # live demo, connecting to localhost:30401. We instead want to use a
+    # local directory via file://.
+
+    # TODO: Determine if this code should be adjusted to use os.path.join(),
+    # or if that's not appropriate for file:// links.
+
+    image_repo_mirror = ['file://' + TEMP_CLIENT_DIR + '/imagerepo']
+    director_mirror = ['file://' + TEMP_CLIENT_DIR + '/director']
+
+    repository_urls = TestPrimary.instance.updater.pinned_metadata['repositories']
+    repository_urls['imagerepo']['mirrors'] = image_repo_mirror
+    repository_urls['director']['mirrors'] = director_mirror
+
+    # Also fix the copied pinned metadata in the individual repo updaters
+    # in the updater.
+    TestPrimary.instance.updater.repositories['imagerepo'].mirrors = image_repo_mirror
+    TestPrimary.instance.updater.repositories['director'].mirrors = director_mirror
 
 
 

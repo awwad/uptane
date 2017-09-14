@@ -408,6 +408,9 @@ class TestSecondary(unittest.TestCase):
       # The location of the files will be as follows, after the sample
       # metadata archive is expanded (in test 40 below):
 
+      # TODO: Determine if this code should be adjusted to use os.path.join(),
+      # or if that's not appropriate for file:// links.
+
       image_repo_mirror = ['file://' + client_dir + '/unverified/imagerepo']
       director_mirror = ['file://' + client_dir + '/unverified/director']
       if vin == '000':

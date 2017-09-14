@@ -47,10 +47,12 @@ TEST_IMAGE_REPO_ROOT_FNAME = os.path.join(
 TEST_PINNING_FNAME = os.path.join(TEST_DATA_DIR, 'pinned.json')
 TEMP_CLIENT_DIR = os.path.join(TEST_DATA_DIR, 'temp_test_primary')
 
-#Source to copy all the local metadata to the TEMP_CLIENT_DIR
-SOURCE_FOR_LOCAL_METADATA = os.path.join(uptane.WORKING_DIR, 'samples', 'metadata_samples_long_expiry', 'update_to_one_ecu', 'full_metadata_archive')
-#Source to copy all the target files to TEMP_CLIENT_DIR
-SOURCE_FOR_LOCAL_TARGETS = os.path.join(uptane.WORKING_DIR,'demo', "images")
+# Sample metadata and targets that will be copied to TEMP_CLIENT_DIR to use
+# as a local repository for testing.
+SAMPLE_METADATA = os.path.join(
+    uptane.WORKING_DIR, 'samples', 'metadata_samples_long_expiry',
+    'update_to_one_ecu', 'full_metadata_archive')
+SAMPLE_TARGETS = os.path.join(uptane.WORKING_DIR, 'demo', 'images')
 
 # Changing some of these values would require producing new signed sample data
 # from the Timeserver or a Secondary.
@@ -140,14 +142,16 @@ class TestPrimary(unittest.TestCase):
         {'imagerepo': TEST_IMAGE_REPO_ROOT_FNAME,
         'director': TEST_DIRECTOR_ROOT_FNAME})
 
+    # Create repository directories that will be accessed locally (using
+    # file:// URLs) from which to "download" test metadata and targets.
     for repository in ["director", "imagerepo"]:
     	shutil.copytree(
-    		os.path.join(SOURCE_FOR_LOCAL_METADATA,repository),
-    		os.path.join(TEMP_CLIENT_DIR,repository))
+    		os.path.join(SAMPLE_METADATA, repository),
+    		os.path.join(TEMP_CLIENT_DIR, repository))
 
+    # Note that there may be extra targets available here.
     shutil.copytree(
-    	SOURCE_FOR_LOCAL_TARGETS,
-    	os.path.join(TEMP_CLIENT_DIR,'director','targets'))
+    	SAMPLE_TARGETS, os.path.join(TEMP_CLIENT_DIR, 'director', 'targets'))
 
 
 
@@ -205,7 +209,7 @@ class TestPrimary(unittest.TestCase):
           vin=vin,
           ecu_serial=primary_ecu_serial,
           primary_key=TestPrimary.ecu_key,
-          time='potato', # INVALID
+          time='invalid because this is not a time', # INVALID
           timeserver_public_key=TestPrimary.key_timeserver_pub,
           my_secondaries=[])
 
@@ -589,45 +593,68 @@ class TestPrimary(unittest.TestCase):
 
   def test_55_update_exists_for_ecu(self):
 
-    Registered_Unknown_Secondary = "potato" #Secondary that will be registered w/ primary as secondaries but will not listed by targets/director for any updates
-    Unregistered_Unknown_Secondary = "potato1" #Secondary that will be not registered w/ primary as secondaries and will not listed by targets/director for any updates
-    Registered_Known_Secondary = "TCUdemocar" #Secondary that will be registered w/ primary as secondaries and will be listed by targets/director for updates.
-    Registered_Unknown_Invalid_Secondary = 5 #Invalid ECU Serial for a secondary
 
-    # Registering valid names
-    TestPrimary.instance.register_new_secondary(Registered_Unknown_Secondary)
-    TestPrimary.instance.register_new_secondary(Registered_Known_Secondary)
+    # The various ECU Serials of Secondary ECUs we'll test:
 
-    # Registering already registered names for testing lines in register_new_secondary()
-    TestPrimary.instance.register_new_secondary(Registered_Unknown_Secondary)
+    # 1: Registered with the Primary but NOT listed in Director metadata
+    #    (i.e. will not have any updates assigned)
+    known_secondary_with_no_updates = "secondary_without_updates"
 
-    # Trying to register an invalid name
+    # 2: NOT registered w/ the Primary and NOT listed in Director metadata
+    unknown_secondary = "unknown_ecu_serial"
+
+    # 3: Registered with the Primary and listed in Director metadata
+    normal_secondary = "TCUdemocar"
+
+    # 4: Invalid name for a Secondary (wrong format)
+    invalid_name_secondary = 5
+
+
+    # Register the Secondaries with the Primary and make sure registration
+    # succeeded.
+    TestPrimary.instance.register_new_secondary(known_secondary_with_no_updates)
+    TestPrimary.instance.register_new_secondary(normal_secondary)
+
+    self.assertIn(
+        known_secondary_with_no_updates, TestPrimary.instance.my_secondaries)
+    self.assertIn(normal_secondary, TestPrimary.instance.my_secondaries)
+
+    # Try registering a Secondary that has already been registered with the
+    # Primary. Expect success??? # TODO: Clarify.
+    TestPrimary.instance.register_new_secondary(known_secondary_with_no_updates)
+
+    # Try registering an invalid name.
     with self.assertRaises(tuf.FormatError):
-      TestPrimary.instance.register_new_secondary(Registered_Unknown_Invalid_Secondary)
+      TestPrimary.instance.register_new_secondary(invalid_name_secondary)
 
-    #Asserting that as long as name is in a valid format it will be registered by the primary as a secondary.
-    self.assertIn(Registered_Unknown_Secondary, TestPrimary.instance.my_secondaries)
-    self.assertIn(Registered_Known_Secondary, TestPrimary.instance.my_secondaries)
-
+    # Confirm that unknown_secondary has not been registered.
     with self.assertRaises(uptane.UnknownECU):
-      TestPrimary.instance._check_ecu_serial(Unregistered_Unknown_Secondary)
+      TestPrimary.instance._check_ecu_serial(unknown_secondary)
 
-    # Running a primary update cycle so it process all the files required for a establishing update cycle
+    # Run a primary update cycle so that the Primary fetches and validates
+    # metadata and targets from the "repositories" (in this test, the
+    # repositories sit in a local folder accessed by file://).
+    # This also processes the data acquired to populate fields accessed by
+    # Secondaries below.
     TestPrimary.instance.primary_update_cycle()
 
-    #Trying to get updates for an unregistered unknown ECU
+    # Try to find out if updates exist for an unknown ECU.
     with self.assertRaises(uptane.UnknownECU):
-      TestPrimary.instance.update_exists_for_ecu(Unregistered_Unknown_Secondary)
+      TestPrimary.instance.update_exists_for_ecu(unknown_secondary)
 
-    #Trying to get updates for a registered secondary that is not listed by targets for updates
-    self.assertFalse(TestPrimary.instance.update_exists_for_ecu(Registered_Unknown_Secondary))
+    # Find out if updates exist for a known ECU that has no updates assigned to
+    # it by the Director (expect empty list).
+    self.assertFalse(TestPrimary.instance.update_exists_for_ecu(
+        known_secondary_with_no_updates))
 
-    #Trying to get updates for a registered secondary that is listed by targets for updates
-    self.assertTrue(TestPrimary.instance.update_exists_for_ecu(Registered_Known_Secondary))
+    # Confirm that updates exist for a known ECU to which we've assigned
+    # updates (list is not empty).
+    self.assertTrue(TestPrimary.instance.update_exists_for_ecu(
+        normal_secondary))
 
 
-    # Run the update cycle again to test file/archive replacement when a cycle
-    # has already occurred.
+    # Run the update cycle again to test file/archive replacement when an
+    # update cycle has already occurred.
     TestPrimary.instance.primary_update_cycle()
 
 

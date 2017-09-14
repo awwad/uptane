@@ -226,8 +226,8 @@ class TestPrimary(unittest.TestCase):
           director_repo_name=5, #INVALID
           vin=vin,
           ecu_serial=primary_ecu_serial,
-          primary_key=primary_ecu_key, time=clock,
-          timeserver_public_key = key_timeserver_pub,
+          primary_key=TestPrimary.ecu_key, time=TestPrimary.initial_time,
+          timeserver_public_key = TestPrimary.key_timeserver_pub,
           my_secondaries=[])
 
     # Invalid name for Director repository
@@ -237,8 +237,8 @@ class TestPrimary(unittest.TestCase):
           director_repo_name= "invalid", #INVALID
           vin=vin,
           ecu_serial=primary_ecu_serial,
-          primary_key=primary_ecu_key, time=clock,
-          timeserver_public_key = key_timeserver_pub,
+          primary_key=TestPrimary.ecu_key, time=TestPrimary.initial_time,
+          timeserver_public_key = TestPrimary.key_timeserver_pub,
           my_secondaries=[])
 
 
@@ -582,35 +582,35 @@ class TestPrimary(unittest.TestCase):
     Registered_Unknown_Invalid_Secondary = 5 #Invalid ECU Serial for a secondary
 
     # Registering valid names
-    primary_instance.register_new_secondary(Registered_Unknown_Secondary) 
-    primary_instance.register_new_secondary(Registered_Known_Secondary)
+    TestPrimary.instance.register_new_secondary(Registered_Unknown_Secondary) 
+    TestPrimary.instance.register_new_secondary(Registered_Known_Secondary)
 
     # Registering already registered names for testing lines in register_new_secondary()
-    primary_instance.register_new_secondary(Registered_Unknown_Secondary)
+    TestPrimary.instance.register_new_secondary(Registered_Unknown_Secondary)
     
     # Trying to register an invalid name
     with self.assertRaises(tuf.FormatError):
-      primary_instance.register_new_secondary(Registered_Unknown_Invalid_Secondary)
+      TestPrimary.instance.register_new_secondary(Registered_Unknown_Invalid_Secondary)
 
     #Asserting that as long as name is in a valid format it will be registered by the primary as a secondary.
-    self.assertIn(Registered_Unknown_Secondary, primary_instance.my_secondaries)
-    self.assertIn(Registered_Known_Secondary, primary_instance.my_secondaries)
+    self.assertIn(Registered_Unknown_Secondary, TestPrimary.instance.my_secondaries)
+    self.assertIn(Registered_Known_Secondary, TestPrimary.instance.my_secondaries)
     
     with self.assertRaises(uptane.UnknownECU):
-      primary_instance._check_ecu_serial(Unregistered_Unknown_Secondary)
+      TestPrimary.instance._check_ecu_serial(Unregistered_Unknown_Secondary)
     
     # Running a primary update cycle so it process all the files required for a establishing update cycle    
-    primary_instance.primary_update_cycle()
+    TestPrimary.instance.primary_update_cycle()
 
     #Trying to get updates for an unregistered unknown ECU 
     with self.assertRaises(uptane.UnknownECU):
-      primary_instance.update_exists_for_ecu(Unregistered_Unknown_Secondary)
+      TestPrimary.instance.update_exists_for_ecu(Unregistered_Unknown_Secondary)
 
     #Trying to get updates for a registered secondary that is not listed by targets for updates
-    self.assertFalse(primary_instance.update_exists_for_ecu(Registered_Unknown_Secondary))
+    self.assertFalse(TestPrimary.instance.update_exists_for_ecu(Registered_Unknown_Secondary))
 
     #Trying to get updates for a registered secondary that is listed by targets for updates
-    self.assertTrue(primary_instance.update_exists_for_ecu(Registered_Known_Secondary))
+    self.assertTrue(TestPrimary.instance.update_exists_for_ecu(Registered_Known_Secondary))
 
 
     # Run the update cycle again to test file/archive replacement when a cycle

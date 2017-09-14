@@ -226,7 +226,7 @@ class TestPrimary(unittest.TestCase):
 
     # Invalid format for Director Repository name
     with self.assertRaises(uptane.Error):
-      p = primary.Primary(
+      primary.Primary(
           full_client_dir=TEMP_CLIENT_DIR,
           director_repo_name=5, #INVALID
           vin=vin,
@@ -237,7 +237,7 @@ class TestPrimary(unittest.TestCase):
 
     # Invalid name for Director repository
     with self.assertRaises(uptane.Error):
-      p = primary.Primary(
+      primary.Primary(
           full_client_dir=TEMP_CLIENT_DIR,
           director_repo_name= "invalid", #INVALID
           vin=vin,

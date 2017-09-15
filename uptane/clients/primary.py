@@ -646,10 +646,10 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
         print(GREEN + 'We have rejected these. Firmware not updated.\n' + ENDCOLORS)
 
       else:
-        assert(os.path.exists(full_fname)), 'Programming error: no download ' + \
-            'error, but file still does not exist.'
-        print(GREEN + 'Successfully downloaded a trustworthy ' + repr(filepath) +
-            ' image.' + ENDCOLORS)
+        assert(os.path.exists(full_fname)), 'Programming error: no ' + \
+            'download error, but file still does not exist.'
+        log.info(GREEN + 'Successfully downloaded trustworthy ' +
+            repr(filepath) + ' image.' + ENDCOLORS)
 
 
         # TODO: <~> There is an attack vector here, potentially, for a minor
@@ -947,7 +947,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
                           Secondaries
       uptane.Error        if the VIN for the report is not the same as our VIN
     """
-    # check arg format and that serial is registered
+    # Check argument format and that ECU Serial is registered
     self._check_ecu_serial(ecu_serial)
     tuf.formats.BOOLEAN_SCHEMA.check_match(force_pydict)
 

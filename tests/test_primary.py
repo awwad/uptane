@@ -397,13 +397,15 @@ class TestPrimary(unittest.TestCase):
 
 
     # Though this is not required functionality, test register_ecu_manifest
-    # with DER manifests. (By the time they reach this point in the code,
-    # they've generally been converted to JSON already, but there's support
-    # in register_ecu_manifest for converting DER to JSON, too.)
-    TestPrimary.instance.register_ecu_manifest(
-        vin=vin, ecu_serial='ecu11111', nonce=nonce,
-        signed_ecu_manifest=asn1_codec.convert_signed_metadata_to_der(
-        sample_ecu_manifest, datatype='ecu_manifest'), force_pydict=False)
+    # with DER manifests during the DER tests. (By the time they reach this
+    # point in the code, they've generally been converted to JSON already, but
+    # there's support in register_ecu_manifest for converting DER to JSON,
+    # too.)
+    if tuf.conf.METADATA_FORMAT == 'der':
+      TestPrimary.instance.register_ecu_manifest(
+          vin=vin, ecu_serial='ecu11111', nonce=nonce,
+          signed_ecu_manifest=asn1_codec.convert_signed_metadata_to_der(
+          sample_ecu_manifest, datatype='ecu_manifest'), force_pydict=False)
 
 
 

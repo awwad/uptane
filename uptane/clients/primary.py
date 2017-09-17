@@ -76,22 +76,6 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
       (In other implementations, the important point is that this should be
       unique.) The Director should be aware of this identifier.
 
-    self.hardware_id
-      An identifier for a group of ECUs that helps ensure the installation
-      of the right firmware is installed.
-      Verified for installation if the value matches both in the
-      Image Repository and Director Repository.
-      Conforms to uptane.formats.HARDWARE_ID_SCHEMA.
-      This is used to prevent a compromised director from causing an
-      ECU to download an image not intended for it.
-
-    self.release_counter
-      An integer value to track the version number of the images installed.
-      Ensures that an older image than the one currently installed is
-      not installed.
-      Conforms to uptane.formats.RELEASE_COUNTER_SCHEMA.
-      This is used to prevent a compromised director from causing an ECU
-      to download an outdated image or an older one with known vulnerabilities.
 
     self.primary_key
       The signing key for this Secondary ECU. This key will be used to sign
@@ -244,8 +228,6 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     primary_key,
     time,
     timeserver_public_key,
-    hardware_id,
-    release_counter = 0,  # Sample image has version 0
     my_secondaries=[]):
 
     """
@@ -300,8 +282,6 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
     self.vin = vin
     self.ecu_serial = ecu_serial
-    self.hardware_id = hardware_id
-    self.release_counter = release_counter
     self.full_client_dir = full_client_dir
     self.all_valid_timeserver_times = [time]
     self.all_valid_timeserver_attestations = []

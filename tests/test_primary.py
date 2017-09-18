@@ -627,8 +627,8 @@ class TestPrimary(unittest.TestCase):
       TestPrimary.instance.validate_time_attestation(time_attestation__badsig)
 
 
-    self.assertNotEqual(500, NONCE, msg='Programming error: bad and good '
-        'test nonces are equal.')
+    assert 500 not in original_time_attestation['signed']['nonces'], \
+        'Programming error: bad and good test nonces are equal.'
 
     time_attestation__wrongnonce = {
         'signed': {'nonces': [500], 'time': '2016-11-02T21:15:00Z'},

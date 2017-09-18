@@ -56,9 +56,9 @@ SAMPLE_TARGETS = os.path.join(uptane.WORKING_DIR, 'demo', 'images')
 
 # Changing some of these values would require producing new signed sample data
 # from the Timeserver or a Secondary.
-nonce = 5
-vin = '000'
-primary_ecu_serial = '00000'
+NONCE = 5
+VIN = 'democar'
+PRIMARY_ECU_SERIAL = '00000'
 
 
 
@@ -169,7 +169,7 @@ class TestPrimary(unittest.TestCase):
           full_client_dir=TEMP_CLIENT_DIR,
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=5,  # INVALID
-          ecu_serial=primary_ecu_serial,
+          ecu_serial=PRIMARY_ECU_SERIAL,
           primary_key=TestPrimary.ecu_key,
           time=TestPrimary.initial_time,
           timeserver_public_key=TestPrimary.key_timeserver_pub,
@@ -180,7 +180,7 @@ class TestPrimary(unittest.TestCase):
       primary.Primary(
           full_client_dir=TEMP_CLIENT_DIR,
           director_repo_name=demo.DIRECTOR_REPO_NAME,
-          vin=vin,
+          vin=VIN,
           ecu_serial=500, # INVALID
           primary_key=TestPrimary.ecu_key,
           time=TestPrimary.initial_time,
@@ -192,8 +192,8 @@ class TestPrimary(unittest.TestCase):
       primary.Primary(
           full_client_dir=TEMP_CLIENT_DIR,
           director_repo_name=demo.DIRECTOR_REPO_NAME,
-          vin=vin,
-          ecu_serial=primary_ecu_serial,
+          vin=VIN,
+          ecu_serial=PRIMARY_ECU_SERIAL,
           primary_key={''}, # INVALID
           time=TestPrimary.initial_time,
           timeserver_public_key=TestPrimary.key_timeserver_pub,
@@ -204,8 +204,8 @@ class TestPrimary(unittest.TestCase):
       primary.Primary(
           full_client_dir=TEMP_CLIENT_DIR,
           director_repo_name=demo.DIRECTOR_REPO_NAME,
-          vin=vin,
-          ecu_serial=primary_ecu_serial,
+          vin=VIN,
+          ecu_serial=PRIMARY_ECU_SERIAL,
           primary_key=TestPrimary.ecu_key,
           time='invalid because this is not a time', # INVALID
           timeserver_public_key=TestPrimary.key_timeserver_pub,
@@ -216,8 +216,8 @@ class TestPrimary(unittest.TestCase):
       primary.Primary(
           full_client_dir=TEMP_CLIENT_DIR,
           director_repo_name=demo.DIRECTOR_REPO_NAME,
-          vin=vin,
-          ecu_serial=primary_ecu_serial,
+          vin=VIN,
+          ecu_serial=PRIMARY_ECU_SERIAL,
           primary_key=TestPrimary.ecu_key, time=TestPrimary.initial_time,
           timeserver_public_key=TestPrimary.initial_time, # INVALID
           my_secondaries=[])
@@ -227,8 +227,8 @@ class TestPrimary(unittest.TestCase):
       primary.Primary(
           full_client_dir=TEMP_CLIENT_DIR,
           director_repo_name=5, #INVALID
-          vin=vin,
-          ecu_serial=primary_ecu_serial,
+          vin=VIN,
+          ecu_serial=PRIMARY_ECU_SERIAL,
           primary_key=TestPrimary.ecu_key, time=TestPrimary.initial_time,
           timeserver_public_key = TestPrimary.key_timeserver_pub,
           my_secondaries=[])
@@ -238,8 +238,8 @@ class TestPrimary(unittest.TestCase):
       primary.Primary(
           full_client_dir=TEMP_CLIENT_DIR,
           director_repo_name= "invalid", #INVALID
-          vin=vin,
-          ecu_serial=primary_ecu_serial,
+          vin=VIN,
+          ecu_serial=PRIMARY_ECU_SERIAL,
           primary_key=TestPrimary.ecu_key, time=TestPrimary.initial_time,
           timeserver_public_key = TestPrimary.key_timeserver_pub,
           my_secondaries=[])
@@ -253,8 +253,8 @@ class TestPrimary(unittest.TestCase):
     TestPrimary.instance = primary.Primary(
         full_client_dir=TEMP_CLIENT_DIR,
         director_repo_name=demo.DIRECTOR_REPO_NAME,
-        vin=vin,
-        ecu_serial=primary_ecu_serial,
+        vin=VIN,
+        ecu_serial=PRIMARY_ECU_SERIAL,
         primary_key=TestPrimary.ecu_key,
         time=TestPrimary.initial_time,
         timeserver_public_key=TestPrimary.key_timeserver_pub)
@@ -264,8 +264,8 @@ class TestPrimary(unittest.TestCase):
 
     self.assertEqual([], TestPrimary.instance.nonces_to_send)
     self.assertEqual([], TestPrimary.instance.nonces_sent)
-    self.assertEqual(vin, TestPrimary.instance.vin)
-    self.assertEqual(primary_ecu_serial, TestPrimary.instance.ecu_serial)
+    self.assertEqual(VIN, TestPrimary.instance.vin)
+    self.assertEqual(PRIMARY_ECU_SERIAL, TestPrimary.instance.ecu_serial)
     self.assertEqual(TestPrimary.ecu_key, TestPrimary.instance.primary_key)
     self.assertEqual(dict(), TestPrimary.instance.ecu_manifests)
     self.assertEqual(
@@ -351,7 +351,7 @@ class TestPrimary(unittest.TestCase):
     with self.assertRaises(uptane.Error):
       TestPrimary.instance.register_ecu_manifest(
           vin='13105941', # unexpected VIN
-          ecu_serial='ecu11111', nonce=nonce,
+          ecu_serial='ecu11111', nonce=NONCE,
           signed_ecu_manifest=sample_ecu_manifest,
           force_pydict=True)
 
@@ -359,9 +359,9 @@ class TestPrimary(unittest.TestCase):
     # doesn't match the ECU Serial in the manifest.
     with self.assertRaises(uptane.UnknownECU):
       TestPrimary.instance.register_ecu_manifest(
-          vin=vin, # unexpected VIN
+          vin=VIN, # unexpected VIN
           ecu_serial='e689681291f', # unexpected ECU Serial
-          nonce=nonce,
+          nonce=NONCE,
           signed_ecu_manifest=sample_ecu_manifest,
           force_pydict=True)
 
@@ -370,9 +370,9 @@ class TestPrimary(unittest.TestCase):
       sample_ecu_manifest2 = copy.deepcopy(sample_ecu_manifest)
       sample_ecu_manifest2['signed']['ecu_serial'] = '12345678'
       TestPrimary.instance.register_ecu_manifest(
-          vin=vin, # unexpected VIN
+          vin=VIN, # unexpected VIN
           ecu_serial='12345678', # unexpected ECU Serial
-          nonce=nonce,
+          nonce=NONCE,
           signed_ecu_manifest=sample_ecu_manifest2,
           force_pydict=True)
 
@@ -381,7 +381,7 @@ class TestPrimary(unittest.TestCase):
 
     # Initialize correctly this time.
     TestPrimary.instance.register_ecu_manifest(
-        vin=vin, ecu_serial='ecu11111', nonce=nonce,
+        vin=VIN, ecu_serial='ecu11111', nonce=NONCE,
         signed_ecu_manifest=sample_ecu_manifest,
         force_pydict=True)
 
@@ -392,7 +392,7 @@ class TestPrimary(unittest.TestCase):
         sample_ecu_manifest, TestPrimary.instance.ecu_manifests['ecu11111'])
 
     # Make sure the nonce provided was noted in the right place.
-    self.assertIn(nonce, TestPrimary.instance.nonces_to_send)
+    self.assertIn(NONCE, TestPrimary.instance.nonces_to_send)
     self.assertEqual([], TestPrimary.instance.nonces_sent)
 
 
@@ -403,7 +403,7 @@ class TestPrimary(unittest.TestCase):
     # too.)
     if tuf.conf.METADATA_FORMAT == 'der':
       TestPrimary.instance.register_ecu_manifest(
-          vin=vin, ecu_serial='ecu11111', nonce=nonce,
+          vin=VIN, ecu_serial='ecu11111', nonce=NONCE,
           signed_ecu_manifest=asn1_codec.convert_signed_metadata_to_der(
           sample_ecu_manifest, datatype='ecu_manifest'), force_pydict=False)
 
@@ -413,16 +413,16 @@ class TestPrimary(unittest.TestCase):
 
   def test_15_get_nonces_to_send_and_rotate(self):
 
-    self.assertIn(nonce, TestPrimary.instance.nonces_to_send)
+    self.assertIn(NONCE, TestPrimary.instance.nonces_to_send)
 
     # Cycle nonces and make sure the return value is as expected from the
     # previous test (a list of one specific nonce).
     self.assertEqual(
-        [nonce], TestPrimary.instance.get_nonces_to_send_and_rotate())
+        [NONCE], TestPrimary.instance.get_nonces_to_send_and_rotate())
 
     # Ensure that that nonce is now listed as sent and that the list of nonces
     # to send is now empty.
-    self.assertEqual([nonce], TestPrimary.instance.nonces_sent)
+    self.assertEqual([NONCE], TestPrimary.instance.nonces_sent)
     self.assertEqual([], TestPrimary.instance.nonces_to_send)
 
 
@@ -434,7 +434,7 @@ class TestPrimary(unittest.TestCase):
     # Try a valid time attestation first, signed by an expected timeserver key,
     # with an expected nonce (previously "received" from a Secondary)
     original_time_attestation = time_attestation = {
-        'signed': {'nonces': [nonce], 'time': '2016-11-02T21:06:05Z'},
+        'signed': {'nonces': [NONCE], 'time': '2016-11-02T21:06:05Z'},
         'signatures': [{
           'method': 'ed25519',
           'sig': 'aabffcebaa57f1d6397bdc5647764261fd23516d2996446c3c40b3f30efb2a4a8d80cd2c21a453e78bf99dafb9d0f5e56c4e072db365499fa5f2f304afec100e',
@@ -461,7 +461,7 @@ class TestPrimary(unittest.TestCase):
       # Rewrite the first 9 digits of the signature ('sig') to something
       # invalid.
       time_attestation__badsig = {
-          'signed': {'nonces': [nonce], 'time': '2016-11-02T21:06:05Z'},
+          'signed': {'nonces': [NONCE], 'time': '2016-11-02T21:06:05Z'},
           'signatures': [{
             'method': 'ed25519',
             'sig': '987654321a57f1d6397bdc5647764261fd23516d2996446c3c40b3f30efb2a4a8d80cd2c21a453e78bf99dafb9d0f5e56c4e072db365499fa5f2f304afec100e',
@@ -472,7 +472,7 @@ class TestPrimary(unittest.TestCase):
       TestPrimary.instance.validate_time_attestation(time_attestation__badsig)
 
 
-    self.assertNotEqual(500, nonce, msg='Programming error: bad and good '
+    self.assertNotEqual(500, NONCE, msg='Programming error: bad and good '
         'test nonces are equal.')
 
     time_attestation__wrongnonce = {

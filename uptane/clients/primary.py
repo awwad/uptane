@@ -263,6 +263,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
     # Check arguments:
     tuf.formats.PATH_SCHEMA.check_match(full_client_dir)
+    tuf.formats.REPOSITORY_NAME_SCHEMA.check_match(director_repo_name)
     tuf.formats.ISO8601_DATETIME_SCHEMA.check_match(time)
     uptane.formats.VIN_SCHEMA.check_match(vin)
     uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial)

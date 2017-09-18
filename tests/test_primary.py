@@ -317,7 +317,10 @@ class TestPrimary(unittest.TestCase):
 
   def test_10_register_ecu_manifest(self):
 
-    TestPrimary.instance.register_new_secondary('ecu11111')
+    # Throughout this function, I'll use a different nonces in each call to
+    # register_ecu_manifest, and check that the ones in calls expected to
+    # succeed have been noted and that the ones in calls expected to fail have
+    # not been noted.
 
     # TODO: Test providing bad data.
 
@@ -332,80 +335,195 @@ class TestPrimary(unittest.TestCase):
     self.assertEqual([], TestPrimary.instance.nonces_to_send)
     self.assertEqual([], TestPrimary.instance.nonces_sent)
 
-    sample_ecu_manifest = {
-        "signatures": [{
-          "method": "ed25519",
-          "sig": "df043006d4322a386cf85a6761a96bb8c92b2a41f4a4201badb8aae6f6dc17ef930addfa96a3d17f20533a01c158a7a33e406dd8291382a1bbab772bd2fa9804",
-          "keyid": "49309f114b857e4b29bfbff1c1c75df59f154fbc45539b2eb30c8a867843b2cb"}],
-        "signed": {
-          "timeserver_time": "2016-10-14T16:06:03Z",
-          "installed_image": {
-            "filepath": "/file2.txt", "fileinfo": {
-              "hashes": {"sha256": "3910b632b105b1e03baa9780fc719db106f2040ebfe473c66710c7addbb2605a", "sha512": "e2ebe151d7f357fcc6b0789d9e029bbf13310e98bc4d15585c1e90ea37c2c7181306f834342080ef007d71439bdd03fb728186e6d1e9eb51fdddf16f76301cef"},
-            "length": 21}},
-          "previous_timeserver_time": "2016-10-14T16:06:03Z",
-          "ecu_serial": "ecu11111",
-          "attacks_detected": ""}}
+
+    # Load the manifests we'll use in these tests.
+    # Note that the .json and .der manifest samples aren't identical; they're
+    # signed over different data, so to get the JSON version of the DER
+    # manifests, we'll convert them.
+    # We'll always need the JSON encodings for testing, and we'll load the
+    # ASN.1/DER manifests only if we're in DER mode.
+    # 1: Correctly signed ECU manifest from ECU TCUdemocar
+    # 2: Correctly signed ECU manifest from ECU unknown_ecu
+    # 3: ECU Manifest from ECU TCUdemocar signed by the wrong key
+    #    (demo's Image Repo timestamp key in particular, instead of demo's
+    #     Secondary key)
+    # 4: Correctly signed ECU manifest from TCUdemocar w/ attack report
+
+    if tuf.conf.METADATA_FORMAT == 'json':
+      manifest1 = manifest1_json = json.load(open(os.path.join(TEST_DATA_DIR,
+          'flawed_manifests', 'em1_typical_ecu_manifest.json')))
+
+      manifest2 = manifest2_json = json.load(open(os.path.join(TEST_DATA_DIR,
+          'flawed_manifests', 'em2_unknown_ecu_manifest.json')))
+
+      manifest3 = manifest3_json = json.load(open(os.path.join(TEST_DATA_DIR,
+          'flawed_manifests', 'em3_ecu_manifest_signed_with_wrong_key.json')))
+
+      manifest4 = manifest4_json = json.load(open(os.path.join(TEST_DATA_DIR,
+          'flawed_manifests', 'em4_attack_detected_in_ecu_manifest.json')))
+
+    else:
+      assert tuf.conf.METADATA_FORMAT == 'der', 'Test code is flawed.'
+
+      manifest1 = open(os.path.join(TEST_DATA_DIR, 'flawed_manifests',
+          'em1_typical_ecu_manifest.der'), 'rb').read()
+
+      manifest1_json = asn1_codec.convert_signed_der_to_dersigned_json(
+          manifest1, 'ecu_manifest')
+
+      manifest2 = open(os.path.join(TEST_DATA_DIR, 'flawed_manifests',
+          'em2_unknown_ecu_manifest.der'), 'rb').read()
+
+      manifest2_json = asn1_codec.convert_signed_der_to_dersigned_json(
+          manifest2, 'ecu_manifest')
+
+      manifest3 = open(os.path.join(TEST_DATA_DIR, 'flawed_manifests',
+          'em3_ecu_manifest_signed_with_wrong_key.der'), 'rb').read()
+
+      manifest3_json = asn1_codec.convert_signed_der_to_dersigned_json(
+          manifest3, 'ecu_manifest')
+
+      manifest4 = open(os.path.join(TEST_DATA_DIR, 'flawed_manifests',
+          'em4_attack_detected_in_ecu_manifest.der'), 'rb').read()
+
+      manifest4_json = asn1_codec.convert_signed_der_to_dersigned_json(
+          manifest4, 'ecu_manifest')
+
+
+    # Register two Secondaries with the Primary.
+    TestPrimary.instance.register_new_secondary('TCUdemocar')
+    TestPrimary.instance.register_new_secondary('ecu11111')
+
+
+    # Start with a sequence of tests with bad arguments but an otherwise
+    # correct ECU Manifest, manifest1.
 
     # Try using the wrong vin.
     with self.assertRaises(uptane.Error):
       TestPrimary.instance.register_ecu_manifest(
           vin='13105941', # unexpected VIN
-          ecu_serial='ecu11111', nonce=NONCE,
-          signed_ecu_manifest=sample_ecu_manifest,
-          force_pydict=True)
+          ecu_serial='TCUdemocar', nonce=1,
+          signed_ecu_manifest=manifest1)
 
-    # Try changing the Secondary's ECU Serial so that the ECU Serial argument
-    # doesn't match the ECU Serial in the manifest.
+    # Try using the wrong ECU Serial - one that is registered, but which does
+    # not match the ECU Serial listed in the ECU Manifest itself.
+    with self.assertRaises(uptane.Spoofing):
+      TestPrimary.instance.register_ecu_manifest(
+          vin=VIN,
+          ecu_serial='ecu11111', # not the same ECU Serial in the manifest
+          nonce=2, signed_ecu_manifest=manifest1)
+
+    # Try using an ECU Serial that the Primary is not aware of.
     with self.assertRaises(uptane.UnknownECU):
       TestPrimary.instance.register_ecu_manifest(
           vin=VIN, # unexpected VIN
-          ecu_serial='e689681291f', # unexpected ECU Serial
-          nonce=NONCE,
-          signed_ecu_manifest=sample_ecu_manifest,
-          force_pydict=True)
-
-    # Try using an unknown ECU Serial.
-    with self.assertRaises(uptane.UnknownECU):
-      sample_ecu_manifest2 = copy.deepcopy(sample_ecu_manifest)
-      sample_ecu_manifest2['signed']['ecu_serial'] = '12345678'
-      TestPrimary.instance.register_ecu_manifest(
-          vin=VIN, # unexpected VIN
-          ecu_serial='12345678', # unexpected ECU Serial
-          nonce=NONCE,
-          signed_ecu_manifest=sample_ecu_manifest2,
-          force_pydict=True)
+          ecu_serial='an unknown secondary ecu serial', # unexpected ECU Serial
+          nonce=3,
+          signed_ecu_manifest=manifest1)
 
 
-    # TODO: Other possible tests here.
-
-    # Initialize correctly this time.
+    # Register the ECU Manifest correctly this time.
     TestPrimary.instance.register_ecu_manifest(
-        vin=VIN, ecu_serial='ecu11111', nonce=NONCE,
-        signed_ecu_manifest=sample_ecu_manifest,
-        force_pydict=True)
+        vin=VIN, ecu_serial='TCUdemocar', nonce=10,
+        signed_ecu_manifest=manifest1)
 
     # Make sure the provided manifest is now in the Primary's ecu manifests
-    # dictionary.
-    self.assertIn('ecu11111', TestPrimary.instance.ecu_manifests)
+    # dictionary. Note that the Primary holds manifests as JSON-compatible
+    # Python dictionaries regardless of the format it receives them in.
+    self.assertIn('TCUdemocar', TestPrimary.instance.ecu_manifests)
     self.assertIn(
-        sample_ecu_manifest, TestPrimary.instance.ecu_manifests['ecu11111'])
+        manifest1_json, TestPrimary.instance.ecu_manifests['TCUdemocar'])
 
     # Make sure the nonce provided was noted in the right place.
-    self.assertIn(NONCE, TestPrimary.instance.nonces_to_send)
+    self.assertIn(10, TestPrimary.instance.nonces_to_send)
     self.assertEqual([], TestPrimary.instance.nonces_sent)
 
 
     # Though this is not required functionality, test register_ecu_manifest
-    # with DER manifests during the DER tests. (By the time they reach this
-    # point in the code, they've generally been converted to JSON already, but
-    # there's support in register_ecu_manifest for converting DER to JSON,
-    # too.)
-    if tuf.conf.METADATA_FORMAT == 'der':
+    # with JSON manifests as well, even if we're running in DER mode.
+    # And make sure force_pydict=True doesn't break if we're already in JSON
+    # mode, either.
+    TestPrimary.instance.register_ecu_manifest(
+        VIN, 'TCUdemocar', nonce=11, signed_ecu_manifest=manifest1_json,
+        force_pydict=True)
+
+
+
+    # The next tests use ECU Manifests that contain problematic values.
+    # (We're now testing things beyond just the arguments provided.
+    # If we're running in DER mode, we'll try both DER and JSON manifests.
+    # If we're running in JSON mode, we'll only try JSON manifests
+    #    (though in JSON mode, we'll run twice, once with force_pydict on
+    #    to make sure that run doesn't break despite the redundant argument).
+
+    # The list again is:
+    # 2: Correctly signed ECU manifest from ECU unknown_ecu
+    # 3: ECU Manifest from ECU TCUdemocar signed by the wrong key
+    # 4: Correctly signed ECU manifest from TCUdemocar w/ attack report
+
+
+    # Case 2: We won't save the ECU Manifest from an unknown ECU Serial.
+    self.assertNotIn('unknown_ecu', TestPrimary.instance.ecu_manifests)
+    self.assertNotIn(
+        manifest2_json, TestPrimary.instance.ecu_manifests['TCUdemocar'])
+
+    with self.assertRaises(uptane.UnknownECU):
       TestPrimary.instance.register_ecu_manifest(
-          vin=VIN, ecu_serial='ecu11111', nonce=NONCE,
-          signed_ecu_manifest=asn1_codec.convert_signed_metadata_to_der(
-          sample_ecu_manifest, datatype='ecu_manifest'), force_pydict=False)
+          'democar', 'unknown_ecu', nonce=4, signed_ecu_manifest=manifest2)
+
+    with self.assertRaises(uptane.UnknownECU):
+      TestPrimary.instance.register_ecu_manifest(
+          'democar', 'unknown_ecu', nonce=5,
+          signed_ecu_manifest=manifest2_json, force_pydict=True)
+
+    self.assertNotIn('unknown_ecu', TestPrimary.instance.ecu_manifests)
+    self.assertNotIn( # Make sure it's not in the wrong list of ECU Manifests
+        manifest2_json, TestPrimary.instance.ecu_manifests['TCUdemocar'])
+
+
+    # Case 3: ECU Manifest signed with the wrong key: we save it anyway and
+    #         send it on to the Director like any other; Primaries don't check
+    #         the signatures on ECU Manifests: they can't be expected to know
+    #         the right public or symmetric keys.
+    self.assertNotIn(
+        manifest3_json, TestPrimary.instance.ecu_manifests['TCUdemocar'])
+
+    TestPrimary.instance.register_ecu_manifest(
+        'democar', 'TCUdemocar', nonce=12, signed_ecu_manifest=manifest3)
+
+    TestPrimary.instance.register_ecu_manifest(
+        'democar', 'TCUdemocar', nonce=13, signed_ecu_manifest=manifest3_json,
+        force_pydict=True)
+
+    self.assertIn(
+        manifest3_json, TestPrimary.instance.ecu_manifests['TCUdemocar'])
+
+
+    # Case 4: ECU Manifest containing an attack report. Make sure it doesn't
+    #         fail to be registered.
+    self.assertNotIn(
+        manifest4_json, TestPrimary.instance.ecu_manifests['TCUdemocar'])
+
+    TestPrimary.instance.register_ecu_manifest(
+        'democar', 'TCUdemocar', nonce=14, signed_ecu_manifest=manifest4)
+
+    TestPrimary.instance.register_ecu_manifest(
+        'democar', 'TCUdemocar', nonce=15, signed_ecu_manifest=manifest4_json,
+        force_pydict=True)
+
+    self.assertIn(
+        manifest4_json, TestPrimary.instance.ecu_manifests['TCUdemocar'])
+
+
+
+    # Confirm that we've succeeded in registering the right nonces.
+    for this_nonce in [1, 2, 3, 4, 5]:
+      self.assertNotIn(this_nonce, TestPrimary.instance.nonces_to_send)
+
+    for this_nonce in [10, 11, 12, 13, 14, 15]:
+      self.assertIn(this_nonce, TestPrimary.instance.nonces_to_send)
+
+
 
 
 

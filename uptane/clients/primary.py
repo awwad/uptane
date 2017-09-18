@@ -934,18 +934,69 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
   def register_ecu_manifest(
       self, vin, ecu_serial, nonce, signed_ecu_manifest, force_pydict=False):
     """
-    Called by Secondaries (in the demo, this is via an XMLRPC interface, or
-    through another interface and passed through the XMLRPC interface).
+    <Purpose>
+      Called by Secondaries (in the demo, this is via an XMLRPC interface, or
+      through another interface and passed through the XMLRPC interface).
 
-    The Primary need not track ECU serials, so calling this doesn't result in a
-    verification of the ECU's signature on the ECU manifest. This information
-    is bundled together in a single vehicle report to the Director service.
+      The Primary need not track ECU keys, so calling this doesn't result in a
+      verification of the ECU's signature on the ECU manifest. This information
+      is bundled together in a single vehicle report to the Director service.
 
-    Exceptions:
-      uptane.Spoofing     if ECU Serials within the manifest are inconsistent
-      uptane.UnknownECU   if the manifest is from an ECU that is not one of our
-                          Secondaries
-      uptane.Error        if the VIN for the report is not the same as our VIN
+    <Arguments>
+      vin
+          See class docstring above. The VIN of a Secondary in this vehicle
+          submitting an ECU Manifest is expected to be the same as the VIN for
+          this Primary. (In deployments where a Primary is shared -- for
+          example, a dealer device connected directly to a vehicle for manual
+          updates/modifications -- some code would have to be changed in a few
+          modules to remove this assumption.)
+
+      ecu_serial
+          The ECU Serial of the Secondary submitting the ECU Manifest. This
+          should match the ECU Serial listed in the signed manifest itself.
+
+      nonce
+          A (probably randomly generated) integer token produced by the
+          Secondary, which this Primary is expected to include in a request to
+          the Timeserver to produce a signed time that includes this token (and
+          others). When the Secondary receives the signed timeserver
+          attestation, if it sees this token in the signed contents of the
+          attestation, the Secondary can be reassured of the freshness of the
+          time attestation.
+
+      signed_ecu_manifest
+          The ECU Manifest a Secondary is submitting.
+
+      force_pydict (optional, default False)
+          When True, indicates that signed_ecu_manifest is a JSON-compatible
+          Python dictionary, the internal representation of an ECU Manifest,
+          conformant with uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA,
+          just as if tuf.conf.METADATA_FORMAT were set to json'. By default
+          (False), the expected format of signed_ecu_manifest is based on
+          tuf.conf.METADATA_FORMAT, so signed_ecu_manifest is expected to
+          conform to uptane.formats.DER_DATA_SCHEMA, which decodes to data
+          conformant with uptane.encoding.asn1_definitions.ECUVersionManifest
+
+
+    <Exceptions>
+
+      uptane.Spoofing
+          if ecu_serial is not the same as the ECU Serial listed in the
+          provided ECU Manifest itself.
+
+      uptane.UnknownECU
+          if ecu_serial is not one of this Primary's Secondaries
+
+      uptane.UnknownVehicle
+          if the VIN argument is not the same as this primary's VIN
+
+    <Returns>
+      None
+
+    <Side Effects>
+      self.ecu_manifests[ecu_serial] will contain signed_ecu_manifest
+      nonce will be added to self.nonces_to_send
+
     """
     # check arg format and that serial is registered
     self._check_ecu_serial(ecu_serial)

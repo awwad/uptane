@@ -52,6 +52,9 @@ LIBUPTANE_LIBRARY_FNAME = os.path.join(
 
 
 
+# When True, the reference implementation's primary.py code displays banners
+# when firmware images are rejected, to make the successful defense visible.
+uptane.DEMO_MODE = True
 
 
 # Globals

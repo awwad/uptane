@@ -33,6 +33,10 @@ import uptane.services.timeserver as timeserver
 import uptane.encoding.asn1_codec as asn1_codec
 import hashlib
 
+# Provided for consistency; used only by demo_primary currently.
+uptane.DEMO_MODE = True
+
+
 
 # Restrict director requests to a particular path.
 # Must specify RPC2 here for the XML-RPC interface to work.

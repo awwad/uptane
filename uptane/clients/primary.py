@@ -16,7 +16,6 @@
   the "Design Overview" and "Implementation Specification" documents, links to
   which are maintained at uptane.github.io
 """
-from __future__ import print_function
 from __future__ import unicode_literals
 
 import uptane # Import before TUF modules; may change tuf.conf values.
@@ -529,15 +528,17 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
             'untrustworthy Image Repository, or the Director and Image '
             'Repository may be out of sync.' + ENDCOLORS)
 
-        # The following is code intended for a demonstration, inserted here
-        # into the reference implementation as a temporary measure.
-        print_banner(BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG,
-            text='The Director has instructed us to download a file that does '
-            ' does not exactly match the Image Repository metadata. '
-            'File: ' + repr(target_filepath), sound=TADA)
-        import time
-        time.sleep(3)
-        # End demo code.
+        # If running the demo, display splash banner indicating the rejection.
+        # This clause should be pulled out of the reference implementation when
+        # possible.
+        if uptane.DEMO_MODE: # pragma: no cover
+          print_banner(BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG,
+              text='The Director has instructed us to download a file that does '
+              ' does not exactly match the Image Repository metadata. '
+              'File: ' + repr(target_filepath), sound=TADA)
+          import time
+          time.sleep(3)
+
 
     # # Grab a filepath from each of the dicts of target file infos. (Each dict
     # # corresponds to one file, and the filepaths in all the infos in that dict
@@ -619,37 +620,41 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
         self.updater.download_target(target, full_targets_directory)
 
       except tuf.NoWorkingMirrorError as e:
-        print('')
-        print(YELLOW + 'In downloading target ' + repr(filepath) + ', am unable '
-            'to find a mirror providing a trustworthy file.\nChecking the mirrors'
-            ' resulted in these errors:')
+        error_report = ''
         for mirror in e.mirror_errors:
-          print('    ' + type(e.mirror_errors[mirror]).__name__ + ' from ' + mirror)
-        print(ENDCOLORS)
+          error_report += \
+              type(e.mirror_errors[mirror]).__name__ + ' from ' + mirror + '; '
+        log.info(YELLOW + 'In downloading target ' + repr(filepath) +
+            ', am unable to find a mirror providing a trustworthy file. '
+            'Checking the mirrors resulted in these errors:  ' + error_report +
+            ENDCOLORS)
 
-        print_banner(BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG,
-            text='No image was found that exactly matches the signed metadata '
-            'from the Director and Image Repositories. Not keeping '
-            'untrustworthy files. ' + repr(target_filepath), sound=TADA)
-        import time
-        time.sleep(3)
+        # If running the demo, display splash banner indicating the rejection.
+        # This clause should be pulled out of the reference implementation when
+        # possible.
+        if uptane.DEMO_MODE: # pragma: no cover
+          print_banner(BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG,
+              text='No image was found that exactly matches the signed metadata '
+              'from the Director and Image Repositories. Not keeping '
+              'untrustworthy files. ' + repr(target_filepath), sound=TADA)
+          import time
+          time.sleep(3)
 
 
         # # If this was our firmware, notify that we're not installing.
         # if filepath.startswith('/') and filepath[1:] == firmware_filename or \
         #   not filepath.startswith('/') and filepath == firmware_filename:
 
-        print()
-        print(YELLOW + ' While the Director and Image Repository provided '
-            'consistent metadata for new firmware,')
-        print(' mirrors we contacted provided only untrustworthy images. ')
-        print(GREEN + 'We have rejected these. Firmware not updated.\n' + ENDCOLORS)
+        log.info(YELLOW + 'The Director and Image Repository provided '
+            'consistent metadata for new firmware, but contacted mirrors '
+            'provided only untrustworthy images, which have been ' + GREEN +
+            'rejected' + ENDCOLORS + ' Firmware not updated.')
 
       else:
         assert(os.path.exists(full_fname)), 'Programming error: no download ' + \
             'error, but file still does not exist.'
-        print(GREEN + 'Successfully downloaded a trustworthy ' + repr(filepath) +
-            ' image.' + ENDCOLORS)
+        log.info(GREEN + 'Successfully downloaded trustworthy ' +
+            repr(filepath) + ' image.' + ENDCOLORS)
 
 
         # TODO: <~> There is an attack vector here, potentially, for a minor

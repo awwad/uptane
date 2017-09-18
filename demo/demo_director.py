@@ -53,6 +53,11 @@ from six.moves import xmlrpc_server # for the director services interface
 
 import atexit # to kill server process on exit()
 
+
+# Provided for consistency; used only by demo_primary currently.
+uptane.DEMO_MODE = True
+
+
 KNOWN_VINS = ['111', '112', '113', 'democar']
 
 # Dynamic global objects

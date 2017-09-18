@@ -952,8 +952,8 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     tuf.formats.BOOLEAN_SCHEMA.check_match(force_pydict)
 
     if vin != self.vin:
-      raise uptane.Error('Received an ECU Manifest supposedly hailing from a '
-          'different vehicle....')
+      raise uptane.UnknownVehicle('Received an ECU Manifest supposedly hailing '
+          'from a different vehicle....')
 
     if tuf.conf.METADATA_FORMAT == 'der' and not force_pydict:
       # If we're working with ASN.1/DER, convert it into the format specified in

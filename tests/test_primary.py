@@ -531,16 +531,25 @@ class TestPrimary(unittest.TestCase):
 
   def test_15_get_nonces_to_send_and_rotate(self):
 
-    self.assertIn(NONCE, TestPrimary.instance.nonces_to_send)
+    # The Primary's list of nonces to send in the next request to the
+    # timeserver for a time attestation:
+    nonces_to_have_sent = TestPrimary.instance.nonces_to_send
 
-    # Cycle nonces and make sure the return value is as expected from the
-    # previous test (a list of one specific nonce).
+
+    # Double-check that one of the expected nonces from the previous test
+    # function is in the list of the Primary's nonces to send.
+    self.assertIn(10, nonces_to_have_sent)
+
+
+    # Cycle nonces: Request the list of nonces to send to the timeserver,
+    # triggering the rotation of nonces. Make sure the nonce list provided
+    # is as expected from the previous test, and then that the rotation has
+    # actually occurred (nonces_to_send emptied, contents moved to nonces_sent).
     self.assertEqual(
-        [NONCE], TestPrimary.instance.get_nonces_to_send_and_rotate())
+        sorted(nonces_to_have_sent),
+        sorted(TestPrimary.instance.get_nonces_to_send_and_rotate()))
 
-    # Ensure that that nonce is now listed as sent and that the list of nonces
-    # to send is now empty.
-    self.assertEqual([NONCE], TestPrimary.instance.nonces_sent)
+    self.assertEqual(nonces_to_have_sent, TestPrimary.instance.nonces_sent)
     self.assertEqual([], TestPrimary.instance.nonces_to_send)
 
 
@@ -548,6 +557,11 @@ class TestPrimary(unittest.TestCase):
 
 
   def test_20_validate_time_attestation(self):
+
+    # First, confirm that we've never validated a timeserver attestation, and/or
+    # that that results in get_last_timeserver_attestation returning None.
+    self.assertIsNone(TestPrimary.instance.get_last_timeserver_attestation())
+
 
     # Try a valid time attestation first, signed by an expected timeserver key,
     # with an expected nonce (previously "received" from a Secondary)
@@ -564,7 +578,30 @@ class TestPrimary(unittest.TestCase):
           original_time_attestation,
           private_key=TestPrimary.key_timeserver_pri, resign=True)
 
+
+    # In the previous functions, we added a variety of nonces in the nonce
+    # rotation. Validation of a time attestation confirms that the time
+    # attestation contains the nonces we've most recently sent to the
+    # timeserver. The sample attestation we have here does not have the nonces
+    # we've indicated to the Primary that we've sent, so this validation
+    # should fail:
+    with self.assertRaises(uptane.BadTimeAttestation):
+      TestPrimary.instance.validate_time_attestation(time_attestation)
+
+    # Now we adjust the Primary's notion of what nonces we sent to the
+    # timeserver most recently, and then try the validation again, expecting
+    # it to succeed.
+    TestPrimary.instance.get_nonces_to_send_and_rotate()
+    TestPrimary.instance.nonces_to_send = [NONCE]
+    TestPrimary.instance.get_nonces_to_send_and_rotate()
     TestPrimary.instance.validate_time_attestation(time_attestation)
+
+    # Since the validation succeeded, get_last_timeserver_attestation should
+    # return the attestation we just provided.
+    self.assertEqual(
+        time_attestation,
+        TestPrimary.instance.get_last_timeserver_attestation())
+
 
 
     # Prepare to try again with a bad signature.
@@ -639,7 +676,7 @@ class TestPrimary(unittest.TestCase):
     # Make sure that the Secondary's ECU Manifest (from the register ECU
     # ECU Manifest test above) is listed in the Vehicle Manifest.
     self.assertIn(
-        'ecu11111', vehicle_manifest['signed']['ecu_version_manifests'])
+        'TCUdemocar', vehicle_manifest['signed']['ecu_version_manifests'])
 
     # TODO: More testing of the contents of the vehicle manifest.
 
@@ -851,9 +888,13 @@ class TestPrimary(unittest.TestCase):
 
   def test_70_get_last_timeserver_attestation(self):
 
-    # TODO: More thorough test.
+    # get_last_timeserver_attestation is tested in more detail in a previous
+    # test, test_20_validate_time_attestation.
 
     attestation = TestPrimary.instance.get_last_timeserver_attestation()
+
+    # We expect to have validated an attestation in previous tests.
+    self.assertIsNotNone(attestation)
 
     if tuf.conf.METADATA_FORMAT == 'der':
       uptane.formats.DER_DATA_SCHEMA.check_match(attestation)

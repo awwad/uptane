@@ -398,7 +398,6 @@ class TestSecondary(unittest.TestCase):
     # hack of swapping tuf.conf.repository_directories back and forth to make
     # it work for these tests.
 
-<<<<<<< HEAD
 
     # Initialize three clients and perform checks on each of them.
     for i in range(0, len(TEMP_CLIENT_DIRS)):

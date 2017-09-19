@@ -584,6 +584,7 @@ class TestPrimary(unittest.TestCase):
 
 
   def test_55_update_exists_for_ecu(self):
+    pass
 
     # secondary_wo_update = "TCU222" #Secondary that will be registered #w/ primary as secondaries but will not listed by targets/director
     # #for any updates
@@ -637,8 +638,8 @@ class TestPrimary(unittest.TestCase):
 
 
 
-    # def test_60_hardware_id_attack(self):
-    # 	pass
+    def test_60_hardware_id_attack(self):
+      pass
 
 
 # Run unit test.

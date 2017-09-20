@@ -40,8 +40,11 @@ import uptane.encoding.asn1_codec as asn1_codec
 
 from uptane import GREEN, RED, YELLOW, ENDCOLORS
 
-# The following import is a temporary measure to facilitate demonstration.
-# It does not ultimately belong here in the reference implementation.
+# The following two imports are only used for the Uptane demonstration, where
+# they enable delays and the display of splash banners indicating metadata
+# rejection during sequential metadata checks. These should be pulled out of
+# the reference implementation when possible.
+import time
 from demo.uptane_banners import *
 
 
@@ -536,7 +539,6 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
               text='The Director has instructed us to download a file that does '
               ' does not exactly match the Image Repository metadata. '
               'File: ' + repr(target_filepath), sound=TADA)
-          import time
           time.sleep(3)
 
 
@@ -637,7 +639,6 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
               text='No image was found that exactly matches the signed metadata '
               'from the Director and Image Repositories. Not keeping '
               'untrustworthy files. ' + repr(target_filepath), sound=TADA)
-          import time
           time.sleep(3)
 
 

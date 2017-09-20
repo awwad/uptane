@@ -52,6 +52,13 @@ LIBUPTANE_LIBRARY_FNAME = os.path.join(
 
 
 
+# Tell the reference implementation that we're in demo mode:
+# When True, the reference implementation's primary.py code displays banners
+# when firmware images are rejected during primary_update_cycle, to make the
+# successful defense visible during a demonstration. (Otherwise, the rejection
+# would be hard to notice while the primary would just proceed to the next
+# image.)
+uptane.DEMO_MODE = True
 
 
 # Globals

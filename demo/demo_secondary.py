@@ -19,8 +19,6 @@ ds.submit_ecu_manifest_to_primary() # optionally takes different signed manifest
         nonce,
         manifest)
 
-
-
 """
 from __future__ import print_function
 from __future__ import unicode_literals
@@ -45,6 +43,15 @@ import json # for customizing the Secondary's pinnings file.
 import canonicaljson
 
 from six.moves import xmlrpc_client
+
+
+# Tell the reference implementation that we're in demo mode.
+# (Provided for consistency.) Currently, primary.py in the reference
+# implementation uses this to display banners for defenses that would otherwise
+# be hard to notice. No other reference implementation code (secondary.py,
+# director.py, etc.) currently uses this setting, but it could.
+uptane.DEMO_MODE = True
+
 
 # Globals
 CLIENT_DIRECTORY_PREFIX = 'temp_secondary' # name for this secondary's directory

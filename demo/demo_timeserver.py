@@ -33,6 +33,14 @@ import uptane.services.timeserver as timeserver
 import uptane.encoding.asn1_codec as asn1_codec
 import hashlib
 
+# Tell the reference implementation that we're in demo mode.
+# (Provided for consistency.) Currently, primary.py in the reference
+# implementation uses this to display banners for defenses that would otherwise
+# be hard to notice. No other reference implementation code (secondary.py,
+# director.py, etc.) currently uses this setting, but it could.
+uptane.DEMO_MODE = True
+
+
 
 # Restrict director requests to a particular path.
 # Must specify RPC2 here for the XML-RPC interface to work.

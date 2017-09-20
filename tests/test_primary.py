@@ -291,8 +291,9 @@ class TestPrimary(unittest.TestCase):
           "ecu_serial": "ecu11111",
           "attacks_detected": ""}}
 
-    # Try using the wrong vin.
-    with self.assertRaises(uptane.Error):
+    # Try using a VIN that is not the Primary's VIN (ECU Manifest apparently
+    # from another car!)
+    with self.assertRaises(uptane.UnknownVehicle):
       TestPrimary.instance.register_ecu_manifest(
           vin='13105941', # unexpected VIN
           ecu_serial='ecu11111', nonce=nonce,

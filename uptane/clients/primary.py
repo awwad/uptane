@@ -1008,8 +1008,8 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
 
     if vin != self.vin:
-      raise uptane.Error('Received an ECU Manifest supposedly hailing from a '
-          'different vehicle....')
+      raise uptane.UnknownVehicle('Received an ECU Manifest supposedly hailing '
+          'from a different vehicle....')
 
     if tuf.conf.METADATA_FORMAT == 'der' and not force_pydict:
       uptane.formats.DER_DATA_SCHEMA.check_match(signed_ecu_manifest)

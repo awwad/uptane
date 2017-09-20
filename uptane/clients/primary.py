@@ -960,16 +960,22 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
       signed_ecu_manifest
           The ECU Manifest a Secondary is submitting.
 
-      force_pydict (optional, default False)
-          When True, indicates that signed_ecu_manifest is a JSON-compatible
-          Python dictionary, the internal representation of an ECU Manifest,
-          conformant with uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA,
-          just as if tuf.conf.METADATA_FORMAT were set to json'. By default
-          (False), the expected format of signed_ecu_manifest is based on
-          tuf.conf.METADATA_FORMAT, so signed_ecu_manifest is expected to
-          conform to uptane.formats.DER_DATA_SCHEMA, which decodes to data
-          conformant with uptane.encoding.asn1_definitions.ECUVersionManifest
+          The expected format that signed_ecu_manifest should conform to is
+          based on the value of tuf.conf.METADATA_FORMAT:
 
+            if 'json': uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA,
+                       a JSON-compatible Python dictionary, the internal
+                       repreentation of an ECU Manifest
+
+            if 'der':  uptane.formats.DER_DATA_SCHEMA encoding data conforming
+                       to ECUVersionManifest specified in file ECUModule.asn1
+                       (and the Uptane Implementation Specification)
+
+          See force_pydict.
+
+      force_pydict (optional, default False)
+          When True, the function treats signed_ecu_manifest as if the value of
+          tuf.conf.METADATA_FORMAT is set to 'json'. See signed_ecu_manifest.
 
     <Exceptions>
 
@@ -982,6 +988,9 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
       uptane.UnknownVehicle
           if the VIN argument is not the same as this primary's VIN
+
+      tuf.FormatError
+          if any of the arguments are not in the expected formats.
 
     <Returns>
       None

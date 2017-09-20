@@ -45,7 +45,11 @@ import canonicaljson
 from six.moves import xmlrpc_client
 
 
-# Provided for consistency; used only by demo_primary currently.
+# Tell the reference implementation that we're in demo mode.
+# (Provided for consistency.) Currently, primary.py in the reference
+# implementation uses this to display banners for defenses that would otherwise
+# be hard to notice. No other reference implementation code (secondary.py,
+# director.py, etc.) currently uses this setting, but it could.
 uptane.DEMO_MODE = True
 
 

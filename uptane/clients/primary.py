@@ -263,6 +263,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
     # Check arguments:
     tuf.formats.PATH_SCHEMA.check_match(full_client_dir)
+    tuf.formats.REPOSITORY_NAME_SCHEMA.check_match(director_repo_name)
     tuf.formats.ISO8601_DATETIME_SCHEMA.check_match(time)
     uptane.formats.VIN_SCHEMA.check_match(vin)
     uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial)
@@ -596,14 +597,6 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
       full_fname = os.path.join(full_targets_directory, filepath)
       enforce_jail(filepath, full_targets_directory)
 
-      # TODO: Remove this. It's here for convenience during dev & testing.
-      # Considerations on the ground by implementers / users of the reference
-      # implementation will decide what to do with target files after they've
-      # been used.
-      # Delete existing targets.
-      if os.path.exists(full_fname):
-        os.remove(full_fname)
-
       # Download each target.
       # Now that we have fileinfo for all targets listed by both the Director and
       # the Image Repository -- which should include file2.txt in this test --
@@ -934,35 +927,102 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
   def register_ecu_manifest(
       self, vin, ecu_serial, nonce, signed_ecu_manifest, force_pydict=False):
     """
-    Called by Secondaries (in the demo, this is via an XMLRPC interface, or
-    through another interface and passed through the XMLRPC interface).
+    <Purpose>
+      Called by Secondaries (in the demo, this is via an XMLRPC interface, or
+      through another interface and passed through the XMLRPC interface).
 
-    The Primary need not track ECU serials, so calling this doesn't result in a
-    verification of the ECU's signature on the ECU manifest. This information
-    is bundled together in a single vehicle report to the Director service.
+      The Primary need not track ECU keys, so calling this doesn't result in a
+      verification of the ECU's signature on the ECU manifest. This information
+      is bundled together in a single vehicle report to the Director service.
 
-    Exceptions:
-      uptane.Spoofing     if ECU Serials within the manifest are inconsistent
-      uptane.UnknownECU   if the manifest is from an ECU that is not one of our
-                          Secondaries
-      uptane.Error        if the VIN for the report is not the same as our VIN
+    <Arguments>
+      vin
+          See class docstring above. The VIN of a Secondary in this vehicle
+          submitting an ECU Manifest is expected to be the same as the VIN for
+          this Primary. (In deployments where a Primary is shared -- for
+          example, a dealer device connected directly to a vehicle for manual
+          updates/modifications -- some code would have to be changed in a few
+          modules to remove this assumption.)
+
+      ecu_serial
+          The ECU Serial of the Secondary submitting the ECU Manifest. This
+          should match the ECU Serial listed in the signed manifest itself.
+
+      nonce
+          A (probably randomly generated) integer token produced by the
+          Secondary, which this Primary is expected to include in a request to
+          the Timeserver to produce a signed time that includes this token (and
+          others). When the Secondary receives the signed timeserver
+          attestation, if it sees this token in the signed contents of the
+          attestation, the Secondary can be reassured of the freshness of the
+          time attestation.
+
+      signed_ecu_manifest
+          The ECU Manifest a Secondary is submitting.
+
+          The expected format that signed_ecu_manifest should conform to is
+          based on the value of tuf.conf.METADATA_FORMAT:
+
+            if 'json': uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA,
+                       a JSON-compatible Python dictionary, the internal
+                       repreentation of an ECU Manifest
+
+            if 'der':  uptane.formats.DER_DATA_SCHEMA encoding data conforming
+                       to ECUVersionManifest specified in file ECUModule.asn1
+                       (and the Uptane Implementation Specification)
+
+          See force_pydict.
+
+      force_pydict (optional, default False)
+          When True, the function treats signed_ecu_manifest as if the value of
+          tuf.conf.METADATA_FORMAT is set to 'json'. See signed_ecu_manifest.
+
+    <Exceptions>
+
+      uptane.Spoofing
+          if ecu_serial is not the same as the ECU Serial listed in the
+          provided ECU Manifest itself.
+
+      uptane.UnknownECU
+          if ecu_serial is not one of this Primary's Secondaries
+
+      uptane.UnknownVehicle
+          if the VIN argument is not the same as this primary's VIN
+
+      tuf.FormatError
+          if any of the arguments are not in the expected formats.
+
+    <Returns>
+      None
+
+    <Side Effects>
+      self.ecu_manifests[ecu_serial] will contain signed_ecu_manifest
+      nonce will be added to self.nonces_to_send
+
     """
     # check arg format and that serial is registered
     self._check_ecu_serial(ecu_serial)
     tuf.formats.BOOLEAN_SCHEMA.check_match(force_pydict)
+    uptane.formats.VIN_SCHEMA.check_match(vin)
+    uptane.formats.NONCE_SCHEMA.check_match(nonce)
+
 
     if vin != self.vin:
       raise uptane.Error('Received an ECU Manifest supposedly hailing from a '
           'different vehicle....')
 
     if tuf.conf.METADATA_FORMAT == 'der' and not force_pydict:
+      uptane.formats.DER_DATA_SCHEMA.check_match(signed_ecu_manifest)
       # If we're working with ASN.1/DER, convert it into the format specified in
       # uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.
       signed_ecu_manifest = asn1_codec.convert_signed_der_to_dersigned_json(
           signed_ecu_manifest, datatype='ecu_manifest')
 
     # Else, we're working with standard Python dictionaries and no conversion
-    # is necessary.
+    # is necessary, but we'll still validate the signed_ecu_manifest argument.
+    else:
+      uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
+          signed_ecu_manifest)
 
     if ecu_serial != signed_ecu_manifest['signed']['ecu_serial']:
       # TODO: Choose an exception class.

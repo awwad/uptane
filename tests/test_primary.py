@@ -202,6 +202,16 @@ class TestPrimary(unittest.TestCase):
           timeserver_public_key=TestPrimary.initial_time, # INVALID
           my_secondaries=[])
 
+    # Invalid format for Director Repository name
+    with self.assertRaises(tuf.FormatError):
+      primary.Primary(
+          full_client_dir=TEMP_CLIENT_DIR,
+          director_repo_name=5, #INVALID
+          vin=vin,
+          ecu_serial=primary_ecu_serial,
+          primary_key=TestPrimary.ecu_key, time=TestPrimary.initial_time,
+          timeserver_public_key = TestPrimary.key_timeserver_pub,
+          my_secondaries=[])
 
     # Try creating a Primary, expecting it to work.
     # Initializes a Primary ECU, making a client directory and copying the root

@@ -21,9 +21,6 @@ try:
 except ImportError:
  uptane.logger.error('pyasn1 library not found. Proceeding using JSON only.')
 else:
- #import uptane.ber_encoder as ber_encoder
- # TODO: Add the modules necessary to handle timeserver attestation ASN1
- # conversion to Uptane.
  PYASN1_EXISTS = True
 
 import time

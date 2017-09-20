@@ -80,7 +80,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
       unique.) The Director should be aware of this identifier.
 
     self.primary_key
-      The signing key for this Secondary ECU. This key will be used to sign
+      The signing key for this Primary ECU. This key will be used to sign
       Vehicle Manifests that will then be sent to the Director). The Director
       should be aware of the corresponding public key, so that it can validate
       these Vehicle Manifests. Conforms to tuf.formats.ANYKEY_SCHEMA.
@@ -645,8 +645,8 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
             'rejected' + ENDCOLORS + ' Firmware not updated.')
 
       else:
-        assert(os.path.exists(full_fname)), 'Programming error: no download ' + \
-            'error, but file still does not exist.'
+        assert(os.path.exists(full_fname)), 'Programming error: no ' + \
+            'download error, but file still does not exist.'
         log.info(GREEN + 'Successfully downloaded trustworthy ' +
             repr(filepath) + ' image.' + ENDCOLORS)
 
@@ -822,7 +822,10 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
           most_recent_attestation)
       return most_recent_attestation
 
-    else:
+    # An unrecognized value in the setting tuf.conf.METADATA_FORMAT should not
+    # be allowed. This clause is provided so as to draw developer attention to
+    # this location if a new metadata format has been added.
+    else: # pragma: no cover
       raise uptane.Error('Unable to convert time attestation as configured. '
           'The settings supported for timeserver attestations are "json" and '
           '"der", but the value of tuf.conf.METADATA_FORMAT is: ' +
@@ -1006,7 +1009,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
       nonce will be added to self.nonces_to_send
 
     """
-    # check arg format and that serial is registered
+    # Check argument format and that ECU Serial is registered
     self._check_ecu_serial(ecu_serial)
     tuf.formats.BOOLEAN_SCHEMA.check_match(force_pydict)
     uptane.formats.VIN_SCHEMA.check_match(vin)

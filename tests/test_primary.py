@@ -33,6 +33,7 @@ import uptane.encoding.asn1_codec as asn1_codec
 
 # For temporary convenience:
 import demo # for generate_key, import_public_key, import_private_key
+import json
 
 
 TEST_DATA_DIR = os.path.join(uptane.WORKING_DIR, 'tests', 'test_data')
@@ -46,11 +47,18 @@ TEST_IMAGE_REPO_ROOT_FNAME = os.path.join(
 TEST_PINNING_FNAME = os.path.join(TEST_DATA_DIR, 'pinned.json')
 TEMP_CLIENT_DIR = os.path.join(TEST_DATA_DIR, 'temp_test_primary')
 
+# Sample metadata and targets that will be copied to TEMP_CLIENT_DIR to use
+# as a local repository for testing.
+SAMPLE_METADATA = os.path.join(
+    uptane.WORKING_DIR, 'samples', 'metadata_samples_long_expiry',
+    'update_to_one_ecu', 'full_metadata_archive')
+SAMPLE_TARGETS = os.path.join(uptane.WORKING_DIR, 'demo', 'images')
+
 # Changing some of these values would require producing new signed sample data
 # from the Timeserver or a Secondary.
-nonce = 5
-vin = '000'
-primary_ecu_serial = '00000'
+NONCE = 5
+VIN = 'democar'
+PRIMARY_ECU_SERIAL = '00000'
 
 
 
@@ -134,6 +142,18 @@ class TestPrimary(unittest.TestCase):
         {'imagerepo': TEST_IMAGE_REPO_ROOT_FNAME,
         'director': TEST_DIRECTOR_ROOT_FNAME})
 
+    # Create repository directories that will be accessed locally (using
+    # file:// URLs) from which to "download" test metadata and targets.
+    for repository in ["director", "imagerepo"]:
+    	shutil.copytree(
+    		os.path.join(SAMPLE_METADATA, repository),
+    		os.path.join(TEMP_CLIENT_DIR, repository))
+
+    # Note that there may be extra targets available here.
+    shutil.copytree(
+    	SAMPLE_TARGETS, os.path.join(TEMP_CLIENT_DIR, 'director', 'targets'))
+
+
 
     # TODO: Test with invalid pinning file
     # TODO: Test with pinning file lacking a Director repo.
@@ -149,7 +169,7 @@ class TestPrimary(unittest.TestCase):
           full_client_dir=TEMP_CLIENT_DIR,
           director_repo_name=demo.DIRECTOR_REPO_NAME,
           vin=5,  # INVALID
-          ecu_serial=primary_ecu_serial,
+          ecu_serial=PRIMARY_ECU_SERIAL,
           primary_key=TestPrimary.ecu_key,
           time=TestPrimary.initial_time,
           timeserver_public_key=TestPrimary.key_timeserver_pub,
@@ -160,7 +180,7 @@ class TestPrimary(unittest.TestCase):
       primary.Primary(
           full_client_dir=TEMP_CLIENT_DIR,
           director_repo_name=demo.DIRECTOR_REPO_NAME,
-          vin=vin,
+          vin=VIN,
           ecu_serial=500, # INVALID
           primary_key=TestPrimary.ecu_key,
           time=TestPrimary.initial_time,
@@ -172,8 +192,8 @@ class TestPrimary(unittest.TestCase):
       primary.Primary(
           full_client_dir=TEMP_CLIENT_DIR,
           director_repo_name=demo.DIRECTOR_REPO_NAME,
-          vin=vin,
-          ecu_serial=primary_ecu_serial,
+          vin=VIN,
+          ecu_serial=PRIMARY_ECU_SERIAL,
           primary_key={''}, # INVALID
           time=TestPrimary.initial_time,
           timeserver_public_key=TestPrimary.key_timeserver_pub,
@@ -184,10 +204,10 @@ class TestPrimary(unittest.TestCase):
       primary.Primary(
           full_client_dir=TEMP_CLIENT_DIR,
           director_repo_name=demo.DIRECTOR_REPO_NAME,
-          vin=vin,
-          ecu_serial=primary_ecu_serial,
+          vin=VIN,
+          ecu_serial=PRIMARY_ECU_SERIAL,
           primary_key=TestPrimary.ecu_key,
-          time='potato', # INVALID
+          time='invalid because this is not a time', # INVALID
           timeserver_public_key=TestPrimary.key_timeserver_pub,
           my_secondaries=[])
 
@@ -196,8 +216,8 @@ class TestPrimary(unittest.TestCase):
       primary.Primary(
           full_client_dir=TEMP_CLIENT_DIR,
           director_repo_name=demo.DIRECTOR_REPO_NAME,
-          vin=vin,
-          ecu_serial=primary_ecu_serial,
+          vin=VIN,
+          ecu_serial=PRIMARY_ECU_SERIAL,
           primary_key=TestPrimary.ecu_key, time=TestPrimary.initial_time,
           timeserver_public_key=TestPrimary.initial_time, # INVALID
           my_secondaries=[])
@@ -207,11 +227,24 @@ class TestPrimary(unittest.TestCase):
       primary.Primary(
           full_client_dir=TEMP_CLIENT_DIR,
           director_repo_name=5, #INVALID
-          vin=vin,
-          ecu_serial=primary_ecu_serial,
+          vin=VIN,
+          ecu_serial=PRIMARY_ECU_SERIAL,
           primary_key=TestPrimary.ecu_key, time=TestPrimary.initial_time,
           timeserver_public_key = TestPrimary.key_timeserver_pub,
           my_secondaries=[])
+
+    # Invalid name for Director repository
+    with self.assertRaises(uptane.Error):
+      primary.Primary(
+          full_client_dir=TEMP_CLIENT_DIR,
+          director_repo_name= "invalid", #INVALID
+          vin=VIN,
+          ecu_serial=PRIMARY_ECU_SERIAL,
+          primary_key=TestPrimary.ecu_key, time=TestPrimary.initial_time,
+          timeserver_public_key = TestPrimary.key_timeserver_pub,
+          my_secondaries=[])
+
+
 
     # Try creating a Primary, expecting it to work.
     # Initializes a Primary ECU, making a client directory and copying the root
@@ -220,8 +253,8 @@ class TestPrimary(unittest.TestCase):
     TestPrimary.instance = primary.Primary(
         full_client_dir=TEMP_CLIENT_DIR,
         director_repo_name=demo.DIRECTOR_REPO_NAME,
-        vin=vin,
-        ecu_serial=primary_ecu_serial,
+        vin=VIN,
+        ecu_serial=PRIMARY_ECU_SERIAL,
         primary_key=TestPrimary.ecu_key,
         time=TestPrimary.initial_time,
         timeserver_public_key=TestPrimary.key_timeserver_pub)
@@ -231,8 +264,8 @@ class TestPrimary(unittest.TestCase):
 
     self.assertEqual([], TestPrimary.instance.nonces_to_send)
     self.assertEqual([], TestPrimary.instance.nonces_sent)
-    self.assertEqual(vin, TestPrimary.instance.vin)
-    self.assertEqual(primary_ecu_serial, TestPrimary.instance.ecu_serial)
+    self.assertEqual(VIN, TestPrimary.instance.vin)
+    self.assertEqual(PRIMARY_ECU_SERIAL, TestPrimary.instance.ecu_serial)
     self.assertEqual(TestPrimary.ecu_key, TestPrimary.instance.primary_key)
     self.assertEqual(dict(), TestPrimary.instance.ecu_manifests)
     self.assertEqual(
@@ -242,6 +275,29 @@ class TestPrimary(unittest.TestCase):
     tuf.formats.ANYKEY_SCHEMA.check_match(
         TestPrimary.instance.timeserver_public_key)
     self.assertEqual([], TestPrimary.instance.my_secondaries)
+
+
+
+
+    # Now, fix the updater's pinned metadata to point it to the appropriate
+    # local directory, since the pinned metadata we fed in was actually for the
+    # live demo, connecting to localhost:30401. We instead want to use a
+    # local directory via file://.
+
+    # TODO: Determine if this code should be adjusted to use os.path.join(),
+    # or if that's not appropriate for file:// links.
+
+    image_repo_mirror = ['file://' + TEMP_CLIENT_DIR + '/imagerepo']
+    director_mirror = ['file://' + TEMP_CLIENT_DIR + '/director']
+
+    repository_urls = TestPrimary.instance.updater.pinned_metadata['repositories']
+    repository_urls['imagerepo']['mirrors'] = image_repo_mirror
+    repository_urls['director']['mirrors'] = director_mirror
+
+    # Also fix the copied pinned metadata in the individual repo updaters
+    # in the updater.
+    TestPrimary.instance.updater.repositories['imagerepo'].mirrors = image_repo_mirror
+    TestPrimary.instance.updater.repositories['director'].mirrors = director_mirror
 
 
 
@@ -261,13 +317,10 @@ class TestPrimary(unittest.TestCase):
 
   def test_10_register_ecu_manifest(self):
 
-    TestPrimary.instance.register_new_secondary('ecu11111')
-
-    # TODO: Test providing bad data.
-
-    # TODO: Update this test to use either a JSON or an ASN.1/DER ECU Manifest
-    # depending on tuf.conf.METADATA_FORMAT instead of always using a JSON
-    # manifest.
+    # Throughout this function, I'll use a different nonces in each call to
+    # register_ecu_manifest, and check that the ones in calls expected to
+    # succeed have been noted and that the ones in calls expected to fail have
+    # not been noted.
 
     # Starting with an empty ecu manifest dictionary.
     self.assertEqual(dict(), TestPrimary.instance.ecu_manifests)
@@ -276,69 +329,196 @@ class TestPrimary(unittest.TestCase):
     self.assertEqual([], TestPrimary.instance.nonces_to_send)
     self.assertEqual([], TestPrimary.instance.nonces_sent)
 
-    sample_ecu_manifest = {
-        "signatures": [{
-          "method": "ed25519",
-          "sig": "df043006d4322a386cf85a6761a96bb8c92b2a41f4a4201badb8aae6f6dc17ef930addfa96a3d17f20533a01c158a7a33e406dd8291382a1bbab772bd2fa9804",
-          "keyid": "49309f114b857e4b29bfbff1c1c75df59f154fbc45539b2eb30c8a867843b2cb"}],
-        "signed": {
-          "timeserver_time": "2016-10-14T16:06:03Z",
-          "installed_image": {
-            "filepath": "/file2.txt", "fileinfo": {
-              "hashes": {"sha256": "3910b632b105b1e03baa9780fc719db106f2040ebfe473c66710c7addbb2605a", "sha512": "e2ebe151d7f357fcc6b0789d9e029bbf13310e98bc4d15585c1e90ea37c2c7181306f834342080ef007d71439bdd03fb728186e6d1e9eb51fdddf16f76301cef"},
-            "length": 21}},
-          "previous_timeserver_time": "2016-10-14T16:06:03Z",
-          "ecu_serial": "ecu11111",
-          "attacks_detected": ""}}
+
+    # Load the manifests we'll use in these tests.
+    # Note that the .json and .der manifest samples aren't identical; they're
+    # signed over different data, so to get the JSON version of the DER
+    # manifests, we'll convert them.
+    # We'll always need the JSON encodings for testing, and we'll load the
+    # ASN.1/DER manifests only if we're in DER mode.
+    # 1: Correctly signed ECU manifest from ECU TCUdemocar
+    # 2: Correctly signed ECU manifest from ECU unknown_ecu
+    # 3: ECU Manifest from ECU TCUdemocar signed by the wrong key
+    #    (demo's Image Repo timestamp key in particular, instead of demo's
+    #     Secondary key)
+    # 4: Correctly signed ECU manifest from TCUdemocar w/ attack report
+
+    if tuf.conf.METADATA_FORMAT == 'json':
+      manifest1 = manifest1_json = json.load(open(os.path.join(TEST_DATA_DIR,
+          'flawed_manifests', 'em1_typical_ecu_manifest.json')))
+
+      manifest2 = manifest2_json = json.load(open(os.path.join(TEST_DATA_DIR,
+          'flawed_manifests', 'em2_unknown_ecu_manifest.json')))
+
+      manifest3 = manifest3_json = json.load(open(os.path.join(TEST_DATA_DIR,
+          'flawed_manifests', 'em3_ecu_manifest_signed_with_wrong_key.json')))
+
+      manifest4 = manifest4_json = json.load(open(os.path.join(TEST_DATA_DIR,
+          'flawed_manifests', 'em4_attack_detected_in_ecu_manifest.json')))
+
+    else:
+      assert tuf.conf.METADATA_FORMAT == 'der', 'Test code is flawed.'
+
+      manifest1 = open(os.path.join(TEST_DATA_DIR, 'flawed_manifests',
+          'em1_typical_ecu_manifest.der'), 'rb').read()
+
+      manifest1_json = asn1_codec.convert_signed_der_to_dersigned_json(
+          manifest1, 'ecu_manifest')
+
+      manifest2 = open(os.path.join(TEST_DATA_DIR, 'flawed_manifests',
+          'em2_unknown_ecu_manifest.der'), 'rb').read()
+
+      manifest2_json = asn1_codec.convert_signed_der_to_dersigned_json(
+          manifest2, 'ecu_manifest')
+
+      manifest3 = open(os.path.join(TEST_DATA_DIR, 'flawed_manifests',
+          'em3_ecu_manifest_signed_with_wrong_key.der'), 'rb').read()
+
+      manifest3_json = asn1_codec.convert_signed_der_to_dersigned_json(
+          manifest3, 'ecu_manifest')
+
+      manifest4 = open(os.path.join(TEST_DATA_DIR, 'flawed_manifests',
+          'em4_attack_detected_in_ecu_manifest.der'), 'rb').read()
+
+      manifest4_json = asn1_codec.convert_signed_der_to_dersigned_json(
+          manifest4, 'ecu_manifest')
+
+
+    # Register two Secondaries with the Primary.
+    TestPrimary.instance.register_new_secondary('TCUdemocar')
+    TestPrimary.instance.register_new_secondary('ecu11111')
+
+
+    # Start with a sequence of tests with bad arguments but an otherwise
+    # correct ECU Manifest, manifest1.
 
     # Try using a VIN that is not the Primary's VIN (ECU Manifest apparently
     # from another car!)
     with self.assertRaises(uptane.UnknownVehicle):
       TestPrimary.instance.register_ecu_manifest(
           vin='13105941', # unexpected VIN
-          ecu_serial='ecu11111', nonce=nonce,
-          signed_ecu_manifest=sample_ecu_manifest,
-          force_pydict=True)
+          ecu_serial='TCUdemocar', nonce=1,
+          signed_ecu_manifest=manifest1)
 
-    # Try changing the Secondary's ECU Serial so that the ECU Serial argument
-    # doesn't match the ECU Serial in the manifest.
+    # Try using the wrong ECU Serial - one that is registered, but which does
+    # not match the ECU Serial listed in the ECU Manifest itself.
+    with self.assertRaises(uptane.Spoofing):
+      TestPrimary.instance.register_ecu_manifest(
+          vin=VIN,
+          ecu_serial='ecu11111', # not the same ECU Serial in the manifest
+          nonce=2, signed_ecu_manifest=manifest1)
+
+    # Try using an ECU Serial that the Primary is not aware of.
     with self.assertRaises(uptane.UnknownECU):
       TestPrimary.instance.register_ecu_manifest(
-          vin=vin, # unexpected VIN
-          ecu_serial='e689681291f', # unexpected ECU Serial
-          nonce=nonce,
-          signed_ecu_manifest=sample_ecu_manifest,
-          force_pydict=True)
-
-    # Try using an unknown ECU Serial.
-    with self.assertRaises(uptane.UnknownECU):
-      sample_ecu_manifest2 = copy.deepcopy(sample_ecu_manifest)
-      sample_ecu_manifest2['signed']['ecu_serial'] = '12345678'
-      TestPrimary.instance.register_ecu_manifest(
-          vin=vin, # unexpected VIN
-          ecu_serial='12345678', # unexpected ECU Serial
-          nonce=nonce,
-          signed_ecu_manifest=sample_ecu_manifest2,
-          force_pydict=True)
+          vin=VIN, # unexpected VIN
+          ecu_serial='an unknown secondary ecu serial', # unexpected ECU Serial
+          nonce=3,
+          signed_ecu_manifest=manifest1)
 
 
-    # TODO: Other possible tests here.
-
-    # Initialize correctly this time.
+    # Register the ECU Manifest correctly this time.
     TestPrimary.instance.register_ecu_manifest(
-        vin=vin, ecu_serial='ecu11111', nonce=nonce,
-        signed_ecu_manifest=sample_ecu_manifest,
-        force_pydict=True)
+        vin=VIN, ecu_serial='TCUdemocar', nonce=10,
+        signed_ecu_manifest=manifest1)
 
     # Make sure the provided manifest is now in the Primary's ecu manifests
-    # dictionary.
-    self.assertIn('ecu11111', TestPrimary.instance.ecu_manifests)
+    # dictionary. Note that the Primary holds manifests as JSON-compatible
+    # Python dictionaries regardless of the format it receives them in.
+    self.assertIn('TCUdemocar', TestPrimary.instance.ecu_manifests)
     self.assertIn(
-        sample_ecu_manifest, TestPrimary.instance.ecu_manifests['ecu11111'])
+        manifest1_json, TestPrimary.instance.ecu_manifests['TCUdemocar'])
 
     # Make sure the nonce provided was noted in the right place.
-    self.assertIn(nonce, TestPrimary.instance.nonces_to_send)
+    self.assertIn(10, TestPrimary.instance.nonces_to_send)
     self.assertEqual([], TestPrimary.instance.nonces_sent)
+
+
+    # Though this is not required functionality, test register_ecu_manifest
+    # with JSON manifests as well, even if we're running in DER mode.
+    # And make sure force_pydict=True doesn't break if we're already in JSON
+    # mode, either.
+    TestPrimary.instance.register_ecu_manifest(
+        VIN, 'TCUdemocar', nonce=11, signed_ecu_manifest=manifest1_json,
+        force_pydict=True)
+
+
+
+    # The next tests use ECU Manifests that contain problematic values.
+    # (We're now testing things beyond just the arguments provided.
+    # If we're running in DER mode, we'll try both DER and JSON manifests.
+    # If we're running in JSON mode, we'll only try JSON manifests
+    #    (though in JSON mode, we'll run twice, once with force_pydict on
+    #    to make sure that run doesn't break despite the redundant argument).
+
+    # The list again is:
+    # 2: Correctly signed ECU manifest from ECU unknown_ecu
+    # 3: ECU Manifest from ECU TCUdemocar signed by the wrong key
+    # 4: Correctly signed ECU manifest from TCUdemocar w/ attack report
+
+
+    # Case 2: We won't save the ECU Manifest from an unknown ECU Serial.
+    self.assertNotIn('unknown_ecu', TestPrimary.instance.ecu_manifests)
+    self.assertNotIn(
+        manifest2_json, TestPrimary.instance.ecu_manifests['TCUdemocar'])
+
+    with self.assertRaises(uptane.UnknownECU):
+      TestPrimary.instance.register_ecu_manifest(
+          'democar', 'unknown_ecu', nonce=4, signed_ecu_manifest=manifest2)
+
+    with self.assertRaises(uptane.UnknownECU):
+      TestPrimary.instance.register_ecu_manifest(
+          'democar', 'unknown_ecu', nonce=5,
+          signed_ecu_manifest=manifest2_json, force_pydict=True)
+
+    self.assertNotIn('unknown_ecu', TestPrimary.instance.ecu_manifests)
+    self.assertNotIn( # Make sure it's not in the wrong list of ECU Manifests
+        manifest2_json, TestPrimary.instance.ecu_manifests['TCUdemocar'])
+
+
+    # Case 3: ECU Manifest signed with the wrong key: we save it anyway and
+    #         send it on to the Director like any other; Primaries don't check
+    #         the signatures on ECU Manifests: they can't be expected to know
+    #         the right public or symmetric keys.
+    self.assertNotIn(
+        manifest3_json, TestPrimary.instance.ecu_manifests['TCUdemocar'])
+
+    TestPrimary.instance.register_ecu_manifest(
+        'democar', 'TCUdemocar', nonce=12, signed_ecu_manifest=manifest3)
+
+    TestPrimary.instance.register_ecu_manifest(
+        'democar', 'TCUdemocar', nonce=13, signed_ecu_manifest=manifest3_json,
+        force_pydict=True)
+
+    self.assertIn(
+        manifest3_json, TestPrimary.instance.ecu_manifests['TCUdemocar'])
+
+
+    # Case 4: ECU Manifest containing an attack report. Make sure it doesn't
+    #         fail to be registered.
+    self.assertNotIn(
+        manifest4_json, TestPrimary.instance.ecu_manifests['TCUdemocar'])
+
+    TestPrimary.instance.register_ecu_manifest(
+        'democar', 'TCUdemocar', nonce=14, signed_ecu_manifest=manifest4)
+
+    TestPrimary.instance.register_ecu_manifest(
+        'democar', 'TCUdemocar', nonce=15, signed_ecu_manifest=manifest4_json,
+        force_pydict=True)
+
+    self.assertIn(
+        manifest4_json, TestPrimary.instance.ecu_manifests['TCUdemocar'])
+
+
+
+    # Confirm that we've succeeded in registering the right nonces.
+    for this_nonce in [1, 2, 3, 4, 5]:
+      self.assertNotIn(this_nonce, TestPrimary.instance.nonces_to_send)
+
+    for this_nonce in [10, 11, 12, 13, 14, 15]:
+      self.assertIn(this_nonce, TestPrimary.instance.nonces_to_send)
+
+
 
 
 
@@ -346,16 +526,25 @@ class TestPrimary(unittest.TestCase):
 
   def test_15_get_nonces_to_send_and_rotate(self):
 
-    self.assertIn(nonce, TestPrimary.instance.nonces_to_send)
+    # The Primary's list of nonces to send in the next request to the
+    # timeserver for a time attestation:
+    nonces_to_have_sent = TestPrimary.instance.nonces_to_send
 
-    # Cycle nonces and make sure the return value is as expected from the
-    # previous test (a list of one specific nonce).
+
+    # Double-check that one of the expected nonces from the previous test
+    # function is in the list of the Primary's nonces to send.
+    self.assertIn(10, nonces_to_have_sent)
+
+
+    # Cycle nonces: Request the list of nonces to send to the timeserver,
+    # triggering the rotation of nonces. Make sure the nonce list provided
+    # is as expected from the previous test, and then that the rotation has
+    # actually occurred (nonces_to_send emptied, contents moved to nonces_sent).
     self.assertEqual(
-        [nonce], TestPrimary.instance.get_nonces_to_send_and_rotate())
+        sorted(nonces_to_have_sent),
+        sorted(TestPrimary.instance.get_nonces_to_send_and_rotate()))
 
-    # Ensure that that nonce is now listed as sent and that the list of nonces
-    # to send is now empty.
-    self.assertEqual([nonce], TestPrimary.instance.nonces_sent)
+    self.assertEqual(nonces_to_have_sent, TestPrimary.instance.nonces_sent)
     self.assertEqual([], TestPrimary.instance.nonces_to_send)
 
 
@@ -364,10 +553,15 @@ class TestPrimary(unittest.TestCase):
 
   def test_20_validate_time_attestation(self):
 
+    # First, confirm that we've never validated a timeserver attestation, and/or
+    # that that results in get_last_timeserver_attestation returning None.
+    self.assertIsNone(TestPrimary.instance.get_last_timeserver_attestation())
+
+
     # Try a valid time attestation first, signed by an expected timeserver key,
     # with an expected nonce (previously "received" from a Secondary)
     original_time_attestation = time_attestation = {
-        'signed': {'nonces': [nonce], 'time': '2016-11-02T21:06:05Z'},
+        'signed': {'nonces': [NONCE], 'time': '2016-11-02T21:06:05Z'},
         'signatures': [{
           'method': 'ed25519',
           'sig': 'aabffcebaa57f1d6397bdc5647764261fd23516d2996446c3c40b3f30efb2a4a8d80cd2c21a453e78bf99dafb9d0f5e56c4e072db365499fa5f2f304afec100e',
@@ -379,7 +573,30 @@ class TestPrimary(unittest.TestCase):
           original_time_attestation,
           private_key=TestPrimary.key_timeserver_pri, resign=True)
 
+
+    # In the previous functions, we added a variety of nonces in the nonce
+    # rotation. Validation of a time attestation confirms that the time
+    # attestation contains the nonces we've most recently sent to the
+    # timeserver. The sample attestation we have here does not have the nonces
+    # we've indicated to the Primary that we've sent, so this validation
+    # should fail:
+    with self.assertRaises(uptane.BadTimeAttestation):
+      TestPrimary.instance.validate_time_attestation(time_attestation)
+
+    # Now we adjust the Primary's notion of what nonces we sent to the
+    # timeserver most recently, and then try the validation again, expecting
+    # it to succeed.
+    TestPrimary.instance.get_nonces_to_send_and_rotate()
+    TestPrimary.instance.nonces_to_send = [NONCE]
+    TestPrimary.instance.get_nonces_to_send_and_rotate()
     TestPrimary.instance.validate_time_attestation(time_attestation)
+
+    # Since the validation succeeded, get_last_timeserver_attestation should
+    # return the attestation we just provided.
+    self.assertEqual(
+        time_attestation,
+        TestPrimary.instance.get_last_timeserver_attestation())
+
 
 
     # Prepare to try again with a bad signature.
@@ -394,7 +611,7 @@ class TestPrimary(unittest.TestCase):
       # Rewrite the first 9 digits of the signature ('sig') to something
       # invalid.
       time_attestation__badsig = {
-          'signed': {'nonces': [nonce], 'time': '2016-11-02T21:06:05Z'},
+          'signed': {'nonces': [NONCE], 'time': '2016-11-02T21:06:05Z'},
           'signatures': [{
             'method': 'ed25519',
             'sig': '987654321a57f1d6397bdc5647764261fd23516d2996446c3c40b3f30efb2a4a8d80cd2c21a453e78bf99dafb9d0f5e56c4e072db365499fa5f2f304afec100e',
@@ -405,8 +622,8 @@ class TestPrimary(unittest.TestCase):
       TestPrimary.instance.validate_time_attestation(time_attestation__badsig)
 
 
-    self.assertNotEqual(500, nonce, msg='Programming error: bad and good '
-        'test nonces are equal.')
+    assert 500 not in original_time_attestation['signed']['nonces'], \
+        'Programming error: bad and good test nonces are equal.'
 
     time_attestation__wrongnonce = {
         'signed': {'nonces': [500], 'time': '2016-11-02T21:15:00Z'},
@@ -454,7 +671,7 @@ class TestPrimary(unittest.TestCase):
     # Make sure that the Secondary's ECU Manifest (from the register ECU
     # ECU Manifest test above) is listed in the Vehicle Manifest.
     self.assertIn(
-        'ecu11111', vehicle_manifest['signed']['ecu_version_manifests'])
+        'TCUdemocar', vehicle_manifest['signed']['ecu_version_manifests'])
 
     # TODO: More testing of the contents of the vehicle manifest.
 
@@ -534,15 +751,152 @@ class TestPrimary(unittest.TestCase):
 
 
 
-  def test_45_get_image_for_ecu(self):
+  def test_55_update_exists_for_ecu(self):
+
+
+    # The various ECU Serials of Secondary ECUs we'll test:
+
+    # 1: Registered with the Primary but NOT listed in Director metadata
+    #    (i.e. will not have any updates assigned)
+    known_secondary_with_no_updates = "secondary_without_updates"
+
+    # 2: NOT registered w/ the Primary and NOT listed in Director metadata
+    unknown_secondary = "unknown_ecu_serial"
+
+    # 3: Registered with the Primary and listed in Director metadata
+    normal_secondary = "TCUdemocar"
+
+    # 4: Invalid name for a Secondary (wrong format)
+    invalid_name_secondary = 5
+
+
+    # Register the Secondaries with the Primary and make sure registration
+    # succeeded.
+    TestPrimary.instance.register_new_secondary(known_secondary_with_no_updates)
+    TestPrimary.instance.register_new_secondary(normal_secondary)
+
+    self.assertIn(
+        known_secondary_with_no_updates, TestPrimary.instance.my_secondaries)
+    self.assertIn(normal_secondary, TestPrimary.instance.my_secondaries)
+
+    # Try registering a Secondary that has already been registered with the
+    # Primary. Expect success??? # TODO: Clarify.
+    TestPrimary.instance.register_new_secondary(known_secondary_with_no_updates)
+
+    # Try registering an invalid name.
+    with self.assertRaises(tuf.FormatError):
+      TestPrimary.instance.register_new_secondary(invalid_name_secondary)
+
+    # Confirm that unknown_secondary has not been registered.
+    with self.assertRaises(uptane.UnknownECU):
+      TestPrimary.instance._check_ecu_serial(unknown_secondary)
+
+    # Run a primary update cycle so that the Primary fetches and validates
+    # metadata and targets from the "repositories" (in this test, the
+    # repositories sit in a local folder accessed by file://).
+    # This also processes the data acquired to populate fields accessed by
+    # Secondaries below.
+    TestPrimary.instance.primary_update_cycle()
+
+    # Try to find out if updates exist for an unknown ECU.
+    with self.assertRaises(uptane.UnknownECU):
+      TestPrimary.instance.update_exists_for_ecu(unknown_secondary)
+
+    # Find out if updates exist for a known ECU that has no updates assigned to
+    # it by the Director (expect empty list).
+    self.assertFalse(TestPrimary.instance.update_exists_for_ecu(
+        known_secondary_with_no_updates))
+
+    # Confirm that updates exist for a known ECU to which we've assigned
+    # updates (list is not empty).
+    self.assertTrue(TestPrimary.instance.update_exists_for_ecu(
+        normal_secondary))
+
+
+    # Run the update cycle again to test file/archive replacement when an
+    # update cycle has already occurred.
+    TestPrimary.instance.primary_update_cycle()
+
+
+
+
+
+  def test_60_get_image_fname_for_ecu(self):
+
+    # TODO: More thorough tests.
+
+    with self.assertRaises(uptane.UnknownECU):
+      TestPrimary.instance.get_image_fname_for_ecu('unknown')
+
+    # Expect an image.
+    image_fname = TestPrimary.instance.get_image_fname_for_ecu('TCUdemocar')
+
+    self.assertTrue(image_fname)
+
+    tuf.formats.RELPATH_SCHEMA.check_match(image_fname)
+
+    # Fetch the image filename for an ECU that has had no update assigned it,
+    # expecting None.
+    self.assertIsNone(TestPrimary.instance.get_image_fname_for_ecu(
+        'secondary_without_updates'))
+
+
+
+
+
+
+  def test_61_get_full_metadata_archive_fname(self):
+
+    # TODO: More thorough tests.
+
+    archive_fname = TestPrimary.instance.get_full_metadata_archive_fname()
+
+    self.assertTrue(archive_fname)
+
+    tuf.formats.RELPATH_SCHEMA.check_match(archive_fname)
+
+
+
+
+
+  def test_62_get_partial_metadata_fname(self):
+
+    # TODO: More thorough tests.
+
+    fname = TestPrimary.instance.get_partial_metadata_fname()
+
+    self.assertTrue(fname)
+
+    tuf.formats.RELPATH_SCHEMA.check_match(fname)
+
+
+
+
+
+  def test_65_get_metadata_for_ecu(self):
     pass
 
 
 
 
 
-  def test_50_get_metadata_for_ecu(self):
-    pass
+
+  def test_70_get_last_timeserver_attestation(self):
+
+    # get_last_timeserver_attestation is tested in more detail in a previous
+    # test, test_20_validate_time_attestation.
+
+    attestation = TestPrimary.instance.get_last_timeserver_attestation()
+
+    # We expect to have validated an attestation in previous tests.
+    self.assertIsNotNone(attestation)
+
+    if tuf.conf.METADATA_FORMAT == 'der':
+      uptane.formats.DER_DATA_SCHEMA.check_match(attestation)
+    else:
+      assert tuf.conf.METADATA_FORMAT == 'json', 'Coding error in test.'
+      uptane.formats.SIGNABLE_TIMESERVER_ATTESTATION_SCHEMA.check_match(
+          attestation)
 
 
 

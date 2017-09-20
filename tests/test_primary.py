@@ -322,12 +322,6 @@ class TestPrimary(unittest.TestCase):
     # succeed have been noted and that the ones in calls expected to fail have
     # not been noted.
 
-    # TODO: Test providing bad data.
-
-    # TODO: Update this test to use either a JSON or an ASN.1/DER ECU Manifest
-    # depending on tuf.conf.METADATA_FORMAT instead of always using a JSON
-    # manifest.
-
     # Starting with an empty ecu manifest dictionary.
     self.assertEqual(dict(), TestPrimary.instance.ecu_manifests)
 

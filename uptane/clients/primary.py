@@ -503,7 +503,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     # This next block employs get_validated_target_info calls to determine what
     # the right fileinfo (hash, length, etc) for each target file is. This
     # begins by matching paths/patterns in pinned.json to determine which
-    # repository to connect to. Since pinned.json will generally assigns all
+    # repository to connect to. Since pinned.json will generally assign all
     # targets to a multi-repository delegation requiring consensus between the
     # two repositories, one for the Director and one for the Image Repository,
     # this call will retrieve metadata from both repositories and compare it to

@@ -53,23 +53,6 @@ class OctetString(univ.OctetString):
 OctetString.subtypeSpec = constraint.ValueSizeConstraint(1, 2048)
 
 
-class BitString(univ.BitString):
-    pass
-
-
-BitString.subtypeSpec=constraint.ValueSizeConstraint(1, 2048)
-
-
-class BinaryData(univ.Choice):
-    pass
-
-
-BinaryData.componentType = namedtype.NamedTypes(
-    namedtype.NamedType('bitString', BitString().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 0))),
-    namedtype.NamedType('octetString', OctetString().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 1)))
-)
-
-
 class Token(univ.Integer):
     pass
 
@@ -125,7 +108,7 @@ SignatureMethod.namedValues = namedval.NamedValues(
 )
 
 
-class Keyid(BinaryData):
+class Keyid(OctetString):
     pass
 
 
@@ -134,9 +117,9 @@ class Signature(univ.Sequence):
 
 
 Signature.componentType = namedtype.NamedTypes(
-    namedtype.NamedType('keyid', Keyid().subtype(explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 0))),
     namedtype.NamedType('method', SignatureMethod().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 1))),
-    namedtype.NamedType('value', BinaryData().subtype(explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 2)))
+    namedtype.NamedType('keyid', Keyid()),
+    namedtype.NamedType('value', OctetString())
 )
 
 
@@ -179,7 +162,7 @@ class EncryptedSymmetricKey(univ.Sequence):
 
 EncryptedSymmetricKey.componentType = namedtype.NamedTypes(
     namedtype.NamedType('encryptedSymmetricKeyType', EncryptedSymmetricKeyType().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 0))),
-    namedtype.NamedType('encryptedSymmetricKeyValue', BinaryData().subtype(explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 1)))
+    namedtype.NamedType('encryptedSymmetricKeyValue', OctetString().subtype(explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 1)))
 )
 
 
@@ -210,8 +193,7 @@ class Hash(univ.Sequence):
 
 Hash.componentType = namedtype.NamedTypes(
     namedtype.NamedType('function', HashFunction().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 0))),
-    namedtype.NamedType('digest', BinaryData().subtype(explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 1)))
-)
+    namedtype.NamedType('digest', OctetString()))
 
 
 class Hashes(univ.SequenceOf):
@@ -293,7 +275,7 @@ class ImageBlock(univ.Sequence):
 ImageBlock.componentType = namedtype.NamedTypes(
     namedtype.NamedType('filename', Filename().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 0))),
     namedtype.NamedType('blockNumber', Positive().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 1))),
-    namedtype.NamedType('block', BinaryData().subtype(explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 2)))
+    namedtype.NamedType('block', OctetString().subtype(explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 2)))
 )
 
 

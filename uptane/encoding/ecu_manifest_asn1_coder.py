@@ -63,14 +63,7 @@ def get_asn_signed(json_signed):
     hash_value = filemeta['hashes'][hash_function]
     hash = Hash()
     hash['function'] = int(HashFunction(hash_function))
-    digest = BinaryData()\
-             .subtype(explicitTag=tag.Tag(tag.tagClassContext,
-                                          tag.tagFormatConstructed, 1))
-    octetString = univ.OctetString(hexValue=hash_value)\
-                  .subtype(implicitTag=tag.Tag(tag.tagClassContext,
-                                               tag.tagFormatSimple, 1))
-    digest['octetString'] = octetString
-    hash['digest'] = digest
+    hash['digest'] = OctetString(hexValue=hash_value)
     hashes[numberOfHashes] = hash
     numberOfHashes += 1
 
@@ -107,7 +100,7 @@ def get_json_signed(asn_metadata):
   for j in range(numberOfHashes):
     hash = hashes[j]
     hash_function = hashenum_to_hashfunction[int(hash['function'])]
-    hash_value = hash['digest']['octetString'].prettyPrint()
+    hash_value = hash['digest'].prettyPrint()
     assert hash_value.startswith('0x')
     hash_value = hash_value[2:]
     json_hashes[hash_function] = hash_value

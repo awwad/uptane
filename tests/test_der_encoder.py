@@ -226,12 +226,12 @@ class TestASN1(unittest.TestCase):
 
     # Converts it, without re-signing (default for this method).
     der_attestation = asn1_codec.convert_signed_metadata_to_der(
-        signable_attestation)
+        signable_attestation, datatype='time_attestation')
 
     self.assertTrue(is_valid_nonempty_der(der_attestation))
 
     attestation_again = asn1_codec.convert_signed_der_to_dersigned_json(
-        der_attestation)
+        der_attestation, datatype='time_attestation')
 
     self.assertEqual(attestation_again, signable_attestation)
 
@@ -334,7 +334,7 @@ class TestASN1(unittest.TestCase):
     # signable_attestation. We produce it here so that we can check it against
     # the result of encoding, resigning, and decoding.
     der_signed = asn1_codec.convert_signed_metadata_to_der(
-        signable_attestation, only_signed=True)
+        signable_attestation, only_signed=True, datatype='time_attestation')
     der_signed_hash = hashlib.sha256(der_signed).digest()
 
 
@@ -344,14 +344,15 @@ class TestASN1(unittest.TestCase):
     # the hash of the DER encoding of the 'signed' ASN.1 data.
     # This is the final product to be distributed back to a Primary client.
     der_attestation = asn1_codec.convert_signed_metadata_to_der(
-        signable_attestation, private_key=timeserver_key, resign=True)
+        signable_attestation, private_key=timeserver_key, resign=True,
+        datatype='time_attestation')
 
 
     # Now, in order to test the final product, decode it back from DER into
     # pyasn1 ASN.1, and convert back into Uptane's standard Python dictionary
     # form.
     pydict_again = asn1_codec.convert_signed_der_to_dersigned_json(
-        der_attestation)
+        der_attestation, datatype='time_attestation')
 
     # Check the extracted signature against the hash we produced earlier.
     self.assertTrue(tuf.keys.verify_signature(

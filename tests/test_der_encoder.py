@@ -271,20 +271,10 @@ class TestASN1(unittest.TestCase):
     i = 0 # Index for iterating through asn signatures
     for pydict_sig in signable_attestation['signatures']:
       asn_sig = asn1_spec.Signature()
-      asn_sig['keyid'] = asn1_spec.Keyid().subtype(
-          explicitTag=tag.Tag(tag.tagClassContext,
-          tag.tagFormatConstructed, 0))
-      asn_sig['keyid']['octetString'] = univ.OctetString(
-          hexValue=pydict_sig['keyid']).subtype(implicitTag=tag.Tag(
-          tag.tagClassContext, tag.tagFormatSimple, 1))
+      asn_sig['keyid'] = asn1_spec.Keyid(hexValue=pydict_sig['keyid'])
       asn_sig['method'] = int(asn1_spec.SignatureMethod(
           pydict_sig['method']))
-      asn_sig['value'] = asn1_spec.BinaryData().subtype(
-          explicitTag=tag.Tag(tag.tagClassContext,
-          tag.tagFormatConstructed, 2))
-      asn_sig['value']['octetString'] = univ.OctetString(
-          hexValue=pydict_sig['sig']).subtype(implicitTag=tag.Tag(
-          tag.tagClassContext, tag.tagFormatSimple, 1))
+      asn_sig['value'] = asn1_spec.OctetString(hexValue=pydict_sig['sig'])
       asn_signatures_list[i] = asn_sig # has no append method
       i += 1
 

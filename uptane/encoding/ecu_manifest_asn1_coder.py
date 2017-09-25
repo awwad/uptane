@@ -38,8 +38,6 @@ def get_asn_signed(json_signed):
   # Optional bit.
   if 'attacks_detected' in json_signed and json_signed['attacks_detected']:
     attacks_detected = json_signed['attacks_detected']
-    assert len(attacks_detected) > 0,\
-           'attacks_detected cannot be an empty string!'
     signed['securityAttack'] = attacks_detected
 
   target = Target().subtype(implicitTag=tag.Tag(tag.tagClassContext,
@@ -120,7 +118,7 @@ def get_json_signed(asn_metadata):
   }
 
   # Optional bit.
-  if asn_signed['securityAttack']:
+  if 'securityAttack' in asn_signed and asn_signed['securityAttack'].hasValue():
     json_signed['attacks_detected'] = str(asn_signed['securityAttack'])
 
   return json_signed

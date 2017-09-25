@@ -424,7 +424,7 @@ def convert_signatures_to_json(asn_signatures):
         # octetString to what TUF expects.
         'keyid': asn_signature['keyid'].prettyPrint()[2:],
         # TODO: See if it's possible to tweak the definition of 'method' so that str(method) returns what we want rather here than the enum, so that we don't have to do make this weird enum translation call?
-        'method': asn_signature['method'].namedValues[asn_signature['method']._value][0], #str(asn_signature['method']),
+        'method': asn_signature['method'].namedValues[asn_signature['method']._value],
         'sig': asn_signature['value'].prettyPrint()[2:]})
 
 

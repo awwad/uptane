@@ -37,14 +37,18 @@ from uptane.encoding.asn1_codec import DATATYPE_ECU_MANIFEST
 # For temporary convenience:
 import demo # for generate_key, import_public_key, import_private_key
 
-TEST_DATA_DIR = os.path.join(uptane.WORKING_DIR, 'tests', 'test_data')
-TEST_DIRECTOR_METADATA_DIR = os.path.join(TEST_DATA_DIR, 'director_metadata')
-TEST_IMAGE_REPO_METADATA_DIR = os.path.join(
-    TEST_DATA_DIR, 'image_repo_metadata')
+
+SAMPLES_DIR = os.path.join(uptane.WORKING_DIR, 'samples')
 TEST_DIRECTOR_ROOT_FNAME = os.path.join(
-    TEST_DIRECTOR_METADATA_DIR, 'root.' + tuf.conf.METADATA_FORMAT)
+  SAMPLES_DIR, 'metadata_samples_long_expiry', 'initial_w_no_update',
+  'full_metadata_archive', 'director', 'metadata',
+  'root.' + tuf.conf.METADATA_FORMAT)
 TEST_IMAGE_REPO_ROOT_FNAME = os.path.join(
-    TEST_IMAGE_REPO_METADATA_DIR, 'root.' + tuf.conf.METADATA_FORMAT)
+  SAMPLES_DIR, 'metadata_samples_long_expiry', 'initial_w_no_update',
+  'full_metadata_archive', 'imagerepo', 'metadata',
+  'root.' + tuf.conf.METADATA_FORMAT)
+
+TEST_DATA_DIR = os.path.join(uptane.WORKING_DIR, 'tests', 'test_data')
 TEST_PINNING_FNAME = os.path.join(TEST_DATA_DIR, 'pinned.json')
 
 TEMP_CLIENT_DIRS = [
@@ -590,18 +594,7 @@ class TestSecondary(unittest.TestCase):
     """
 
     # --- Test this test module's setup (defensive)
-    # First, check the source directories, from which the temp dir is copied.
-    # This first part is testing this test module, since this setup was done
-    # above in setUpClass(), to maintain test integrity over time.
-    # We should see only root.(json or der).
-    for data_directory in [
-        TEST_DIRECTOR_METADATA_DIR, TEST_IMAGE_REPO_METADATA_DIR]:
-
-      self.assertEqual(
-          ['root.der', 'root.json'],
-          sorted(os.listdir(data_directory)))
-
-    # Next, check that the clients' metadata directories have the same
+    # Check that the clients' metadata directories have the right
     # properties -- that the correct root metadata file was transferred to the
     # client directories when the directories were created by the
     # create_directory_structure_for_client() calls in setUpClass above, and

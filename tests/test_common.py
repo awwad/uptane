@@ -33,14 +33,16 @@ keys_pri = {}
 keys_pub = {}
 
 SAMPLES_DIR = os.path.join(uptane.WORKING_DIR, 'samples')
-TEST_DATA_DIR = os.path.join(uptane.WORKING_DIR, 'tests', 'test_data')
-TEST_DIRECTOR_METADATA_DIR = os.path.join(TEST_DATA_DIR, 'director_metadata')
-TEST_IMAGE_REPO_METADATA_DIR = os.path.join(
-    TEST_DATA_DIR, 'image_repo_metadata')
 TEST_DIRECTOR_ROOT_FNAME = os.path.join(
-    TEST_DIRECTOR_METADATA_DIR, 'root.' + tuf.conf.METADATA_FORMAT)
+  SAMPLES_DIR, 'metadata_samples_long_expiry', 'initial_w_no_update',
+  'full_metadata_archive', 'director', 'metadata',
+  'root.' + tuf.conf.METADATA_FORMAT)
 TEST_IMAGE_REPO_ROOT_FNAME = os.path.join(
-    TEST_IMAGE_REPO_METADATA_DIR, 'root.' + tuf.conf.METADATA_FORMAT)
+  SAMPLES_DIR, 'metadata_samples_long_expiry', 'initial_w_no_update',
+  'full_metadata_archive', 'imagerepo', 'metadata',
+  'root.' + tuf.conf.METADATA_FORMAT)
+
+TEST_DATA_DIR = os.path.join(uptane.WORKING_DIR, 'tests', 'test_data')
 TEST_PINNING_FNAME = os.path.join(TEST_DATA_DIR, 'pinned.json')
 TEMP_CLIENT_DIR = os.path.join(TEST_DATA_DIR, 'temp_test_common')
 

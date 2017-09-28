@@ -3,7 +3,7 @@
   {
    "keyid": "c24b457b2ca4b3c2f415efdbbebb914a0d05c5345b9889bda044362589d6f596",
    "method": "ed25519",
-   "sig": "398cb53d34dcdda7b01ee363c42bab7fe1c82b222296de06236dbce280ce1ffd059143fff80efb5da02c0e96e2a20ae108ade9665a35965ac93934c9ddacdf07"
+   "sig": "aa5c4bd41dbb8bcf5fdc6fd44ec6b42998488fb1849cc9634e58e514dc5f00f7a59e75216db325f07bfdaba72558a9a4dcfe694f76c8e9af2980477a2893b208"
   }
  ],
  "signed": {
@@ -12,7 +12,7 @@
    "keys": {},
    "roles": []
   },
-  "expires": "2037-05-16T17:49:09Z",
+  "expires": "2037-09-28T12:46:18Z",
   "targets": {
    "/BCU1.0.txt": {
     "hashes": {

@@ -3,7 +3,7 @@
   {
    "keyid": "fdba7eaa358fa5a8113a789f60c4a6ce29c4478d8d8eff3e27d1d77416696ab2",
    "method": "ed25519",
-   "sig": "1eaace99d781458b52d4f88707559d9320367dcf380efb4606f4aca7f10941159bea48b0a27033ed900b2de4dd1ae24175f55a62b1c8e7f94660adf0c7452d03"
+   "sig": "e9855e5171934d56a78033cead3dc217d6df3730f9c668742346a4e66f0d1141fe7283a21964e0c35163e76b6103e36a04d44f1b0799fe34af45c65f32f38b09"
   }
  ],
  "signed": {
@@ -12,7 +12,7 @@
    "gz"
   ],
   "consistent_snapshot": false,
-  "expires": "2037-05-15T18:55:42Z",
+  "expires": "2037-09-28T12:46:29Z",
   "keys": {
    "630cf584f392430b2119a4395e39624e86f5e5c5374507a789be5cf35bf090d6": {
     "keyid_hash_algorithms": [

@@ -118,7 +118,7 @@ class Signature(univ.Sequence):
 
 Signature.componentType = namedtype.NamedTypes(
     namedtype.NamedType('keyid', Keyid()),
-    namedtype.NamedType('method', SignatureMethod())
+    namedtype.NamedType('method', SignatureMethod()),
     namedtype.NamedType('value', OctetString())
 )
 

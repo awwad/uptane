@@ -151,7 +151,7 @@ class TestPrimary(unittest.TestCase):
 
     # Note that there may be extra targets available here.
     shutil.copytree(
-    	SAMPLE_TARGETS, os.path.join(TEMP_CLIENT_DIR, 'director', 'targets'))
+    	SAMPLE_TARGETS, os.path.join(TEMP_CLIENT_DIR, 'imagerepo', 'targets'))
 
 
 

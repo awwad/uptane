@@ -268,6 +268,10 @@ def convert_signed_metadata_to_der(
       If the given signatures are already over DER encoding before reaching
       this point (as may happen in the current design), then you will not
       need this to be True.
+      NOTE that if given a vehicle manifest and told to re-sign, this function
+      will only re-sign the vehicle manifest itself - it will not try to re-sign
+      every ECU Manifest contained in it. (Those would presumably be signed
+      by other keys.)
 
     private_key
       This should be left out (None) unless resign is True, in which case

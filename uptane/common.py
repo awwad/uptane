@@ -168,7 +168,7 @@ def sign_over_metadata(
 
       In 'der' mode:
         'data' is expected to be a dictionary compliant with
-        uptane.formats.ANY_SIGNABLE_UPTANE_METADATA_SCHEMA. ASN.1/DER
+        uptane.formats.ANY_UPTANE_METADATA_SCHEMA. ASN.1/DER
         conversion requires strictly defined formats.
 
       In 'json' mode:
@@ -234,6 +234,12 @@ def sign_over_metadata(
   """
 
   tuf.formats.ANYKEY_SCHEMA.check_match(key_dict)
+
+  if datatype not in asn1_codec.SUPPORTED_ASN1_METADATA_MODULES:
+    raise uptane.Error('Datatype ' + repr(datatype) + ' is not a supported '
+        'Uptane metadata type. The options are: ' +
+        repr(asn1_codec.SUPPORTED_ASN1_METADATA_MODULES))
+
   # TODO: Check format of data, based on metadata_format.
   # TODO: Consider checking metadata_format redundantly. It's checked below.
 
@@ -241,9 +247,8 @@ def sign_over_metadata(
     data = tuf.formats.encode_canonical(data).encode('utf-8')
 
   elif metadata_format == 'der':
+    uptane.formats.ANY_UPTANE_METADATA_SCHEMA.check_match(data)
 
-    # TODO: Have convert_signed_metadata_to_der take just the 'signed' element
-    # so we don't have to do this silly wrapping in an empty signable.
     data = asn1_codec.convert_signed_metadata_to_der(
         {'signed': data, 'signatures': []}, only_signed=True, datatype=datatype)
     data = hashlib.sha256(data).digest()

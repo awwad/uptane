@@ -2,7 +2,7 @@ canonicaljson==1.0.0
 cffi==1.7.0
 cryptography==1.7.2
 pynacl==1.0.1
-pyasn1==0.2.2
+pyasn1==0.3.6
 pycrypto==2.6.1
 --editable git://github.com/awwad/tuf.git@refine_asn1_code_tuf#egg=tuf
 --editable .

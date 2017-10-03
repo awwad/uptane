@@ -233,6 +233,7 @@ Custom.componentType = namedtype.NamedTypes(
     namedtype.OptionalNamedType('ecuIdentifier', Identifier()),
     namedtype.OptionalNamedType('encryptedTarget', Target()),
     namedtype.OptionalNamedType('encryptedSymmetricKey', EncryptedSymmetricKey())
+    # TODO: Add hardware ID and release counter placeholders here, and to the .asn1 file that compiles to this.
 )
 
 

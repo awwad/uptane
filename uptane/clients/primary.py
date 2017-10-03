@@ -861,6 +861,13 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
         signable_vehicle_manifest)
 
+    # TODO: While the re-signing functionality in convert_signed_metadata_to_der
+    # does everything we need it to here (both re-signing and converting),
+    # sign_signable is written to support both JSON-compatible and ASN.1/DER
+    # modes, so it's a bit strange to split this functionality out.
+    # Consider changing, but try to avoid converting twice, too. ):
+    # See if there's some way to reorganize this. This goes for secondary.py
+    # and timeserver.py as well.
     if tuf.conf.METADATA_FORMAT == 'der':
       # Convert to DER and sign, replacing the Python dictionary.
       signable_vehicle_manifest = asn1_codec.convert_signed_metadata_to_der(

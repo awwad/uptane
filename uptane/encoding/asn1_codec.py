@@ -458,9 +458,7 @@ def convert_signatures_to_asn(pydict_signatures):
   # expected by the parent object that must contain it.
   # The following documents tagging in pyasn1:
   #   http://www.red-bean.com/doc/python-pyasn1/pyasn1-tutorial.html#1.2
-  asn_signatures_list = asn1_spec.Signatures().subtype(
-      implicitTag=p_type_tag.Tag(p_type_tag.tagClassContext,
-      p_type_tag.tagFormatSimple, 2))
+  asn_signatures_list = asn1_spec.Signatures()
 
   # Now convert each Python dictionary-style signature into an ASN.1 signature
   # and stick those into the ASN.1 list just created.

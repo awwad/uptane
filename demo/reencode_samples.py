@@ -176,6 +176,8 @@ def reproduce_all_der_samples():
   # Convert ECU Manifest samples and test data
   samples_using_normal_key = [
       os.path.join(SAMPLE_DATA_DIR, 'sample_ecu_manifest.json'),
+      os.path.join(SAMPLE_DATA_DIR, 'sample_ecu_manifest_TCUdemocar.json'),
+      os.path.join(SAMPLE_DATA_DIR, 'sample_ecu_manifest_ecu11111.json'),
       os.path.join(FLAWED_MANIFEST_DIR, 'em2_unknown_ecu_manifest.json'),
       os.path.join(FLAWED_MANIFEST_DIR, 'em4_attack_detected_in_ecu_manifest.json')]
 
@@ -183,10 +185,10 @@ def reproduce_all_der_samples():
       os.path.join(FLAWED_MANIFEST_DIR, 'em3_ecu_manifest_signed_with_wrong_key.json')]
 
   for manifest in samples_using_normal_key:
-    udt.derify_sample_ecu_manifest(manifest, skey)
+    derify_sample_ecu_manifest(manifest, skey)
 
   for manifest in samples_using_wrong_key:
-    udt.derify_sample_ecu_manifest(manifest, skey2)
+    derify_sample_ecu_manifest(manifest, skey2)
 
 
   # Convert Vehicle Manifest samples and test data
@@ -202,8 +204,8 @@ def reproduce_all_der_samples():
       os.path.join(FLAWED_MANIFEST_DIR, 'vm3_ecu_manifest_signed_with_wrong_key.json')]
 
   for manifest in samples_using_normal_key:
-    udt.derify_sample_vehicle_manifest(manifest, skey, pkey)
+    derify_sample_vehicle_manifest(manifest, skey, pkey)
 
   for manifest in samples_using_wrong_key:
-    udt.derify_sample_vehicle_manifest(manifest, skey2, pkey)
+    derify_sample_vehicle_manifest(manifest, skey2, pkey)
 

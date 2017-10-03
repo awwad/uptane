@@ -25,10 +25,7 @@ from datetime import datetime
 
 
 def get_asn_signed(json_signed):
-  signed = ECUVersionManifestSigned()\
-           .subtype(implicitTag=tag.Tag(tag.tagClassContext,
-                                        tag.tagFormatConstructed, 0))
-
+  signed = ECUVersionManifestSigned()
   signed['ecuIdentifier'] = json_signed['ecu_serial']
   signed['previousTime'] = calendar.timegm(datetime.strptime(
       json_signed['previous_timeserver_time'], "%Y-%m-%dT%H:%M:%SZ").timetuple())
@@ -40,15 +37,13 @@ def get_asn_signed(json_signed):
     attacks_detected = json_signed['attacks_detected']
     signed['securityAttack'] = attacks_detected
 
-  target = Target().subtype(implicitTag=tag.Tag(tag.tagClassContext,
-                                                tag.tagFormatConstructed, 4))
+  target = Target()
   filename = json_signed['installed_image']['filepath']
   filemeta = json_signed['installed_image']['fileinfo']
   target['filename'] = filename
   target['length'] = filemeta['length']
 
-  hashes = Hashes().subtype(implicitTag=tag.Tag(tag.tagClassContext,
-                                                tag.tagFormatSimple, 3))
+  hashes = Hashes()
   numberOfHashes = 0
 
   # We're going to generate a list of hashes from the dictionary of hashes.

@@ -25,12 +25,9 @@ from datetime import datetime
 
 
 def get_asn_signed(json_signed):
-  signed = TokensAndTimestamp()\
-           .subtype(implicitTag=tag.Tag(tag.tagClassContext,
-                                        tag.tagFormatConstructed, 0))
+  signed = TokensAndTimestamp()
   numberOfTokens = 0
-  tokens = Tokens().subtype(implicitTag=tag.Tag(tag.tagClassContext,
-                                                tag.tagFormatSimple, 1))
+  tokens = Tokens()
   for token in json_signed['nonces']:
     # Some damned bug in pyasn1 I could not care less to fix right now.
     tokens.setComponentByPosition(numberOfTokens, token, False)

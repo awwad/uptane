@@ -24,16 +24,12 @@ import uptane.encoding.ecu_manifest_asn1_coder as ecu_manifest_asn1_coder
 
 
 def get_asn_signed(json_signed):
-  signed = VehicleVersionManifestSigned()\
-           .subtype(implicitTag=tag.Tag(tag.tagClassContext,
-                                        tag.tagFormatConstructed, 0))
+  signed = VehicleVersionManifestSigned()
 
   signed['vehicleIdentifier'] = json_signed['vin']
   signed['primaryIdentifier'] = json_signed['primary_ecu_serial']
 
-  ecuVersionManifests = ECUVersionManifests()\
-                        .subtype(implicitTag=tag.Tag(tag.tagClassContext,
-                                                     tag.tagFormatSimple, 3))
+  ecuVersionManifests = ECUVersionManifests()
   numberOfECUVersionManifests = 0
 
   # We're going to generate a list of ECU Manifests from the dictionary of lists

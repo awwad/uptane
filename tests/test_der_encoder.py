@@ -123,10 +123,7 @@ class TestASN1(unittest.TestCase):
     # Continue to test the ASN.1 data definitions in asn1_spec.
     # This will be an array of tokens that each encode an integer.
 
-    # We create a Tokens object with the subtype definition required by the
-    # classes that contain Tokens objects.
-    tokens = asn1_spec.Tokens().subtype(
-        implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 1))
+    tokens = asn1_spec.Tokens()
 
     # Add a first token to the list.
     t = asn1_spec.Token(42)
@@ -140,8 +137,7 @@ class TestASN1(unittest.TestCase):
 
     (tokens_again, remainder) = p_der_decoder.decode(
         tokens_der,
-        asn1_spec.Tokens().subtype(implicitTag=tag.Tag(
-        tag.tagClassContext, tag.tagFormatSimple, 1)))
+        asn1_spec.Tokens())
 
 
     self.assertFalse(remainder)
@@ -171,10 +167,7 @@ class TestASN1(unittest.TestCase):
 
     # Decoding requires that we provide an object with typing that precisely
     # matches what we expect to decode. This is such an object.
-    exemplar_object = asn1_spec.TokensAndTimestamp().subtype(
-        implicitTag=tag.Tag(tag.tagClassContext,
-        tag.tagFormatConstructed,
-        0))
+    exemplar_object = asn1_spec.TokensAndTimestamp()
 
     (asn1_attestation_again, remainder) = p_der_decoder.decode(
         der_attestation, asn1Spec=exemplar_object)
@@ -265,9 +258,7 @@ class TestASN1(unittest.TestCase):
 
     asn_signed = timeserver_asn1_coder.get_asn_signed(json_signed)
 
-    asn_signatures_list = asn1_spec.Signatures().subtype(
-        implicitTag=tag.Tag(tag.tagClassContext,
-        tag.tagFormatSimple, 2))
+    asn_signatures_list = asn1_spec.Signatures()
     i = 0 # Index for iterating through asn signatures
     for pydict_sig in signable_attestation['signatures']:
       asn_sig = asn1_spec.Signature()

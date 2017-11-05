@@ -488,7 +488,6 @@ def get_metadata_for_ecu(ecu_serial, force_partial_verification=False):
   """
   # Ensure serial is correct format & registered
   primary_ecu._check_ecu_serial(ecu_serial)
-
   # The filename of the file to return.
   fname = None
 

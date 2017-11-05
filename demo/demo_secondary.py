@@ -79,7 +79,8 @@ def clean_slate(
     vin=_vin,
     ecu_serial=_ecu_serial,
     primary_host=None,
-    primary_port=None):
+    primary_port=None,
+    partial_verifying=False):
   """
   """
 
@@ -88,12 +89,13 @@ def clean_slate(
   global _ecu_serial
   global _primary_host
   global _primary_port
+  global _partial_verifying
   global nonce
   global CLIENT_DIRECTORY
   global attacks_detected
-
   _vin = vin
   _ecu_serial = ecu_serial
+  _partial_verifying = partial_verifying
 
   if primary_host is not None:
     _primary_host = primary_host
@@ -142,6 +144,11 @@ def clean_slate(
   tuf.conf.repository_directory = CLIENT_DIRECTORY # This setting should probably be called CLIENT_DIRECTORY instead, post-TAP4.
 
 
+  #Importing director's public key if secondary is partial verification
+  if _partial_verifying:
+    key_director_pub = demo.import_public_key('director')
+  else:
+    key_director_pub = None
 
   # Initialize a full verification Secondary ECU.
   # This also generates a nonce to use in the next time query, sets the initial
@@ -154,7 +161,9 @@ def clean_slate(
       ecu_key=ecu_key,
       time=clock,
       firmware_fileinfo=factory_firmware_fileinfo,
-      timeserver_public_key=key_timeserver_pub)
+      timeserver_public_key=key_timeserver_pub,
+      director_public_key = key_director_pub,
+      partial_verifying = _partial_verifying)
 
 
 
@@ -302,8 +311,7 @@ def update_cycle():
 
   # Download the metadata from the Primary in the form of an archive. This
   # returns the binary data that we need to write to file.
-  metadata_archive = pserver.get_metadata(secondary_ecu.ecu_serial)
-
+  metadata_archive = pserver.get_metadata(secondary_ecu.ecu_serial, secondary_ecu.partial_verifying)
   # Validate the time attestation and internalize the time. Continue
   # regardless.
   try:
@@ -321,14 +329,22 @@ def update_cycle():
   #  print(GREEN + 'Official time has been updated successfully.' + ENDCOLORS)
 
   # Dump the archive file to disk.
-  archive_fname = os.path.join(
-      secondary_ecu.full_client_dir, 'metadata_archive.zip')
-
-  with open(archive_fname, 'wb') as fobj:
-    fobj.write(metadata_archive.data)
+  if secondary_ecu.partial_verifying:
+    archive_fname = os.path.join(
+        secondary_ecu.full_client_dir, 'director_targets.'+tuf.conf.METADATA_FORMAT)
+    with open(archive_fname, 'wb') as f:
+      f.write(metadata_archive.data)
+  else:
+    archive_fname = os.path.join(
+        secondary_ecu.full_client_dir, 'metadata_archive.zip')
+    with open(archive_fname, 'wb') as fobj:
+      fobj.write(metadata_archive.data)
 
   # Now tell the Secondary reference implementation code where the archive file
   # is and let it expand and validate the metadata.
+  # if secondary_ecu.partial_verifying:
+  #   secondary_ecu.process_partial_metadata(archive_fname)
+  # else:
   secondary_ecu.process_metadata(archive_fname)
 
 

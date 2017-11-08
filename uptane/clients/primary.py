@@ -1161,19 +1161,35 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
   def save_distributable_metadata_files(self):
     """
-    Generates a zip archive of the metadata files validated by this Primary,
-    for distribution to full verifying Secondaries. The particular method of
-    distributing this metadata to Secondaries will vary greatly depending on
-    one's setup, and is left to implementers.
+    Generates two metadata files, all validated by this Primary, placing them
+    in the expected locations available for distribution to Secondaries:
+
+      - self.distributable_full_metadata_archive_fname
+          a zip archive of all the metadata files, from all repositories,
+          validated by this Primary, for use by Full Verification Secondaries.
+
+      - self.distributable_partial_metadata_fname
+          the Director Targets role file alone, for use by Partial Verification
+          Secondaries
+
+    The particular method of distributing this metadata to Secondaries will
+    vary greatly depending on one's setup, and is left to implementers, so the
+    files are put in those locations and can be dealt with as desired by
+    implementers' higher level Primary code. (Example in demo/demo_primary.py)
+
+    The files here are each moved into place atomically to help avoid race
+    conditions.
     """
 
     metadata_base_dir = os.path.join(self.full_client_dir, 'metadata')
+
+    # Full Verification Metadata Preparation
 
     # Save a zipped version of all of the metadata.
     # Note that some stale metadata may be retained, but should never affect
     # security. Worth confirming.
     # What we want here, basically, is:
-    #  <full_client_dir>/metadata/*/current/*.json
+    #  <full_client_dir>/metadata/*/current/*.json or *.der
     with zipfile.ZipFile(self.temp_full_metadata_archive_fname, 'w') \
         as archive:
       # For each repository directory within the client metadata directory
@@ -1208,6 +1224,8 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
               os.path.join(repo_dir, 'metadata', role_fname))
 
 
+    # Partial Verification Metadata Preparation
+
     # Copy the Director's targets file to a temp location for partial-verifying
     # Secondaries.
     director_targets_file = os.path.join(
@@ -1220,8 +1238,10 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
       os.remove(self.temp_partial_metadata_fname)
     shutil.copyfile(director_targets_file, self.temp_partial_metadata_fname)
 
-    # Now move both files into place. For each file, this happens atomically
-    # on POSIX-compliant systems and replaces any existing file.
+
+    # Now move both Full and Partial metadata files into place. For each file,
+    # this happens atomically on POSIX-compliant systems and replaces any
+    # existing file.
     os.rename(
         self.temp_partial_metadata_fname,
         self.distributable_partial_metadata_fname)

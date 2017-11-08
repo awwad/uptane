@@ -559,21 +559,20 @@ def get_image_for_ecu(ecu_serial):
 
 def get_metadata_for_ecu(ecu_serial, force_partial_verification=False):
   """
-  Send a zip archive of the most recent consistent set of the Primary's client
-  metadata directory, containing the current, consistent metadata from all
-  repositories used.
+  Provides the (updated) metadata a Secondary will need to validate updates.
 
-  If force_partial_verification is True, then even if the request is coming
-  from a client that is not on a CAN interface and configured to communicate
-  with this Primary via CAN, we will still send partial verification data (just
-  the Director's targets.json file).
+  This takes two forms:
+
+  - For Full Verification Secondaries (the norm):
+      Send a zip archive of the most recent consistent set of the Primary's
+      client metadata directory, containing the current, consistent metadata
+      from all repositories used.
+
+  - For Partial Verification Secondaries:
+      Send the Director's Targets role file.
 
   <Exceptions>
-    uptane.Error
-      - if we are set to communicate via CAN interface, but CAN interface is
-        not ready
-
-    ... fill in more
+    uptane.Error if there is no metadata to distribute
   """
   # Ensure serial is correct format & registered
   primary_ecu._check_ecu_serial(ecu_serial)
@@ -581,15 +580,6 @@ def get_metadata_for_ecu(ecu_serial, force_partial_verification=False):
   # The filename of the file to return.
   fname = None
 
-  # TODO: <~> NO: We can't do it this way. The updater's metadata stored in
-  # this fashion is post-validation and without signatures.
-  # I may have to just transfer files. Is there not somewhere where I can grab
-  # the signed metadata from TUF?
-  # See updater.py _update_metadata 2189-2192?
-  # The more I look at this, the more it looks like I just need to copy all
-  # the files....
-  # I'll use zipfile. In Python 2.7.4 and later, it should prevent files from
-  # being created outside of the target extraction directory.
 
 
 

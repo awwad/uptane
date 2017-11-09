@@ -43,13 +43,6 @@ from six.moves import xmlrpc_server
 from six.moves import range
 import socket # to catch listening failures from six's xmlrpc server
 
-# Import a CAN communications module for partial-verification Secondaries
-import ctypes
-libuptane_lib = None # will be loaded later if we are communicating via CAN
-# You can ignore this unless you're communicating via CAN
-LIBUPTANE_LIBRARY_FNAME = os.path.join(
-    uptane.WORKING_DIR, '..', 'libuptane', 'libuptane.so')
-
 
 
 # Tell the reference implementation that we're in demo mode:
@@ -70,21 +63,6 @@ _ecu_serial = '11111'
 # firmware_filename = 'infotainment_firmware.txt'
 
 
-# If True, we will employ the C interface for CAN communications.
-use_can_interface = False
-# This will be used for the Partial Verification Secondaries that are
-# communicating via the CAN bus and running in C.
-# Any PV Secondary running in C and communicating across CAN must be listed
-# here, or it will be assumed to be a FV Secondary running in Python across IP.
-partial_verification_secondaries = {
-  # A map of ECU Serial to Secondary ID for Sam's CAN code.
-  # This must map correctly to the config file settings on the Primary in Sam's
-  # CAN code that specify how to contact the c-Secondaries.
-  '30000': 1, # Sam's first PV C Secondary
-  '30001': 2  # Sam's second PV C Secondary
-}
-DATATYPE_IMAGE = 0
-DATATYPE_METADATA = 1
 
 # Dynamic globals
 current_firmware_fileinfo = {}
@@ -99,8 +77,7 @@ def clean_slate(
     use_new_keys=False,
     # client_directory_name=None,
     vin=_vin,
-    ecu_serial=_ecu_serial,
-    c_interface=False):
+    ecu_serial=_ecu_serial):
   """
   """
   global primary_ecu
@@ -108,10 +85,8 @@ def clean_slate(
   global _vin
   global _ecu_serial
   global listener_thread
-  global use_can_interface
   _vin = vin
   _ecu_serial = ecu_serial
-  use_can_interface = c_interface
 
   # if client_directory_name is not None:
   #   CLIENT_DIRECTORY = client_directory_name
@@ -180,23 +155,6 @@ def clean_slate(
         'already registered.')
 
 
-  if use_can_interface:
-    # If we're on a device with a CAN interface that we're going to be using
-    # to communicate with Secondaries, then load Sam's libuptane C module.
-    # (We use this on the Raspberry Pis with a PiCAN card.)
-
-    global libuptane_lib
-
-    libuptane_lib = ctypes.cdll.LoadLibrary('LIBUPTANE_ROOT_DIR/libuptane.so')
-
-    # Start up the CAN communications client for the Primary.
-    libuptane_lib.uptane_init_wrapper()
-
-    status = libuptane_lib.check_status_wrapper()
-    print('After initialization, status of c-uptane PV Secondary client is: ' +
-        repr(status))
-
-
   print(GREEN + '\n Now simulating a Primary that rolled off the assembly line'
       '\n and has never seen an update.' + ENDCOLORS)
 
@@ -241,21 +199,6 @@ def create_primary_pinning_file():
     fobj.write(canonicaljson.encode_canonical_json(pinnings))
 
   return fname_to_create
-
-
-
-
-
-def close_can_primary():
-  """Only necessary if use_can_interface is True."""
-  assert use_can_interface, 'This is only of use if use_can_interface is True.'
-  assert libuptane_lib is not None, 'Have not yet loaded libuptane_lib. ' + \
-      'Run clean_slate().'
-
-  import libuptane_lib
-
-  libuptane_lib.uptane_finish_wrapper()
-  print('C CAN module for Primary has shut down.')
 
 
 
@@ -478,17 +421,14 @@ def enforce_jail(fname, expected_containing_dir):
 
 def get_image_for_ecu(ecu_serial):
   """
-  Behaves differently for partial-verification Secondaries communicating across
-  CAN and full-verification Secondaries communicating via xmlrpc.
+  Intended to be called via XMLRPC by the Secondary client, either partial or
+  full verification.
 
-  For PV Secondaries on CAN:
-    Employs C-based libuptane library to send the image binary data to the
-    CAN ID noted in configuration as matching the given ECU Serial.
-
-  For FV Secondaries via XMLRPC:
-    Returns:
-     - filename of the image, relative to the targets directory
-     - binary image data in xmlrpc.Binary format
+  Returns the following to the requesting Secondary:
+     - filename of the firmware image assigned it by the Director and validated
+       by the Primary's full verification (against both repositories, etc).
+       The filename provided is relative to the targets directory.
+     - binary image data for that file in xmlrpc.Binary format
   """
 
   # Ensure serial is correct format & registered
@@ -501,57 +441,18 @@ def get_image_for_ecu(ecu_serial):
         'Primary has no update for that ECU.')
     return None, None
 
-  # If the given ECU is a Partial Verification Secondary operating across a
-  # CAN bus, we send the image via an external C CAN library, libuptane.
-  if use_can_interface and ecu_serial in SECONDARY_ID_ENUM:
+  assert os.path.exists(image_fname), 'File ' + repr(image_fname) + \
+      ' does not exist....'
+  binary_data = xmlrpc_client.Binary(open(image_fname, 'rb').read())
 
-    assert libuptane_lib is not None, 'Have not yet loaded libuptane_lib. ' + \
-        'Run clean_slate().'
+  print('Distributing image to ECU ' + repr(ecu_serial))
 
-    can_id = SECONDARY_ID_ENUM[ecu_serial]
-
-    print('Treating requester as partial-verification Secondary. ECU Serial '
-        '(' + repr(ecu_serial) + ') appears in mapping of ECUs to CAN IDs. '
-        'Corresponding CAN ID is ' + repr(can_id) + '.')
-
-    status = None
-    for i in range(3): # Try checking CAN status a few times.
-      status = libuptane_lib.check_status_wrapper()
-      if status == 1:
-        break
-
-    if status != 1:
-      raise uptane.Error('Unable to connect via CAN interface after several '
-          'tries. Status is ' + repr(status))
-
-    print('Status is ' + repr(status) + '. Sending file.')
-
-    libuptane_lib.send_isotp_file_wrapper(
-        can_id, # enum
-        DATATYPE_IMAGE,
-        image_fname)
-
-    return
-
-
-  else:
-    #print('Treating requester as full-verification Secondary without a CAN '
-    #    'interface because the C CAN interface is off or the ECU Serial (' +
-    #    repr(ecu_serial) + ') does not appear in the mapping of ECU Serials '
-    #    'to CAN IDs.')
-
-    assert os.path.exists(image_fname), 'File ' + repr(image_fname) + \
-        ' does not exist....'
-    binary_data = xmlrpc_client.Binary(open(image_fname, 'rb').read())
-
-    print('Distributing image to ECU ' + repr(ecu_serial))
-
-    # Get relative filename (relative to the client targets directory) so that
-    # it can be used as a TUF-style filepath within the targets namespace by
-    # the Secondary.
-    relative_fname = os.path.relpath(
-        image_fname, os.path.join(primary_ecu.full_client_dir, 'targets'))
-    return (relative_fname, binary_data)
+  # Get relative filename (relative to the client targets directory) so that
+  # it can be used as a TUF-style filepath within the targets namespace by
+  # the Secondary.
+  relative_fname = os.path.relpath(
+      image_fname, os.path.join(primary_ecu.full_client_dir, 'targets'))
+  return (relative_fname, binary_data)
 
 
 
@@ -580,78 +481,28 @@ def get_metadata_for_ecu(ecu_serial, force_partial_verification=False):
   # The filename of the file to return.
   fname = None
 
+  if force_partial_verification:
+    fname = primary_ecu.get_partial_metadata_fname()
 
+  else:
+    # Note that in Python 2.7.4 and later, unzipping should prevent files from
+    # being created outside of the target extraction directory. There are other
+    # security concerns (such as zip bombs). The security of archive use in
+    # your environment should be carefully considered.
+    fname = primary_ecu.get_full_metadata_archive_fname()
 
+  if not os.path.exists(fname):
+    raise uptane.Error(
+        'Primary has no metadata to distribute to Secondary "' + ecu_serial +
+        '". Missing filename: "' + fname + '". Currently operating in ' +
+        ('Partial' if force_partial_verification else 'Full') +
+        ' Verification Mode')
 
-  # If we're responding with the file via this XMLRPC call, not across a CAN:
-  if not use_can_interface or ecu_serial not in SECONDARY_ID_ENUM:
+  print('Distributing metadata file ' + fname + ' to ECU ' + repr(ecu_serial))
 
-    if force_partial_verification:
-      print('Treating request as a partial-verification Secondary because '
-          'force_partial_verification is True, even though the client is not '
-          'on a CAN interface.')
-      fname = primary_ecu.get_partial_metadata_fname()
-    else:
-      # If this is a Full Verification Secondary not running on a CAN network,
-      # select the full metadata archive.
-      # print('Treating requester as full-verification Secondary without a CAN '
-      #     'interface because the C CAN interface is off or the ECU Serial (' +
-      #     repr(ecu_serial) + ') does not appear in the mapping of ECU Serials '
-      #     'to CAN IDs.')
-      fname = primary_ecu.get_full_metadata_archive_fname()
+  binary_data = xmlrpc_client.Binary(open(fname, 'rb').read())
 
-    if not os.path.exists(fname):
-      raise uptane.Error('This Primary does not have a collection of metadata '
-          'to distribute to Secondaries.')
-
-    print('Distributing metadata to ECU ' + repr(ecu_serial))
-
-    binary_data = xmlrpc_client.Binary(open(fname, 'rb').read())
-
-    print('Distributing image to ECU ' + repr(ecu_serial))
-    return binary_data
-
-
-
-
-  # Otherwise, we're dealing with a Partial Verification Secondary that is
-  # running on a CAN network, so it's time to get messy.
-  assert use_can_interface and ecu_serial in SECONDARY_ID_ENUM, 'Programming error.'
-  assert libuptane_lib is not None, 'Have not yet loaded libuptane_lib. ' + \
-      'Run clean_slate().'
-
-  can_id = SECONDARY_ID_ENUM[ecu_serial]
-
-  print('Treating requester as partial-verification Secondary. ECU Serial '
-      '(' + repr(ecu_serial) + ') appears in mapping of ECUs to CAN IDs. '
-      'Corresponding CAN ID is ' + repr(can_id) + '.')
-
-  fname = primary_ecu.get_partial_metadata_fname()
-
-  print('Trying to send ' + repr(fname) + ' to Secondary with CAN ID ' +
-      repr(can_id) + ' and ECU Serial ' + repr(ecu_serial) + ' via CAN '
-      'interface.')
-
-  status = None
-  for i in range(3): # Try checking CAN status a few times.
-    status = libuptane_lib.check_status_wrapper()
-    if status == 1:
-      break
-
-  if status != 1:
-    raise uptane.Error('Unable to connect via CAN interface after several '
-        'tries: check_status has not returned 1. Status is ' + repr(status))
-
-  print('Status is ' + repr(status) + '. Sending file.')
-  libuptane_lib.send_isotp_file_wrapper(
-      can_id, # enum
-      DATATYPE_IMAGE,
-      fname)
-  status = libuptane_lib.check_status_wrapper()
-  print('After sending file ' + repr(fname) + ', status of c-uptane PV '
-      'Secondary client (' + repr(ecu_serial) + ') is: ' + repr(status))
-
-  return
+  return binary_data
 
 
 
@@ -665,43 +516,12 @@ def get_time_attestation_for_ecu(ecu_serial):
 
   attestation = primary_ecu.get_last_timeserver_attestation()
 
-  if use_can_interface and ecu_serial in SECONDARY_ID_ENUM:
+  # If we're using ASN.1/DER, then the attestation is binary data we're about
+  # to transmit via XMLRPC, so we should wrap it appropriately:
+  if tuf.conf.METADATA_FORMAT == 'der':
+    attestation = xmlrpc_client.Binary(attestation)
 
-    assert libuptane_lib is not None, 'Have not yet loaded libuptane_lib. ' + \
-        'Run clean_slate() to load library and initialize CAN interface.'
-
-    can_id = SECONDARY_ID_ENUM[ecu_serial]
-
-    print('Treating requester as partial-verification Secondary. ECU Serial '
-        '(' + repr(ecu_serial) + ') appears in mapping of ECUs to CAN IDs. '
-        'Corresponding CAN ID is ' + repr(can_id) + '.')
-
-    #
-    #
-    # TODO: <~> Right now, the partial verification demo client in C that uses
-    # the CAN interface, libuptane, doesn't support sending timeserver
-    # attestations over CAN, so we'll skip this until it does.
-    #
-    #
-
-    print('Skipping send of timeserver attestation via CAN interface because '
-        'the CAN code does not support it.')
-
-
-  else:
-    # print('Treating requester as full-verification Secondary without a CAN '
-    #     'interface because the C CAN interface is off or the ECU Serial (' +
-    #     repr(ecu_serial) + ') does not appear in the mapping of ECU Serials '
-    #     'to CAN IDs. Sending time attestation back.')
-
-    attestation = primary_ecu.get_last_timeserver_attestation()
-
-    # If we're using ASN.1/DER, then the attestation is binary data we're about
-    # to transmit via XMLRPC, so we should wrap it appropriately:
-    if tuf.conf.METADATA_FORMAT == 'der':
-      attestation = xmlrpc_client.Binary(attestation)
-
-    return attestation
+  return attestation
 
 
 

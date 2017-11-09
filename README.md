@@ -85,7 +85,7 @@ better understand the workings of the reference implementation, see the
 # 1: Starting the Demo
 The code below is intended to be run in five or more consoles:
 - [WINDOW 1](#window-1-the-image-repository): Python shell for the Image Repository. This serves HTTP (repository files, including metadata).
-- [WINDOW 2](#window-2-the-director): Python shell for the Director (Repository and Service). This serves metadata and image files via HTTP,111
+- [WINDOW 2](#window-2-the-director): Python shell for the Director (Repository and Service). This serves metadata and image files via HTTP,
  and receives manifests from the Primary via XMLRPC.
 - [WINDOW 3](#window-3-the-timeserver): Bash shell for the Timeserver. This serves signed times in response to requests from the Primary via XMLRPC.
 - [WINDOW 4](#window-4-the-primary-clients): Python shell for a Primary client in the vehicle. This fetches images and metadata from the repositories via HTTP, and communicates with the Director service, Timeserver, and any Secondaries via XMLRPC. (More of these can be run, simulating more vehicles with one Primary each.)
@@ -432,8 +432,8 @@ The primary client now attempts to download the malicious file.
 >>> dp.update_cycle()
 ```
 
-The primary client should print a DEFENDED banner and provide the following error message: The Director has instructed
-us to download a file that does  does not exactly match the Image Repository metadata. File: '/firmware.img'
+The primary client should print a DEFENDED banner and provide the following error message: `The Director has instructed
+us to download a file that does not exactly match the Image Repository metadata. File: '/firmware.img'`
 
 
 
@@ -464,7 +464,7 @@ On the **secondary** client:
 ```
 
 Note, both the image and director repositories have been compromised. As a
-result, unfortuantely, in an attack of this kind Secondary would install this
+result, unfortunately, in an attack of this kind Secondary would install this
 malicious firmware.img, which neither the Primary nor the
 Secondary have any way of knowing is malicious, since every necessary key has
 signed metadata for that image.

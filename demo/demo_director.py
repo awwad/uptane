@@ -406,7 +406,7 @@ def revoke_compromised_keys():
 
 
 
-def sign_with_compromised_keys_attack():
+def sign_with_compromised_keys_attack(vin=None):
   """
   <Purpose>
     Re-generate Timestamp, Snapshot, and Targets metadata for all vehicles and
@@ -418,7 +418,9 @@ def sign_with_compromised_keys_attack():
     instance is also updated with the key changes.
 
   <Arguments>
-    None.
+    vin (optional)
+      If not provided, all known vehicles will be attacked. You may also provide
+      a single VIN (string) indicating one vehicle to attack.
 
   <Side Effects>
     None.
@@ -454,7 +456,12 @@ def sign_with_compromised_keys_attack():
 
   repo_dir = None
 
-  for vin in director_service_instance.vehicle_repositories:
+  if vin is None:
+    vehicles_to_attack = director_service_instance.vehicle_repositories.keys()
+  else:
+    vehicles_to_attack = [vin]
+
+  for vin in vehicles_to_attack:
 
     repository = director_service_instance.vehicle_repositories[vin]
     repo_dir = repository._repository_directory
@@ -497,7 +504,7 @@ def sign_with_compromised_keys_attack():
 
 
 
-def undo_sign_with_compromised_keys_attack():
+def undo_sign_with_compromised_keys_attack(vin=None):
   """
   <Purpose>
     Undo the actions executed by sign_with_compromised_keys_attack().  Namely,
@@ -505,7 +512,10 @@ def undo_sign_with_compromised_keys_attack():
     reload the valid keys for each repository.
 
   <Arguments>
-    None.
+    vin (optional)
+      If not provided, all known vehicles will be reverted to normal state from
+      attacked state. You may also provide a single VIN (string) indicating
+      one vehicle to undo the attack for.
 
   <Side Effects>
     None.
@@ -539,7 +549,12 @@ def undo_sign_with_compromised_keys_attack():
   # Revert to the last backup for all metadata in the Director repositories.
   restore_repositories()
 
-  for vin in director_service_instance.vehicle_repositories:
+  if vin is None:
+    vehicles_to_attack = director_service_instance.vehicle_repositories.keys()
+  else:
+    vehicles_to_attack = [vin]
+
+  for vin in vehicles_to_attack:
 
     repository = director_service_instance.vehicle_repositories[vin]
     repo_dir = repository._repository_directory

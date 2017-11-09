@@ -517,8 +517,6 @@ def undo_sign_with_compromised_keys_attack():
     None.
   """
 
-  global director_service_instance
-
 
   # Re-load the valid keys, so that the repository objects can be updated to
   # reference them and replace the compromised keys set.
@@ -581,8 +579,6 @@ def add_target_to_director(target_fname, filepath_in_repo, vin, ecu_serial):
       Complies with uptane.formats.ECU_SERIAL_SCHEMA
 
   """
-  global director_service_instance
-
   uptane.formats.VIN_SCHEMA.check_match(vin)
   uptane.formats.ECU_SERIAL_SCHEMA.check_match(ecu_serial)
   tuf.formats.RELPATH_SCHEMA.check_match(target_fname)

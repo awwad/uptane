@@ -207,7 +207,7 @@ Open a Python shell in a new terminal window and then run the following:
 Optionally, multiple windows with different Secondary clients can be run simultaneously. In each additional window, you can run the same calls as above to set up a new ECU in the same, default vehicle by modifying the clean_slate() call to include a distinct ECU Serial. e.g. `ds.clean_slate(ecu_serial='33333')`
 
 If the Secondary is in a different vehicle from the default vehicle, this call should look like:
-`ds.clean_slate(vin='112', ecu_serial='33333', primary_port='30702')`, providing a VIN for the new vehicle, a unique ECU Serial, and indicating the port listed by this Secondary's Primary when that Primary initialized (e.g. "Primary will now listen on port 30702").
+`ds.clean_slate(vin='vehicle_id_here', ecu_serial='ecu_serial_here', primary_port=30702)`, providing a VIN for the new vehicle, a unique ECU Serial, and indicating the port listed by this Secondary's Primary when that Primary initialized (e.g. "Primary will now listen on port 30702").
 
 The Secondary's update_cycle() call:
 - fetches and validates the signed metadata for the vehicle from the Primary
@@ -234,11 +234,10 @@ newly-written metadata:
 >>> di.write_to_live()
 ```
 
-Perform the following in the **Director Repository's** window (WINDOW 2) to assign that Image file to vehicle 111, ECU 22222:
+Perform the following in the **Director Repository's** window (WINDOW 2) to assign that Image file to vehicle 'democar', ECU 'TCUdemocar':
 ```python
 >>> firmware_fname = filepath_in_repo = 'firmware.img'
->>> ecu_serial = '22222'
->>> vin = '111'
+>>> vin='democar'; ecu_serial='TCUdemocar'
 >>> dd.add_target_to_director(firmware_fname, filepath_in_repo, vin, ecu_serial)
 >>> dd.write_to_live(vin_to_update=vin)
 ```
@@ -273,7 +272,7 @@ In WINDOW 2, **Director's** window, run:
 >>> dd.mitm_arbitrary_package_attack(vin, firmware_fname)
 ```
 
-As a result of the attack above, the Director will instruct the secondary client in vehicle 111 to install *firmware.img*.
+As a result of the attack above, the Director will instruct the secondary client in the vehicle to install *firmware.img*.
 Since this file is not on (and validated by) the Image Repository, the Primary will refuse to download it
 (and a Full Verification Secondary would likewise refuse it even if a compromised Primary delivered it
 to the Secondary).
@@ -327,8 +326,8 @@ Not decompressing http://localhost:30301/targets/firmware.img
 Update failed from http://localhost:30301/targets/firmware.img.
 BadHashError
 Failed to update /firmware.img from all mirrors: {u'http://localhost:30301/targets/firmware.img': BadHashError()}
-Downloading: u'http://localhost:30401/111/targets/firmware.img'
-Could not download URL: u'http://localhost:30401/111/targets/firmware.img'
+Downloading: u'http://localhost:30401/democar/targets/firmware.img'
+Could not download URL: u'http://localhost:30401/democar/targets/firmware.img'
 ```
 
 Uptane detected that the image retrieved did not have a hash matching what the
@@ -353,7 +352,7 @@ metadata, `timestamp.der` to a backup. This is what we'll roll back to in the
 attack.
 A function is available to perform this action:
 ```python
->>> dd.backup_timestamp(vin='111')
+>>> dd.backup_timestamp(vin)
 ```
 
 Now, we update the metadata in the Director repository. In this case, a fairly
@@ -374,7 +373,7 @@ Next, in the **Director's window**, we simulate the replay attack, trying to
 distribute the out-of-date metadata backed up earlier, effectively rolling back
 the timestamp file to a previous version.
 ```python
->>> dd.replay_timestamp(vin='111')
+>>> dd.replay_timestamp(vin)
 ```
 
 If this old metadata is presented to the Primary, the Primary rejects it,
@@ -384,16 +383,16 @@ failure (ReplayedMetadataError exception). In the **Primary's window**:
 ```python
 >>> dp.update_cycle()
 ...
-Update failed from http://localhost:30401/111/metadata/timestamp.der.
+Update failed from http://localhost:30401/democar/metadata/timestamp.der.
 ReplayedMetadataError
 Failed to update timestamp.der from all mirrors:
-{u'http://localhost:30401/111/metadata/timestamp.der': ReplayedMetadataError()}
+{u'http://localhost:30401/democar/metadata/timestamp.der': ReplayedMetadataError()}
 ```
 
 Finally, restore the valid, latest version of Timestamp metadata
 (`timestamp.der`) back into place in the **Director's window**.
 ```python
->>> dd.restore_timestamp(vin='111')
+>>> dd.restore_timestamp(vin)
 ```
 
 
@@ -424,7 +423,7 @@ this case), in the **Director's window**:
 
 ```python
 >>> dd.add_target_and_write_to_live(filename='firmware.img',
-    file_content='evil content', vin='111', ecu_serial='22222')
+    file_content='evil content', vin=vin, ecu_serial=ecu_serial)
 ```
 
 The primary client now attempts to download the malicious file.
@@ -510,7 +509,7 @@ And in the **Director** repository window:
 ```
 >>> dd.revoke_compromised_keys()
 >>> dd.add_target_and_write_to_live(filename='firmware.img',
-    file_content='Fresh firmware image', vin='111', ecu_serial='22222')
+    file_content='Fresh firmware image', vin=vin, ecu_serial=ecu_serial)
 ```
 
 We have just used the rarely-needed root keys of the two repositories to
@@ -568,13 +567,13 @@ If you were to inspect the cause of the download failure, you'd find the
 following exception:
 
 ```
-Downloading: u'http://localhost:30401/111/metadata/timestamp.der'
+Downloading: u'http://localhost:30401/democar/metadata/timestamp.der'
 Downloaded 202 bytes out of an upper limit of 16384 bytes.
-Not decompressing http://localhost:30401/111/metadata/timestamp.der
+Not decompressing http://localhost:30401/democar/metadata/timestamp.der
 metadata_role: u'timestamp'
-Update failed from http://localhost:30401/111/metadata/timestamp.der.
+Update failed from http://localhost:30401/democar/metadata/timestamp.der.
 BadSignatureError
-Failed to update timestamp.der from all mirrors: {u'http://localhost:30401/111/metadata/timestamp.der': BadSignatureError()}
+Failed to update timestamp.der from all mirrors: {u'http://localhost:30401/democar/metadata/timestamp.der': BadSignatureError()}
 Valid top-level metadata cannot be downloaded.  Unsafely update the Root metadata.
 ```
 

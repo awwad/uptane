@@ -443,8 +443,10 @@ not enough to allow arbitrary package attacks against ECUs in the vehicle.
 The Director can only instruct clients to install images validated by the Image
 Repository.
 
-But what happens if, at the same time, the attacker is able to sign with an
-image-signing key for the Image Repository?
+But what happens if, at the same time, the attacker is able to get a hold of a
+high-level image-signing key trusted by the Image Repository? (Note that these
+should generally be offline keys and rarely need to be used.)
+With the previous attack still in place, let's add:
 ```python
 >>> di.add_target_and_write_to_live(filename='firmware.img', file_content='evil content')
 ```
@@ -480,7 +482,25 @@ provides many recommendations. In particular, the
 [key placement recommendations](https://docs.google.com/document/d/17wOs-T7mugwte5_Dt-KLGMsp-3_yAARejpFmrAMefSE/view#heading=h.k5rokxr32wv6)
 indicate that Targets keys for the Image Repository are best kept offline; it
 should not be easy to compromise this top-level Image Repository Targets key
-and use it to sign malicious images.
+and use it to sign malicious images, as this key should be needed only when
+altering delegations (to parties who may sign for particular subsets of images).
+Depending on the way you deploy the system, this may be only when establishing a
+relationship with a new firmware supplier or revoking trust in them, for
+example.
+
+A more limited attack of this sort is possible against a subset of available
+firmware if rather than the top-level Image Repository targets keys, the
+attacker acquires the signing keys held by a party who has been delegated trust
+for a subset of images, such as a supplier the Image Repository has elected to
+trust to do the image signing for its own firmware releases to the Image
+Repository. While such delegated keys should also be held offline and need only
+be used when the delegatee produces new firmware, it is easier to imagine such
+a key being compromised than the Image Repository's top-level Targets role
+key(s). The structure of Uptane is flexible enough to accommodate almost any
+trust arrangement, allowing the impact of keys being lost to be limited to a
+small subset of images. Note that as before, this attack still requires also
+compromising the Director repository's Targets role keys or Root role keys.
+
 
 
 
@@ -494,9 +514,9 @@ deployment considerations are available in documentation
 [linked to above](#uptane).)
 
 Once the servers have been recovered, it is easy to revoke any keys that may
-have been compromised. We should also make sure that the targets in the
-repositories are correct, in case things have been changed by the attacker
-while in control. In this demo, these two things are done like so:
+have been compromised. We should also make sure that the targets and metadata
+in the repositories are correct again, in case things have been changed by the
+attacker while in control. In this demo, these two things are done like so:
 
 In the **Image** repository window:
 ```
@@ -518,6 +538,17 @@ both repositories. This is the first time they have needed to be used since the
 repositories' creation at the beginning of this demo. Root keys should be
 kept offline, as discussed in
 the [Uptane Deployment Considerations document](https://docs.google.com/document/d/17wOs-T7mugwte5_Dt-KLGMsp-3_yAARejpFmrAMefSE/edit?usp=sharing).
+If trust in a key needs to be revoked, the keys at a level above it (or any
+level above that) can be used.
+In the case of the top-level roles (like Timestamp, Snapshot, and Targets here),
+that falls to Root to do. In the case of delegated Targets roles, the role
+that delegates would do the revocation. So, for example, if you delegate
+the ability to sign for firmware from a given vendor to the security team from
+that vendor, and that team delegates in turn to a particular release manager,
+and that release manager's YubiKey falls into the sewers, the security team
+from the vendor can remove trust in it and trust a new key. Alternatively, the
+top-level Targets role for the Image Repository could remove trust for the
+security team from the vendor, etc.
 
 Any client that receives the new metadata will be able to validate the root key
 and will cease trusting the revoked keys.
@@ -532,9 +563,10 @@ On the **secondary** client:
 >>> ds.update_cycle()
 ```
 
-As ever, if a particular ECU has been compromised and attacker code has been
-run on it, being certain that specific device is secured is of course difficult
-to assure. Devices that have not been compromised in such an attack, however,
+As ever, if a particular ECU has been compromised and arbitrary attacker code
+has been executed on it, being certain that specific device is secure again
+without wiping it manually is difficult. Devices that have not been compromised
+in such an attack, however,
 should thereafter be protected from the use of those compromised keys by an
 attacker.
 

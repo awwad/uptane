@@ -176,8 +176,6 @@ def create_primary_pinning_file():
 
   Returns the filename of the created file.
   """
-  global TEMP_PINNED_FILE
-
   with open(demo.DEMO_PRIMARY_PINNING_FNAME, 'r') as fobj:
     pinnings = json.load(fobj)
 
@@ -225,9 +223,6 @@ def load_or_generate_key(use_new_keys=False):
 def update_cycle():
   """
   """
-
-  global primary_ecu
-
 
   #
   # FIRST: TIME
@@ -322,7 +317,6 @@ def update_cycle():
 
 def generate_signed_vehicle_manifest():
 
-  global primary_ecu
   global most_recent_signed_vehicle_manifest
 
   # Generate and sign a manifest indicating that this ECU has a particular

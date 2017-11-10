@@ -454,7 +454,7 @@ def get_image_for_ecu(ecu_serial):
 
 def get_metadata_for_ecu(ecu_serial, force_partial_verification=False):
   """
-  Provides the (updated) metadata a Secondary will need to validate updates.
+  Provides the current metadata a Secondary will need to validate updates.
 
   This takes two forms:
 

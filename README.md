@@ -551,7 +551,7 @@ Let's begin the demonstration by generating metadata that is maliciously
 signed with the keys revoked in the last section.
 
 ```Python
->>> dd.sign_with_compromised_keys_attack()
+>>> dd.sign_with_compromised_keys_attack(vin)
 ```
 
 
@@ -582,7 +582,7 @@ keys had been revoked and where new keys were added for the Targets, Snapshot,
 and Timestamp roles.
 
 ```Python
->>> dd.undo_sign_with_compromised_keys_attack()
+>>> dd.undo_sign_with_compromised_keys_attack(vin)
 ```
 
 If the Primary initiates an update cycle once again, it would appear to be

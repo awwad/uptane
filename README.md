@@ -443,7 +443,7 @@ not enough to allow arbitrary package attacks against ECUs in the vehicle.
 The Director can only instruct clients to install images validated by the Image
 Repository.
 
-But what happens if, at the same time, the attacker is able to get a hold of a
+But what happens if, at the same time, the attacker is able to sign with a
 high-level image-signing key trusted by the Image Repository? (Note that these
 should generally be offline keys and rarely need to be used.)
 With the previous attack still in place, let's add:

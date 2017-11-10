@@ -127,7 +127,8 @@ def sign_signable(
           'Unsupported key type: ' + repr(signing_key['keytype']))
 
     # Else, all is well. Sign the signable with the given key, adding that
-    # signature to the signatures list in the signable.
+    # signature to the signatures list in the signable. Add the key used to the
+    # list of keys that have already signed and continue to the next key.
     signable['signatures'].append(sign_over_metadata(
         signing_key, signable['signed'], datatype=datatype,
         metadata_format=metadata_format))

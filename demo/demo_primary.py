@@ -176,8 +176,6 @@ def create_primary_pinning_file():
 
   Returns the filename of the created file.
   """
-  global TEMP_PINNED_FILE
-
   with open(demo.DEMO_PRIMARY_PINNING_FNAME, 'r') as fobj:
     pinnings = json.load(fobj)
 
@@ -225,9 +223,6 @@ def load_or_generate_key(use_new_keys=False):
 def update_cycle():
   """
   """
-
-  global primary_ecu
-
 
   #
   # FIRST: TIME
@@ -322,7 +317,6 @@ def update_cycle():
 
 def generate_signed_vehicle_manifest():
 
-  global primary_ecu
   global most_recent_signed_vehicle_manifest
 
   # Generate and sign a manifest indicating that this ECU has a particular
@@ -460,7 +454,7 @@ def get_image_for_ecu(ecu_serial):
 
 def get_metadata_for_ecu(ecu_serial, force_partial_verification=False):
   """
-  Provides the (updated) metadata a Secondary will need to validate updates.
+  Provides the current metadata a Secondary will need to validate updates.
 
   This takes two forms:
 
@@ -471,6 +465,20 @@ def get_metadata_for_ecu(ecu_serial, force_partial_verification=False):
 
   - For Partial Verification Secondaries:
       Send the Director's Targets role file.
+
+  <Arguments>
+
+    ecu_serial
+        the serial of the (Secondary) ECU for which to retrieve metadata
+
+    force_partial_verification (optional: default False (Full))
+        If True, provides the partial metadata (the Director's Targets role
+        file), else provides the full metadata archive.
+        Which metadata is provided (full vs partial) is entirely determined by
+        force_partial_verification, which should be renamed to
+        partial_verification, but is not yet because there are other branches
+        to be merged that call these. # TODO: rename
+        force_partial_verification.
 
   <Exceptions>
     uptane.Error if there is no metadata to distribute

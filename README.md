@@ -32,7 +32,7 @@ implementation code, divided into these sections:
 
 
 # 0: Installation
-Uptane fully supports Python2 and Python3. As usual for Python, [virtual environments](https://python-docs.readthedocs.io/en/latest/dev/virtualenvs.html) are recommended for development and testing, but not necessary.
+Uptane supports Python2 and Python3. Demonstration code is currently not compatible with Python 2.7.14 in particular due to a change in the xmlrpc library's behavior. As usual for Python, [virtual environments](https://python-docs.readthedocs.io/en/latest/dev/virtualenvs.html) are recommended for development and testing, but not necessary.
 
 Some development libraries are necessary to install some of Uptane's dependencies. If your system uses apt, the command to install them will be:
 ```shell

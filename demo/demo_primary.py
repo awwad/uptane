@@ -626,8 +626,7 @@ def listen():
       primary_ecu.register_new_secondary, 'register_new_secondary')
 
   server.register_function(
-      primary_ecu.get_last_timeserver_attestation,
-      'get_last_timeserver_attestation')
+      get_time_attestation_for_ecu, 'get_time_attestation_for_ecu')
 
   # Distributing images this way is not ideal: there is no method here (as
   # there IS in TUF in general) of detecting endless data attacks or slow

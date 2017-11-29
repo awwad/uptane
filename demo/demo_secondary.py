@@ -288,7 +288,7 @@ def update_cycle():
     'http://' + str(_primary_host) + ':' + str(_primary_port))
 
   # Download the time attestation from the Primary.
-  time_attestation = pserver.get_last_timeserver_attestation()
+  time_attestation = pserver.get_time_attestation_for_ecu(_ecu_serial)
   if tuf.conf.METADATA_FORMAT == 'der':
     # Binary data transfered via XMLRPC has to be wrapped in an xmlrpc Binary
     # object. The data itself is contained in attribute 'data'.

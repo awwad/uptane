@@ -16,13 +16,11 @@ UptaneASN1Definitions DEFINITIONS AUTOMATIC TAGS ::= BEGIN
   Filename        ::= VisibleString (SIZE(1..32))
   -- No known path separator allowed in a strict filename.
   StrictFilename  ::= VisibleString (SIZE(1..32))
-                                    (PATTERN "[^/\\]+")
   BitString       ::= BIT STRING    (SIZE(1..1024))
   OctetString     ::= OCTET STRING  (SIZE(1..1024))
   -- Adjust length of SEQUENCE OF to your needs.
   Paths           ::= SEQUENCE (SIZE(1..8)) OF Path
   Path            ::= VisibleString (SIZE(1..32))
-                                    (PATTERN "[\w\*\\/]+")
   -- Adjust length of SEQUENCE OF to your needs.
   URLs            ::= SEQUENCE (SIZE(0..8)) OF URL
   URL             ::= VisibleString (SIZE(1..1024))

@@ -83,78 +83,59 @@ better understand the workings of the reference implementation, see the
 
 
 # 1: Starting the Demo
-The code below is intended to be run in five or more consoles:
-- [WINDOW 1](#window-1-the-image-repository): Python shell for the Image Repository. This serves HTTP (repository files, including metadata).
-- [WINDOW 2](#window-2-the-director): Python shell for the Director (Repository and Service). This serves metadata and image files via HTTP,
- and receives manifests from the Primary via XMLRPC.
-- [WINDOW 3](#window-3-the-timeserver): Bash shell for the Timeserver. This serves signed times in response to requests from the Primary via XMLRPC.
-- [WINDOW 4](#window-4-the-primary-clients): Python shell for a Primary client in the vehicle. This fetches images and metadata from the repositories via HTTP, and communicates with the Director service, Timeserver, and any Secondaries via XMLRPC. (More of these can be run, simulating more vehicles with one Primary each.)
-- [WINDOW 5](#window-5-the-secondary-clients): Python shell for a Secondary in the vehicle. This communicates directly only with the Primary via XMLRPC, and will perform full metadata verification. (More of these can be run, simulating more ECUs in one or more vehicles.)
+The code below is intended to be run in three or more consoles:
+- [WINDOW 1](#window-1-the-uptane-services): Python shell for the Uptane services
+- [WINDOW 2](#window-2-the-primary-clients): Python shell for a Primary client in the vehicle. This fetches images and metadata from the repositories via HTTP, and communicates with the Director service, Timeserver, and any Secondaries via XMLRPC. (More of these can be run, simulating more vehicles with one Primary each.)
+- [WINDOW 3](#window-3-the-secondary-clients): Python shell for a Secondary in the vehicle. This communicates directly only with the Primary via XMLRPC, and will perform full metadata verification. (More of these can be run, simulating more ECUs in one or more vehicles.)
 
 
 
-### WINDOW 1: the Image Repository
-These instructions start a demonstration version of an OEM's or Supplier's main repository
-for software, hosting images and the metadata Uptane requires.
-
-From within the root `uptane/` directory of the downloaded code (which contains e.g. the `setup.py` file), open an interactive
-Python shell from the command line. (Any version of Python >=2.7 should do, but
-we test 2.7, 3.3, 3.4, and 3.5.)
-
-```Bash
-$ python
-Python 2.7.6 (default, Oct 26 2016, 20:30:19)
-[GCC 4.8.4] on linux2
->>>
-```
-
-In the Python shell, run the following:
-
-```python
->>> import demo.demo_image_repo as di
->>> di.clean_slate()
-```
+### WINDOW 1: the Uptane services
+These instructions start a demonstration version of the three services that
+run OEM-side (or supplier-side, or fleet-side): the Image Repository,
+the Director, and the Timeserver.
 
 
-### WINDOW 2: the Director
-The following starts a Director server, which generates metadata for specific
+The Uptane documentation explains each of these services in greater detail,
+but in brief:
+
+**The Image Repository** is the main repository for images and general metadata
+about them.
+
+**The Director** The Director generates metadata for specific
 vehicles indicating which ECUs should install what firmware (validated against
 and obtained from the Image Repository). It also receives and validates
 Vehicle Manifests from Primaries, and the ECU Manifests from Secondaries
-within the Vehicle Manifests, which capture trustworthy information about what
-software is running on the ECUs, along with signed reports of any attacks
-observed by those ECUs.
+that have been bundled in the Vehicle Manifests, which capture trustworthy
+information about what software is running on the ECUs, along with, optionally,
+signed reports of any attacks observed by those ECUs.
 
-Open a new Python shell in a new terminal window and then run the following:
+**The Timeserver** is a simple service that receives requests for signed
+times, each bundled by a vehicle Primary, and produces a signed attestation
+that includes the tokens each Secondary ECU sent to its Primary to include
+along with the time request, so that each ECU can better establish that it is
+not being tricked into accepting a false time.
 
-```python
->>> import demo.demo_director as dd
->>> dd.clean_slate()
+
+From within the root `uptane/` directory of the downloaded code (which contains e.g. the `setup.py` file), open an interactive
+Python shell from the command line. (Any version of Python >=2.7 should do, but
+we test 2.7, 3.5, and 3.6.) The following command runs the services in
+interactive mode:
+
+```Bash
+$ python -i -c "from demo.start_servers import *; main()"
 ```
+
 
 After that, proceed to the following Windows to prepare clients.
 Once those are ready, you can perform a variety of modifications and attacks.
-Various manipulations can be made here to the Director's interface. Examples
-will be discussed below in the [Delivering an Update](#2-delivering-an-update)
-and [Blocking Attacks](#blocking-attacks) sections.
+Examples will be discussed below in the
+[Delivering an Update](#2-delivering-an-update) and
+[Blocking Attacks](#blocking-attacks) sections.
 
 
 
-### WINDOW 3: the Timeserver:
-The following starts a simple Timeserver, which receives requests for signed
-times, bundled by the Primary, and produces a signed attestation that includes
-the nonces each Secondary ECU sent the Primary to include along with the
-time request, so that each ECU can better establish that it is not being tricked
-into accepting a false time.
-
-In a new terminal window, run the following command:
-```Bash
-$ python demo/demo_timeserver.py
-```
-
-
-
-### WINDOW 4(+): the Primary client(s):
+### WINDOW 2(+): the Primary client(s):
 (Image Repo, Director, and Timeserver must already have finished starting up.)
 The Primary client started below is likely to run on a more capable and
 connected ECU in the vehicle - potentially the head unit / infotainment. It will
@@ -189,7 +170,7 @@ Example setting up a different Primary for a different vehicle:
 
 
 
-### WINDOW 5(+): the Secondary client(s):
+### WINDOW 3(+): the Secondary client(s):
 (The following assumes that the Image Repository, Director, Timeserver, and
 Primary have finished starting up and are hosting/listening.)
 Here, we start a single Secondary ECU and generate a signed ECU Manifest
@@ -223,9 +204,10 @@ To deliver an Update via Uptane, you'll need to add the firmware image to the Im
 and ECU in the Director repository. Then, the Primary will obtain the new firmware, and the Secondary will update from the
 Primary.
 
-Execute the following code in the **Image Repository's** window (WINDOW 1) to create a new file, add it to the repository, and host
-newly-written metadata:
-
+Execute the following code in the Uptane services window (WINDOW 1) to create a
+new firmware file, generate metadata about it, sign that metadata with the
+appropriate keys (assigned by delegations in the Image Repository), and host
+the image and metadata on the Image Repository.
 
 ```python
 >>> firmware_fname = filepath_in_repo = 'firmware.img'
@@ -234,7 +216,8 @@ newly-written metadata:
 >>> di.write_to_live()
 ```
 
-Perform the following in the **Director Repository's** window (WINDOW 2) to assign that Image file to vehicle 'democar', ECU 'TCUdemocar':
+To assign the new image to the ecu 'TCUdemocar' on vehicle 'democar', run
+the following in teh Uptane services window (WINDOW 1):
 ```python
 >>> firmware_fname = filepath_in_repo = 'firmware.img'
 >>> vin='democar'; ecu_serial='TCUdemocar'
@@ -242,12 +225,12 @@ Perform the following in the **Director Repository's** window (WINDOW 2) to assi
 >>> dd.write_to_live(vin_to_update=vin)
 ```
 
-Next, you can update the Primary in the Primary's window (WINDOW 4):
+Next, you can update the Primary. In WINDOW 2:
 ```python
 >>> dp.update_cycle()
 ```
 
-When the Primary has finished, you can update the Secondary in the Secondary's window (WINDOW 5):
+When the Primary has finished, you can update the Secondary. In WINDOW 3:
 ```python
 >>> ds.update_cycle()
 ```
@@ -267,7 +250,7 @@ of the Arbitrary Package Attack.
 This is a simple attack simulating a Man in the Middle that provides a malicious image file. In this attack, the
 attacker does not have the keys to correctly sign new metadata (and so it is an exceptionally basic attack).
 
-In WINDOW 2, **Director's** window, run:
+In the Uptane services window (1):
 ```python
 >>> dd.mitm_arbitrary_package_attack(vin, firmware_fname)
 ```
@@ -277,7 +260,7 @@ Since this file is not on (and validated by) the Image Repository, the Primary w
 (and a Full Verification Secondary would likewise refuse it even if a compromised Primary delivered it
 to the Secondary).
 
-In WINDOW 4, the **Primary's** window, run:
+In WINDOW 1, run:
 ```python
 >>> dp.update_cycle()
 ```
@@ -287,7 +270,7 @@ able to discard the manipulated file without even sending it to the Secondary.
 
 To resume experimenting with the repositories, run this script to put the
 repository back in a normal state (undoing what the attack did) by running the
-following in the **Director's** window:
+following in the services window (1):
 ```python
 >>> dd.undo_mitm_arbitrary_package_attack(vin, firmware_fname)
 ```
@@ -301,13 +284,13 @@ should updated successfully.
 In the previous section, the firmware available on the director repository was replaced with a malicious one.
 What if the image repository is corrupted with a malicious firmware?
 
-Run the following in WINDOW 1, the **Image Repository's** window.
+Run the following in WINDOW 1:
 ```python
 >>> di.mitm_arbitrary_package_attack(firmware_fname)
 ```
 
 You can see the update once again proceeding normally by running this in the
-**Primary's window** (WINDOW 4):
+Primary's window (2):
 ```python
 >>> dp.update_cycle()
 ```
@@ -347,7 +330,7 @@ software, causing secondary clients to use older firmware than they
 currently trust. Rollback attacks in general are described in The
 [Deny Functionality subsection of the Design Overview](https://docs.google.com/document/d/1pBK--40BCg_ofww4GES0weYFB6tZRedAjUy6PJ4Rgzk/edit#heading=h.4mo91b3dvcqd).
 
-First, switch to the **Director's window** and copy the Timestamp role's
+First, switch to the services window and copy the Timestamp role's
 metadata, `timestamp.der` to a backup. This is what we'll roll back to in the
 attack.
 A function is available to perform this action:
@@ -362,14 +345,14 @@ we saved earlier is now old by comparison.
 >>> dd.write_to_live()
 ```
 
-In the **Primary's window**, the Primary client now performs an update,
+In the Primary's window (2), the Primary client now performs an update,
 retrieving the new metadata we generated.
 
 ```python
 >>> dp.update_cycle()
 ```
 
-Next, in the **Director's window**, we simulate the replay attack, trying to
+Next, in the services window, we simulate the replay attack, trying to
 distribute the out-of-date metadata backed up earlier, effectively rolling back
 the timestamp file to a previous version.
 ```python
@@ -390,7 +373,7 @@ Failed to update timestamp.der from all mirrors:
 ```
 
 Finally, restore the valid, latest version of Timestamp metadata
-(`timestamp.der`) back into place in the **Director's window**.
+(`timestamp.der`) back into place in the services window.
 ```python
 >>> dd.restore_timestamp(vin)
 ```
@@ -419,7 +402,7 @@ will sign metadata certifying that malicious firmware file.
 
 To simulate a compromised directory key, we simply sign for an updated
 "firmware.img" that includes malicious content (the phrase "evil content" in
-this case), in the **Director's window**:
+this case), in the services window:
 
 ```python
 >>> dd.add_target_and_write_to_live(filename='firmware.img',
@@ -518,15 +501,11 @@ have been compromised. We should also make sure that the targets and metadata
 in the repositories are correct again, in case things have been changed by the
 attacker while in control. In this demo, these two things are done like so:
 
-In the **Image** repository window:
+In the services window:
 ```
 >>> di.revoke_compromised_keys()
 >>> di.add_target_and_write_to_live(filename='firmware.img',
         file_content='Fresh firmware image')
-```
-
-And in the **Director** repository window:
-```
 >>> dd.revoke_compromised_keys()
 >>> dd.add_target_and_write_to_live(filename='firmware.img',
     file_content='Fresh firmware image', vin=vin, ecu_serial=ecu_serial)

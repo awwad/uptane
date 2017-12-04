@@ -465,7 +465,24 @@ def update_cycle():
   # print a BANNER_COMPROMISED banner.
   image_filepath = os.path.join(CLIENT_DIRECTORY, 'unverified_targets', image_fname)
 
-  with open(image_filepath, 'rb') as file_object:
+  # Simulate installation. (If the demo eventually uses pictures to move into
+  # place or something, here is where to do it.)
+  # 1. Move the downloaded image from the unverified targets subdirectory to
+  #    the root of the client directory.
+  current_firmware_filepath = os.path.join(CLIENT_DIRECTORY, image_fname)
+
+  if os.path.exists(current_firmware_filepath):
+    os.remove(current_firmware_filepath)
+
+  os.rename(image_filepath, current_firmware_filepath)
+
+
+  # 2. Set the fileinfo in the secondary_ecu object to the target info for the
+  #    new firmware.
+  secondary_ecu.firmware_fileinfo = expected_target_info
+
+
+  with open(current_firmware_filepath, 'rb') as file_object:
     if file_object.read() == b'evil content':
       # If every safeguard is defeated and a compromised update is delivered, a
       # real Secondary can't necessarily know it has been compromised, as every
@@ -478,30 +495,13 @@ def update_cycle():
           text='A malicious update has been installed! Arbitrary package attack '
           'successful: this Secondary has been compromised! Image: ' +
           repr(expected_image_fname), sound=WITCH)
-      generate_signed_ecu_manifest()
-      submit_ecu_manifest_to_primary()
-      return
 
-  # Simulate installation. (If the demo eventually uses pictures to move into
-  # place or something, here is where to do it.)
-  # 1. Move the downloaded image from the unverified targets subdirectory to
-  #    the root of the client directory.
-  if os.path.exists(os.path.join(CLIENT_DIRECTORY, image_fname)):
-    os.remove(os.path.join(CLIENT_DIRECTORY, image_fname))
-  os.rename(
-      os.path.join(CLIENT_DIRECTORY, 'unverified_targets', image_fname),
-      os.path.join(CLIENT_DIRECTORY, image_fname))
-
-  # 2. Set the fileinfo in the secondary_ecu object to the target info for the
-  #    new firmware.
-  secondary_ecu.firmware_fileinfo = expected_target_info
-
-
-  print_banner(
-      BANNER_UPDATED, color=WHITE+GREEN_BG,
-      text='Installed firmware received from Primary that was fully '
-      'validated by the Director and Image Repo. Image: ' + repr(image_fname),
-      sound=WON)
+    else:
+      print_banner(
+          BANNER_UPDATED, color=WHITE+GREEN_BG,
+          text='Installed firmware received from Primary that was fully '
+          'validated by the Director and Image Repo. Image: ' +
+          repr(image_fname), sound=WON)
 
   if expected_target_info['filepath'].endswith('.txt'):
     print('The contents of the newly-installed firmware with filename ' +

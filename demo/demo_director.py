@@ -87,12 +87,13 @@ def clean_slate(use_new_keys=False):
 
   # Create keys and/or load keys into memory.
 
+  print(LOG_PREFIX + 'Loading all keys')
+
   if use_new_keys:
     demo.generate_key('directorroot')
     demo.generate_key('directortimestamp')
     demo.generate_key('directorsnapshot')
     demo.generate_key('director') # targets
-
 
   key_dirroot_pub = demo.import_public_key('directorroot')
   key_dirroot_pri = demo.import_private_key('directorroot')
@@ -103,6 +104,8 @@ def clean_slate(use_new_keys=False):
   key_dirtarg_pub = demo.import_public_key('director')
   key_dirtarg_pri = demo.import_private_key('director')
 
+
+  print(LOG_PREFIX + 'Initializing vehicle repositories')
 
   # Create the demo Director instance.
   director_service_instance = director.Director(
@@ -138,6 +141,8 @@ def clean_slate(use_new_keys=False):
           'infotainment_firmware.txt',
           vin,
           ecu)
+
+  print(LOG_PREFIX + 'Signing and hosting initial repository metadata')
 
   write_to_live()
 
@@ -812,7 +817,7 @@ def listen():
       'undo_sign_with_compromised_keys_attack')
 
   print(LOG_PREFIX + 'Starting Director Services Thread: will now listen on '
-      ' port ' + str(demo.DIRECTOR_SERVER_PORT))
+      'port ' + str(demo.DIRECTOR_SERVER_PORT))
   director_service_thread = threading.Thread(target=server.serve_forever)
   director_service_thread.setDaemon(True)
   director_service_thread.start()

@@ -58,6 +58,8 @@ def clean_slate(use_new_keys=False):
 
   global repo
 
+  print(LOG_PREFIX + 'Initializing repository')
+
   # Create target files: file1.txt and infotainment_firmware.txt
 
   if os.path.exists(demo.IMAGE_REPO_TARGETS_DIR):
@@ -77,6 +79,7 @@ def clean_slate(use_new_keys=False):
 
   repo = rt.create_new_repository(demo.IMAGE_REPO_NAME)
 
+  print(LOG_PREFIX + 'Loading all keys')
 
   # Create keys and/or load keys into memory.
 
@@ -136,6 +139,8 @@ def clean_slate(use_new_keys=False):
   add_target_to_imagerepo('demo/images/BCU1.1.txt', 'BCU1.1.txt')
   add_target_to_imagerepo('demo/images/BCU1.2.txt', 'BCU1.2.txt')
 
+
+  print(LOG_PREFIX + 'Signing and hosting initial repository metadata')
 
   write_to_live()
 

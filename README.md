@@ -217,9 +217,8 @@ the image and metadata on the Image Repository.
 ```
 
 To assign the new image to the ecu 'TCUdemocar' on vehicle 'democar', run
-the following in teh Uptane services window (WINDOW 1):
+the following in the Uptane services window (WINDOW 1):
 ```python
->>> firmware_fname = filepath_in_repo = 'firmware.img'
 >>> vin='democar'; ecu_serial='TCUdemocar'
 >>> dd.add_target_to_director(firmware_fname, filepath_in_repo, vin, ecu_serial)
 >>> dd.write_to_live(vin_to_update=vin)

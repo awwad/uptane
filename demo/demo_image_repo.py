@@ -47,6 +47,7 @@ import atexit # to kill server process on exit()
 # director.py, etc.) currently uses this setting, but it could.
 uptane.DEMO_MODE = True
 
+LOG_PREFIX = uptane.PLUM_BG + 'ImageRepo:' + ENDCOLORS + ' '
 
 repo = None
 server_process = None
@@ -185,7 +186,7 @@ def add_target_to_imagerepo(target_fname, filepath_in_repo):
   tuf.formats.RELPATH_SCHEMA.check_match(target_fname)
 
 
-  print('Copying target file into place.')
+  print(LOG_PREFIX + 'Copying target file into place.')
   repo_dir = repo._repository_directory
   destination_filepath = os.path.join(repo_dir, 'targets', filepath_in_repo)
 
@@ -202,7 +203,7 @@ def host():
   global server_process
 
   if server_process is not None:
-    print('Sorry: there is already a server process running.')
+    print(LOG_PREFIX + 'Sorry: there is already a server process running.')
     return
 
   # Prepare to host the main repo contents
@@ -222,10 +223,10 @@ def host():
 
   os.chdir(uptane.WORKING_DIR)
 
-  print('Main Repo server process started, with pid ' + str(server_process.pid))
-  print('Main Repo serving on port: ' + str(demo.IMAGE_REPO_PORT))
-  url = demo.IMAGE_REPO_HOST + ':' + str(demo.IMAGE_REPO_PORT) + '/'
-  print('Main Repo URL is: ' + url)
+  print(LOG_PREFIX + 'Main Repo server process started, with pid ' +
+      str(server_process.pid) + '; Main Repo serving on port: ' +
+      str(demo.IMAGE_REPO_PORT) + '; Main repo URL is ' +
+      demo.IMAGE_REPO_HOST + ':' + str(demo.IMAGE_REPO_PORT) + '/')
 
   # Kill server process after calling exit().
   atexit.register(kill_server)
@@ -267,7 +268,8 @@ def listen():
   global xmlrpc_service_thread
 
   if xmlrpc_service_thread is not None:
-    print('Sorry: there is already a listening Image Repository service thread')
+    print(LOG_PREFIX + 'Sorry: there is already a listening Image Repository '
+        'service thread.')
     return
 
   # Create server
@@ -301,8 +303,8 @@ def listen():
   server.register_function(undo_keyed_arbitrary_package_attack,
       'undo_keyed_arbitrary_package_attack')
 
-  print('Starting Image Repo Services Thread: will now listen on port ' +
-      str(demo.IMAGE_REPO_SERVICE_PORT))
+  print(LOG_PREFIX + 'Starting Image Repo Services Thread: will now listen on '
+      'port ' + str(demo.IMAGE_REPO_SERVICE_PORT))
   xmlrpc_service_thread = threading.Thread(target=server.serve_forever)
   xmlrpc_service_thread.setDaemon(True)
   xmlrpc_service_thread.start()
@@ -314,7 +316,7 @@ def mitm_arbitrary_package_attack(target_filepath):
   # Simulate an arbitrary package attack by a Man in the Middle, without
   # compromising keys.  Move evil target file into place on the image
   # repository, without updating metadata.
-  print('ATTACK: arbitrary package, no keys, on target ' +
+  print(LOG_PREFIX + 'ATTACK: arbitrary package, no keys, on target ' +
       repr(target_filepath))
 
   full_target_filepath = os.path.join(demo.IMAGE_REPO_TARGETS_DIR, target_filepath)
@@ -366,7 +368,7 @@ def undo_mitm_arbitrary_package_attack(target_filepath):
   mitm_arbitrary_package_attack().
   Move the evil target file out and normal target file back in.
   """
-  print('UNDO ATTACK: arbitrary package, no keys, on target ' +
+  print(LOG_PREFIX + 'UNDO ATTACK: arbitrary package, no keys, on target ' +
       repr(target_filepath))
 
   full_target_filepath = os.path.join(demo.IMAGE_REPO_TARGETS_DIR, target_filepath)
@@ -385,7 +387,7 @@ def undo_mitm_arbitrary_package_attack(target_filepath):
   # so we restore the backup over it.
   os.rename(backup_target_filepath, full_target_filepath)
 
-  print('COMPLETED UNDO ATTACK')
+  print(LOG_PREFIX + 'COMPLETED UNDO ATTACK')
 
 
 
@@ -399,8 +401,8 @@ def keyed_arbitrary_package_attack(target_filepath):
 
   This attack is described in README.md, section 3.5.
   """
-  print('ATTACK: keyed_arbitrary_package_attack on target_filepath ' +
-      repr(target_filepath))
+  print(LOG_PREFIX + 'ATTACK: keyed_arbitrary_package_attack on '
+      'target_filepath ' + repr(target_filepath))
 
 
   # TODO: Back up the image and then restore it in the undo function instead of
@@ -425,7 +427,7 @@ def keyed_arbitrary_package_attack(target_filepath):
   # Replace the given target with a malicious version.
   add_target_and_write_to_live(target_filepath, file_content='evil content')
 
-  print('COMPLETED ATTACK')
+  print(LOG_PREFIX + 'COMPLETED ATTACK')
 
 
 
@@ -443,8 +445,8 @@ def undo_keyed_arbitrary_package_attack(target_filepath):
 
   This attack recovery is described in README.md, section 3.6.
   """
-  print('UNDO ATTACK: keyed arbitrary package attack on target_filepath ' +
-      repr(target_filepath))
+  print(LOG_PREFIX + 'UNDO ATTACK: keyed arbitrary package attack on '
+      'target_filepath ' + repr(target_filepath))
 
   # Revoke potentially compromised keys, replacing them with new keys.
   revoke_compromised_keys()
@@ -453,7 +455,7 @@ def undo_keyed_arbitrary_package_attack(target_filepath):
   add_target_and_write_to_live(filename=target_filepath,
       file_content='Fresh firmware image')
 
-  print('COMPLETED UNDO ATTACK')
+  print(LOG_PREFIX + 'COMPLETED UNDO ATTACK')
 
 
 
@@ -567,10 +569,11 @@ def kill_server():
   """
   global server_process
   if server_process is None:
-    print('No server to stop.')
+    print(LOG_PREFIX + 'No server to stop.')
     return
 
   else:
-    print('Killing server process with pid: ' + str(server_process.pid))
+    print(LOG_PREFIX + 'Killing server process with pid: ' +
+        str(server_process.pid))
     server_process.kill()
     server_process = None

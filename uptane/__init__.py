@@ -102,8 +102,22 @@ logger.addHandler(console_handler)
 logger.setLevel(logging.DEBUG)
 
 # Colorful printing for the logger for now.
+# Background colors
+RED_BG = '\033[41m'
+GREEN_BG = '\033[42m'
+TEAL_BG = '\033[46m'
+CYAN_BG = '\033[0;106m'
+PLUM_BG = '\033[45m'
+WHITE_BG = '\033[47m'
+
+# Text colors
+BLACK = '\033[30m'
+
+# Combinations
 RED = '\033[41m\033[30m' # black on red
 GREEN = '\033[42m\033[30m' # black on green
 YELLOW = '\033[93m' # yellow on black
+WHITE = '\033[47m\033[30m' # black on white
+
 ENDCOLORS = '\033[0m'
 

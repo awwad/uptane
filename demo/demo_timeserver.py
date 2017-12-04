@@ -25,6 +25,7 @@ import uptane
 import uptane.common
 import tuf.formats
 
+import threading
 from six.moves import xmlrpc_server
 from six.moves import xmlrpc_client # for Binary data encapsulation
 import uptane.services.timeserver as timeserver
@@ -40,7 +41,9 @@ import hashlib
 # director.py, etc.) currently uses this setting, but it could.
 uptane.DEMO_MODE = True
 
+LOG_PREFIX = uptane.WHITE + 'Timeserver:' + uptane.ENDCOLORS + ' '
 
+timeserver_listener_thread = None
 
 # Restrict director requests to a particular path.
 # Must specify RPC2 here for the XML-RPC interface to work.
@@ -87,10 +90,12 @@ def listen(use_new_keys=False):
    - get_signed_time(nonces)
   """
 
+  global director_service_thread
+
   # Set the timeserver's signing key.
-  print('Loading timeserver signing key.')
+  print(LOG_PREFIX + 'Loading timeserver signing key.')
   timeserver.set_timeserver_key(load_timeserver_key(use_new_keys))
-  print('Timeserver signing key loaded.')
+  print(LOG_PREFIX + 'Timeserver signing key loaded.')
 
 
   # Test locally before opening the XMLRPC port.
@@ -112,8 +117,12 @@ def listen(use_new_keys=False):
       get_signed_time_der_wrapper, 'get_signed_time_der')
 
 
-  print('Timeserver will now listen on port ' + str(demo.TIMESERVER_PORT))
-  server.serve_forever()
+  print(LOG_PREFIX + 'Timeserver will now listen on port ' +
+      str(demo.TIMESERVER_PORT))
+
+  director_service_thread = threading.Thread(target=server.serve_forever)
+  director_service_thread.setDaemon(True)
+  director_service_thread.start()
 
 
 

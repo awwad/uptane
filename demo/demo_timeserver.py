@@ -88,9 +88,9 @@ def listen(use_new_keys=False):
   """
 
   # Set the timeserver's signing key.
-  print('Loading timeserver signing key.')
+  print(LOG_PREFIX + 'Loading timeserver signing key.')
   timeserver.set_timeserver_key(load_timeserver_key(use_new_keys))
-  print('Timeserver signing key loaded.')
+  print(LOG_PREFIX + 'Timeserver signing key loaded.')
 
 
   # Test locally before opening the XMLRPC port.
@@ -112,8 +112,9 @@ def listen(use_new_keys=False):
       get_signed_time_der_wrapper, 'get_signed_time_der')
 
 
-  print('Timeserver will now listen on port ' + str(demo.TIMESERVER_PORT))
   server.serve_forever()
+  print(LOG_PREFIX + 'Timeserver will now listen on port ' +
+      str(demo.TIMESERVER_PORT))
 
 
 

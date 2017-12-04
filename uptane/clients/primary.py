@@ -537,8 +537,8 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
         # possible.
         if uptane.DEMO_MODE: # pragma: no cover
           print_banner(BANNER_DEFENDED, color=WHITE+DARK_BLUE_BG,
-              text='The Director has instructed us to download a file that does '
-              ' does not exactly match the Image Repository metadata. '
+              text='The Director has instructed us to download a file that '
+              'does not exactly match the Image Repository metadata. '
               'File: ' + repr(target_filepath), sound=TADA)
           time.sleep(3)
 

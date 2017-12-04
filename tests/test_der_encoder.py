@@ -265,8 +265,7 @@ class TestASN1(unittest.TestCase):
       asn_signatures_list[i] = asn_sig # has no append method
       i += 1
 
-    asn_signable = asn1_spec.TokensAndTimestampSignable()#.subtype(implicitTag=tag.Tag(
-        #tag.tagClassContext, tag.tagFormatConstructed, 3))
+    asn_signable = asn1_spec.TokensAndTimestampSignable()
     asn_signable['signed'] = asn_signed #considering using der_signed instead - requires changes
     asn_signable['signatures'] = asn_signatures_list # TODO: Support multiple sigs, or integrate with TUF.
     asn_signable['numberOfSignatures'] = len(asn_signatures_list)
@@ -276,10 +275,9 @@ class TestASN1(unittest.TestCase):
 
     self.assertTrue(is_valid_nonempty_der(der_attestation))
 
-    # Decoding requires that we provide an object with typing that precisely
+    # Decoding requires that we provide an object that precisely
     # matches what we expect to decode. This is such an object.
-    exemplar_object = asn1_spec.TokensAndTimestampSignable()#.subtype(implicitTag=tag.Tag(
-        #tag.tagClassContext, tag.tagFormatConstructed, 3))
+    exemplar_object = asn1_spec.TokensAndTimestampSignable()
 
     (asn1_attestation_again, remainder) = p_der_decoder.decode(
         der_attestation, asn1Spec=exemplar_object)

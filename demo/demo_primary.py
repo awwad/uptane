@@ -43,6 +43,9 @@ from six.moves import xmlrpc_server
 from six.moves import range
 import socket # to catch listening failures from six's xmlrpc server
 
+# Allow tab completion in the interactive Python shell.
+import readline, rlcompleter
+readline.parse_and_bind('tab: complete')
 
 
 # Tell the reference implementation that we're in demo mode:

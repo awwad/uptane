@@ -21,6 +21,7 @@ import demo.demo_timeserver as dt
 import demo.demo_director as dd
 import demo.demo_image_repo as di
 from six.moves import xmlrpc_server
+import readline, rlcompleter # for tab completion in interactive Python shell
 
 
 def main():
@@ -42,4 +43,5 @@ def main():
 
 
 if __name__ == '__main__':
+  readline.parse_and_bind('tab: complete')
   main()

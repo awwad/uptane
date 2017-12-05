@@ -117,13 +117,11 @@ along with the time request, so that each ECU can better establish that it is
 not being tricked into accepting a false time.
 
 
-From within the root `uptane/` directory of the downloaded code (which contains e.g. the `setup.py` file), open an interactive
-Python shell from the command line. (Any version of Python >=2.7 should do, but
-we test 2.7, 3.5, and 3.6.) The following command runs the services in
-interactive mode:
+From within the root `uptane/` directory of the downloaded code (which contains e.g. the `setup.py` file), run the following command. (Any version of Python > 2.7
+should do. We test on 2.7, 3.5, and 3.6.)
 
 ```Bash
-$ python -i -c "from demo.start_servers import *; main()"
+$ python -i demo/start_servers.py
 ```
 
 

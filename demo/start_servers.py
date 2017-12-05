@@ -7,13 +7,12 @@ start_servers.py
     the Image Repository
     the Timeserver
 
-  To run the demo services in non-interactive mode, run:
-    python start_servers.py
+  To run the demo services, run the following from the main uptane
+  directory (which contains, for example, setup.py).
+    python -i demo/start_servers.py
 
-  To run the demo services in interactive mode, run:
-    python -i -c "from demo.start_servers import *; main()"
-
-  In either mode, the demo services will respond to commands sent via XMLRPC.
+  That starts the services in an interactive mode (with a prompt from which
+  you can manipulate them for the demonstrations).
 
 """
 import threading

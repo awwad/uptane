@@ -56,8 +56,8 @@ uptane.DEMO_MODE = True
 # Globals
 CLIENT_DIRECTORY_PREFIX = 'temp_secondary' # name for this secondary's directory
 CLIENT_DIRECTORY = None
-_vin = '111'
-_ecu_serial = '22222'
+_vin = 'democar'
+_ecu_serial = 'TCUdemocar'
 _primary_host = demo.PRIMARY_SERVER_HOST
 _primary_port = demo.PRIMARY_SERVER_DEFAULT_PORT
 firmware_filename = 'secondary_firmware.txt'

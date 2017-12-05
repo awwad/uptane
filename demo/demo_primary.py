@@ -58,8 +58,8 @@ uptane.DEMO_MODE = True
 CLIENT_DIRECTORY_PREFIX = 'temp_primary'
 CLIENT_DIRECTORY = None
 #_client_directory_name = 'temp_primary' # name for this Primary's directory
-_vin = '111'
-_ecu_serial = '11111'
+_vin = 'democar'
+_ecu_serial = 'INFOdemocar'
 # firmware_filename = 'infotainment_firmware.txt'
 
 

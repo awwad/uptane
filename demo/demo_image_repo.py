@@ -179,12 +179,18 @@ def add_target_to_imagerepo(target_fname, filepath_in_repo):
   Given a filename pointing to a file in the targets directory, adds that file
   as a target file (calculating its cryptographic hash and length)
 
+  This doesn't employ delegations, which would have to be done manually.
+
   <Arguments>
     target_fname
       The full filename of the file to be added as a target to the image
-      repository's targets role metadata. This file should be in the targets
-      subdirectory of the repository directory.  This doesn't employ
-      delegations, which would have to be done manually.
+      repository's targets role metadata. The file will be copied into the
+      repository's targets directory from the given path.
+
+    filepath_in_repo
+      This is the name that will identify the file in the repository, and
+      the filepath it will have relative to the root of the repository's
+      targets directory.
   """
   global repo
 

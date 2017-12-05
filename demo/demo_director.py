@@ -200,7 +200,7 @@ def write_to_live(vin_to_update=None):
 
 
 
-def backup_repositories():
+def backup_repositories(vin=None):
   """
   <Purpose>
     Back up the last-written state (contents of the 'metadata.staged'
@@ -210,7 +210,10 @@ def backup_repositories():
     '{repo_dir}/metadata.backup'.
 
   <Arguments>
-    None.
+    vin (optional)
+      If not provided, all known vehicle repositories will be backed up.
+      You may also provide a single VIN (string) indicating one vehicle
+      repository to back up.
 
   <Exceptions>
     uptane.Error if backup already exists
@@ -221,7 +224,12 @@ def backup_repositories():
   <Returns>
     None.
   """
-  for vin in director_service_instance.vehicle_repositories:
+  if vin is None:
+    repos_to_backup = director_service_instance.vehicle_repositories.keys()
+  else:
+    repos_to_backup = [vin]
+
+  for vin in repos_to_backup:
     repo = director_service_instance.vehicle_repositories[vin]
     repo_dir = repo._repository_directory
 
@@ -239,7 +247,7 @@ def backup_repositories():
 
 
 
-def restore_repositories():
+def restore_repositories(vin=None):
   """
   <Purpose>
     Restore the last backup of each Director repository.
@@ -248,7 +256,10 @@ def restore_repositories():
     '{repo_dir}/metadata.staged' and '{repo_dir}/metadata'
 
   <Arguments>
-    None.
+    vin (optional)
+      If not provided, all known vehicle repositories will be restored to their
+      backed-up state. You may also provide a single VIN (string) indicating
+      one vehicle to restore from backup.
 
   <Exceptions>
     uptane.Error if backup does not exist
@@ -259,8 +270,12 @@ def restore_repositories():
   <Returns>
     None.
   """
+  if vin is None:
+    repos_to_restore = director_service_instance.vehicle_repositories.keys()
+  else:
+    repos_to_restore = [vin]
 
-  for vin in director_service_instance.vehicle_repositories:
+  for vin in repos_to_restore:
 
     repo_dir = director_service_instance.vehicle_repositories[
         vin]._repository_directory
@@ -447,7 +462,7 @@ def sign_with_compromised_keys_attack(vin=None):
 
   # Start by backing up the repository before the attack occurs so that we
   # can restore it afterwards in undo_sign_with_compromised_keys_attack.
-  backup_repositories()
+  backup_repositories(vin)
 
   # Load the now-revoked keys.
   old_targets_private_key = demo.import_private_key('director')
@@ -535,8 +550,6 @@ def undo_sign_with_compromised_keys_attack(vin=None):
   <Returns>
     None.
   """
-
-
   # Re-load the valid keys, so that the repository objects can be updated to
   # reference them and replace the compromised keys set.
   valid_targets_private_key = demo.import_private_key('new_director')
@@ -554,7 +567,7 @@ def undo_sign_with_compromised_keys_attack(vin=None):
   director_service_instance.key_dirsnap_pri = valid_snapshot_private_key
 
   # Revert to the last backup for all metadata in the Director repositories.
-  restore_repositories()
+  restore_repositories(vin)
 
   if vin is None:
     vehicles_to_attack = director_service_instance.vehicle_repositories.keys()

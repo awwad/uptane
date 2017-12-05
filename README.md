@@ -340,7 +340,7 @@ Now, we update the metadata in the Director repository. In this case, a fairly
 empty update, writing a new `timestamp.der` and `snapshot.der` files. The backup
 we saved earlier is now old by comparison.
 ```python
->>> dd.write_to_live()
+>>> dd.write_to_live(vin)
 ```
 
 In the Primary's window (2), the Primary client now performs an update,

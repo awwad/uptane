@@ -102,7 +102,7 @@ but in brief:
 **The Image Repository** is the main repository for images and general metadata
 about them.
 
-**The Director** The Director generates metadata for specific
+**The Director** generates metadata for specific
 vehicles indicating which ECUs should install what firmware (validated against
 and obtained from the Image Repository). It also receives and validates
 Vehicle Manifests from Primaries, and the ECU Manifests from Secondaries
@@ -112,9 +112,9 @@ signed reports of any attacks observed by those ECUs.
 
 **The Timeserver** is a simple service that receives requests for signed
 times, each bundled by a vehicle Primary, and produces a signed attestation
-that includes the tokens each Secondary ECU sent to its Primary to include
-along with the time request, so that each ECU can better establish that it is
-not being tricked into accepting a false time.
+that includes the request tokens each Secondary ECU sent to its Primary, so
+that each ECU can better establish that it is not being tricked into accepting
+a false or very old time.
 
 
 From within the root `uptane/` directory of the downloaded code (which contains e.g. the `setup.py` file), run the following command. (Any version of Python > 2.7
@@ -313,7 +313,8 @@ Could not download URL: u'http://localhost:30401/democar/targets/firmware.img'
 Uptane detected that the image retrieved did not have a hash matching what the
 signed, validated metadata indicated we should expect.
 
-Undo the the arbitrary package attack so that subsequent sections can be reproduced as expected.
+Undo the the arbitrary package attack so that subsequent demonstration sections
+can proceed.
 
 ```python
 >>> di.undo_mitm_arbitrary_package_attack(firmware_fname)
@@ -370,7 +371,7 @@ Failed to update timestamp.der from all mirrors:
 ```
 
 Finally, restore the valid, latest version of Timestamp metadata
-(`timestamp.der`) back into place in the services window.
+(`timestamp.der`) into place in the services window.
 ```python
 >>> dd.restore_timestamp(vin)
 ```

@@ -90,7 +90,7 @@ def listen(use_new_keys=False):
    - get_signed_time(nonces)
   """
 
-  global director_service_thread
+  global timeserver_listener_thread
 
   # Set the timeserver's signing key.
   print(LOG_PREFIX + 'Loading timeserver signing key.')
@@ -120,9 +120,9 @@ def listen(use_new_keys=False):
   print(LOG_PREFIX + 'Timeserver will now listen on port ' +
       str(demo.TIMESERVER_PORT))
 
-  director_service_thread = threading.Thread(target=server.serve_forever)
-  director_service_thread.setDaemon(True)
-  director_service_thread.start()
+  timeserver_listener_thread = threading.Thread(target=server.serve_forever)
+  timeserver_listener_thread.setDaemon(True)
+  timeserver_listener_thread.start()
 
 
 
@@ -182,3 +182,4 @@ def test_demo_timeserver():
 
 if __name__ == '__main__':
   listen()
+  timeserver_listener_thread.join()

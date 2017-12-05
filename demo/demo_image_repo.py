@@ -515,6 +515,13 @@ def revoke_compromised_keys():
 
   global repo
 
+  # Pick names for the new Targets, Snapshot, and Timestamp keys. These will be
+  # the files created. We do this instead of overwriting the existing files
+  # because we want to be able to start over later with the same original state.
+  new_targets_keyname = 'new_maintargets'
+  new_timestamp_keyname = 'new_maintimestamp'
+  new_snapshot_keyname = 'new_mainsnapshot'
+
   # Grab the old public keys.
   old_targets_public_key = demo.import_public_key('maintargets')
   old_timestamp_public_key = demo.import_public_key('maintimestamp')
@@ -528,17 +535,17 @@ def revoke_compromised_keys():
 
 
   # Generate new public and private keys and import them.
-  demo.generate_key('maintargets')
-  new_targets_public_key = demo.import_public_key('maintargets')
-  new_targets_private_key = demo.import_private_key('maintargets')
+  demo.generate_key(new_targets_keyname)
+  new_targets_public_key = demo.import_public_key(new_targets_keyname)
+  new_targets_private_key = demo.import_private_key(new_targets_keyname)
 
-  demo.generate_key('maintimestamp')
-  new_timestamp_public_key = demo.import_public_key('maintimestamp')
-  new_timestamp_private_key = demo.import_private_key('maintimestamp')
+  demo.generate_key(new_timestamp_keyname)
+  new_timestamp_public_key = demo.import_public_key(new_timestamp_keyname)
+  new_timestamp_private_key = demo.import_private_key(new_timestamp_keyname)
 
-  demo.generate_key('mainsnapshot')
-  new_snapshot_public_key = demo.import_public_key('mainsnapshot')
-  new_snapshot_private_key = demo.import_private_key('mainsnapshot')
+  demo.generate_key(new_snapshot_keyname)
+  new_snapshot_public_key = demo.import_public_key(new_snapshot_keyname)
+  new_snapshot_private_key = demo.import_private_key(new_snapshot_keyname)
 
 
   # Associate the new public keys with the roles.

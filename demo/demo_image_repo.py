@@ -587,11 +587,11 @@ def kill_server():
   """
   global server_process
   if server_process is None:
-    print(LOG_PREFIX + 'No server to stop.')
+    print(LOG_PREFIX + 'No repository hosting process to stop.')
     return
 
   else:
-    print(LOG_PREFIX + 'Killing server process with pid: ' +
+    print(LOG_PREFIX + 'Killing repository hosting process with pid: ' +
         str(server_process.pid))
     server_process.kill()
     server_process = None

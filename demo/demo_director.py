@@ -1226,11 +1226,11 @@ def kill_server():
   global repo_server_process
 
   if repo_server_process is None:
-    print(LOG_PREFIX + 'No server to stop.')
+    print(LOG_PREFIX + 'No repository hosting process to stop.')
     return
 
   else:
-    print(LOG_PREFIX + 'Killing server process with pid: ' +
+    print(LOG_PREFIX + 'Killing repository hosting process with pid: ' +
         str(repo_server_process.pid))
     repo_server_process.kill()
     repo_server_process = None

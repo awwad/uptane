@@ -7,6 +7,19 @@
 # How to generate this file when changes are made to the ASN.1 definitions in
 # asn1_definitions.asn1:
 #
+# There is one strict dependency here:
+#   - pyasn1  for actually using the output .py module that comes from this
+#             process
+#
+#
+# If you intend to compile this file anew from .asn1 files (if you're making
+# changes to the ASN1 definitions), there are two additional dependencies:
+#   - asn1c   to turn fragmentary definitions into a full .asn1 definition
+#   - asn1ate to convert a full .asn1 definition into a .py module that pyasn1
+#             can interpret as ASN.1 definitions.
+#
+# The procedure for generating a new version of this file is this:
+#
 # 1. generate the consolidated ASN.1 definitions in Python using asn1c,
 #    putting them in file intermediate_asn1_definitions.asn1:
 #    $ asn1c -EF asn1_definitions.asn1 > intermediate_asn1_definitions.asn1

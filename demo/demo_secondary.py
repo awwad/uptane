@@ -89,13 +89,11 @@ def clean_slate(
   global _ecu_serial
   global _primary_host
   global _primary_port
-  global _partial_verifying
   global nonce
   global CLIENT_DIRECTORY
   global attacks_detected
   _vin = vin
   _ecu_serial = ecu_serial
-  _partial_verifying = partial_verifying
 
   if primary_host is not None:
     _primary_host = primary_host
@@ -145,7 +143,7 @@ def clean_slate(
 
 
   #Importing director's public key if secondary is partial verification
-  if _partial_verifying:
+  if partial_verifying:
     key_director_pub = demo.import_public_key('director')
   else:
     key_director_pub = None
@@ -163,7 +161,7 @@ def clean_slate(
       firmware_fileinfo=factory_firmware_fileinfo,
       timeserver_public_key=key_timeserver_pub,
       director_public_key = key_director_pub,
-      partial_verifying = _partial_verifying)
+      partial_verifying = partial_verifying)
 
 
 
@@ -309,9 +307,14 @@ def update_cycle():
     # from it like so:
     time_attestation = time_attestation.data
 
-  # Download the metadata from the Primary in the form of an archive. This
-  # returns the binary data that we need to write to file.
-  metadata_archive = pserver.get_metadata(secondary_ecu.ecu_serial, secondary_ecu.partial_verifying)
+  # If the secondary runs in full verification mode:
+  # The metadata is downloaded from the Primary in the form of an archive 
+  # that includes all the metadata files. This returns the binary data that
+  # we need to write to the file.
+  # If the secondary runs in partial verification mode:
+  # Only the director's targets role file is copied.
+
+  metadata_from_primary = pserver.get_metadata(secondary_ecu.ecu_serial, secondary_ecu.partial_verifying)
   # Validate the time attestation and internalize the time. Continue
   # regardless.
   try:
@@ -328,23 +331,24 @@ def update_cycle():
   #else:
   #  print(GREEN + 'Official time has been updated successfully.' + ENDCOLORS)
 
+  # If secondary is running full validation then 
   # Dump the archive file to disk.
+  # If secondary is running partial verification then
+  # copies the director targets role file.
   if secondary_ecu.partial_verifying:
-    archive_fname = os.path.join(
+    director_targets_role = os.path.join(
         secondary_ecu.full_client_dir, 'director_targets.'+tuf.conf.METADATA_FORMAT)
-    with open(archive_fname, 'wb') as f:
-      f.write(metadata_archive.data)
+    with open(director_targets_role, 'wb') as f:
+      f.write(metadata_from_primary.data)
   else:
     archive_fname = os.path.join(
-        secondary_ecu.full_client_dir, 'metadata_archive.zip')
+        secondary_ecu.full_client_dir, 'metadata_from_primary.zip')
     with open(archive_fname, 'wb') as fobj:
-      fobj.write(metadata_archive.data)
+      fobj.write(metadata_from_primary.data)
 
   # Now tell the Secondary reference implementation code where the archive file
   # is and let it expand and validate the metadata.
-  # if secondary_ecu.partial_verifying:
-  #   secondary_ecu.process_partial_metadata(archive_fname)
-  # else:
+
   secondary_ecu.process_metadata(archive_fname)
 
 

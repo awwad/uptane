@@ -446,6 +446,8 @@ class Secondary(object):
 
 
 
+
+
   def fully_validate_metadata(self):
     """
     Treats the unvalidated metadata obtained from the Primary (which the
@@ -494,6 +496,7 @@ class Secondary(object):
           'ecu_serial' not in target['fileinfo']['custom'] or \
           self.ecu_serial != target['fileinfo']['custom']['ecu_serial']:
         continue
+
       # Fully validate the target info for our target(s).
       try:
         validated_targets_for_this_ecu.append(
@@ -503,7 +506,8 @@ class Secondary(object):
             repr(target['filepath']) + ', which the Director assigned to this '
             'Secondary ECU, using the validation rules in pinned.json' +
             ENDCOLORS)
-        continue 
+        continue
+
 
     self.validated_targets_for_this_ecu = validated_targets_for_this_ecu
 
@@ -551,7 +555,7 @@ class Secondary(object):
     tuf.formats.RELPATH_SCHEMA.check_match(metadata_archive_fname)
     if self.partial_verifying:
       self.process_partial_metadata(metadata_archive_fname)
-      #self._metadata(metadata_archive_fname)
+
     else:
       self._expand_metadata_archive(metadata_archive_fname)
 
@@ -561,39 +565,43 @@ class Secondary(object):
 
 
 
-  def process_partial_metadata(self, metadata_archive_fname):
+
+  def process_partial_metadata(self, director_targets_metadata):
     """
-    Implementation for partial verification in secondaries. 
-    Accepts the archive fname. Processes it to only get a tuf.util.tempfile
-    for Director's targets metadata from the archive. 
+    Implementation for partial verification in secondaries.
+    Accepts the director targets metadata.
+    Processes it to only get a tuf.util.tempfile to hold the director
+    target's metadata.
     Checks the targets metadata for the different conditions and attacks as
-    specified in the implementation requirements. 
-    If it passes all checks, the update will be installed.
+    specified in the implementation requirements.
+    Performs partial validation and stores the directors target info
+    recieved for a validated target (hash, length, etc.).
+
     """
-    tuf.formats.RELPATH_SCHEMA.check_match(metadata_archive_fname)
+    tuf.formats.RELPATH_SCHEMA.check_match(director_targets_metadata)
     validated_targets_for_this_ecu = []
     target_metadata = {}
-    if not os.path.exists(metadata_archive_fname):
+    if not os.path.exists(director_targets_metadata):
       raise uptane.Error('Indicated metadata archive does not exist. '
-          'Filename: ' + repr(metadata_archive_fname))
+          'Filename: ' + repr(director_targets_metadata))
 
-    #z = zipfile.ZipFile(metadata_archive_fname)
-    #z.extract('director/metadata/targets.der', self.full_client_dir)
-    #director_target_file = os.path.join(self.full_client_dir, 'director', 'metadata', 'targets.der')
     metadata_file_object = tuf.util.TempFile()
-    with open(metadata_archive_fname, 'rb') as f:
+    with open(director_targets_metadata, 'rb') as f:
       data = f.read()
       metadata_file_object.write(data)
     self.updater.repositories[self.director_repo_name].\
         _verify_uncompressed_metadata_file(metadata_file_object, 'targets')
-    
-    data = tuf.util.load_file(metadata_archive_fname)
+
+    data = tuf.util.load_file(director_targets_metadata)
     targets = data['signed']['targets']
     for file in targets.keys():
-      target_metadata['filepath'] = file                
+      target_metadata['filepath'] = file
       target_metadata['fileinfo'] = targets[file]
       validated_targets_for_this_ecu.append(target_metadata)
     self.validated_targets_for_this_ecu = validated_targets_for_this_ecu
+
+
+
 
 
   def _expand_metadata_archive(self, metadata_archive_fname):
@@ -617,8 +625,6 @@ class Secondary(object):
 
     z = zipfile.ZipFile(metadata_archive_fname)
     z.extractall(os.path.join(self.full_client_dir, 'unverified'))
-
-
 
 
 

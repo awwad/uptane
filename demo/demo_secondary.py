@@ -340,6 +340,7 @@ def update_cycle():
         secondary_ecu.full_client_dir, 'director_targets.'+tuf.conf.METADATA_FORMAT)
     with open(director_targets_role, 'wb') as f:
       f.write(metadata_from_primary.data)
+    secondary_ecu.process_metadata(director_targets_role)
   else:
     archive_fname = os.path.join(
         secondary_ecu.full_client_dir, 'metadata_from_primary.zip')
@@ -349,7 +350,7 @@ def update_cycle():
   # Now tell the Secondary reference implementation code where the archive file
   # is and let it expand and validate the metadata.
 
-  secondary_ecu.process_metadata(archive_fname)
+    secondary_ecu.process_metadata(archive_fname)
 
 
   # As part of the process_metadata call, the secondary will have saved

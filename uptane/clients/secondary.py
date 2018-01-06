@@ -570,34 +570,47 @@ class Secondary(object):
     """
     Implementation for partial verification in secondaries.
     Accepts the director targets metadata.
-    Processes it to only get a tuf.util.tempfile to hold the director
-    target's metadata.
     Checks the targets metadata for the different conditions and attacks as
     specified in the implementation requirements.
     Performs partial validation and stores the directors target info
-    recieved for a validated target (hash, length, etc.).
+    recieved for a validated target (hash, length, etc.) for the particular
+    ecu.
 
     """
     tuf.formats.RELPATH_SCHEMA.check_match(director_targets_metadata)
+    if self.director_public_key is None:
+      raise uptane.Error("Director public key not found for partial"
+          " verification of secondary.")
     validated_targets_for_this_ecu = []
     target_metadata = {}
     if not os.path.exists(director_targets_metadata):
       raise uptane.Error('Indicated metadata archive does not exist. '
           'Filename: ' + repr(director_targets_metadata))
+    metadata_file_object = tuf.util.load_file(director_targets_metadata)
 
-    metadata_file_object = tuf.util.TempFile()
-    with open(director_targets_metadata, 'rb') as f:
-      data = f.read()
-      metadata_file_object.write(data)
-    self.updater.repositories[self.director_repo_name].\
-        _verify_uncompressed_metadata_file(metadata_file_object, 'targets')
+    valid = uptane.common.verify_signature_over_metadata(
+        self.director_public_key,
+        metadata_file_object['signatures'][0], # TODO: Fix single-signature assumption
+        metadata_file_object['signed'],
+        datatype='ecu_manifest')
 
-    data = tuf.util.load_file(director_targets_metadata)
-    targets = data['signed']['targets']
-    for file in targets.keys():
-      target_metadata['filepath'] = file
-      target_metadata['fileinfo'] = targets[file]
-      validated_targets_for_this_ecu.append(target_metadata)
+    if not valid:
+      log.info(
+          'Validation failed on an director targets: signature is not valid. '
+          'It must be correctly signed by the expected key for that ECU.')
+      raise tuf.BadSignatureError('Sender supplied an invalid signature. '
+          'Director targets metadata is unacceptable. If you see this '
+          'persistently, it is possible that the Primary is compromised or '
+          'that there is a man in the middle attack or misconfiguration.')
+    
+    targets = metadata_file_object['signed']['targets']
+    #Combs through the director's targets metadata to find the one assigned to the
+    #current ECU. 
+    for target in targets: 
+      if targets[target]['custom']['ecu_serial'] == self.ecu_serial:
+        target_metadata['filepath'] = target
+        target_metadata['fileinfo'] = targets[target]
+        validated_targets_for_this_ecu.append(target_metadata)
     self.validated_targets_for_this_ecu = validated_targets_for_this_ecu
 
 

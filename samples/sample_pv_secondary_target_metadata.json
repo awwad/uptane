@@ -1,0 +1,30 @@
+{
+ "signatures": [
+  {
+   "keyid": "630cf584f392430b2119a4395e39624e86f5e5c5374507a789be5cf35bf090d6",
+   "method": "ed25519",
+   "sig": "9560312be8ebd451c689724a3ec2fcbdb7ba708b27669861e0146bd61a2a15f04baf90edc75edd2e437ac680a5d2b3d76b3e4b9766a8a961108af6b4e501950e"
+  }
+ ],
+ "signed": {
+  "_type": "Targets",
+  "delegations": {
+   "keys": {},
+   "roles": []
+  },
+  "expires": "2021-01-10T15:14:21Z",
+  "targets": {
+   "/firmware13.img": {
+    "custom": {
+     "ecu_serial": "20000"
+    },
+    "hashes": {
+     "sha256": "daeec2555599b8e7a82b6f1339d5f419346b57a0eb7a39ee6334b8f205595752",
+     "sha512": "1570937a84e9e74e35f5e56a8f8518c91e18258cffc8ace249d9acf173d1845d82002583b1b53373b79edf52494d524f2619f5f1896f3085038deca92c950486"
+    },
+    "length": 20
+   }
+  },
+  "version": 2
+ }
+}

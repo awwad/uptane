@@ -578,11 +578,12 @@ class Secondary(object):
 
     """
     tuf.formats.RELPATH_SCHEMA.check_match(director_targets_metadata)
+    # Checks if the secondary holds the director's public key
     if self.director_public_key is None:
-      raise uptane.Error("Director public key not found for partial"
+      raise tuf.UnknownKeyError("Director public key not found for partial"
           " verification of secondary.")
     validated_targets_for_this_ecu = []
-    target_metadata = {}
+    target_metadata = {} 
     if not os.path.exists(director_targets_metadata):
       raise uptane.Error('Indicated metadata archive does not exist. '
           'Filename: ' + repr(director_targets_metadata))

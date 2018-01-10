@@ -47,17 +47,25 @@ TEST_PINNING_FNAME = os.path.join(TEST_DATA_DIR, 'pinned.json')
 TEMP_CLIENT_DIRS = [
     os.path.join(TEST_DATA_DIR, 'temp_test_secondary0'),
     os.path.join(TEST_DATA_DIR, 'temp_test_secondary1'),
-    os.path.join(TEST_DATA_DIR, 'temp_test_secondary2')]
+    os.path.join(TEST_DATA_DIR, 'temp_test_secondary2'),
+    os.path.join(TEST_DATA_DIR, 'temp_test_partial_secondary0')]
+
+NUM_PARTIAL_SECONDARIES = 1
+# Indices of PV Secondaries in the list of secondaries
+PV_SECONDARY1_INDICE = 3
+# Assigns the last X number of secondaries as partial verification
 
 # I'll initialize these in the __init__ test, and use this for the simple
 # non-damaging tests so as to avoid creating objects all over again.
-secondary_instances = [None, None, None]
+# Initializes the number of secondary instances to the number of 
+# TEMP_CLIENT_DIRS
+secondary_instances = [None] * len(TEMP_CLIENT_DIRS)
 
 # Changing these values would require producing new signed test data from the
 # Timeserver (in the case of nonce) or a Secondary (in the case of the others).
 nonce = 5
-vins = ['democar', 'democar', '000']
-ecu_serials = ['TCUdemocar', '00000', '00000']
+vins = ['democar', 'democar', '000', '111', '111']
+ecu_serials = ['TCUdemocar', '00000', '00000', '20000', '30000']
 
 # Set starting firmware fileinfo (that this ECU had coming from the factory)
 # It will serve as the initial firmware state for the Secondary clients.
@@ -357,7 +365,13 @@ class TestSecondary(unittest.TestCase):
       client_dir = TEMP_CLIENT_DIRS[i]
       ecu_serial = ecu_serials[i]
       vin = vins[i]
-
+      partial_verifying_for_ecu = False
+      director_public_key_for_ecu = None
+      # Sets the last NUM_PARTIAL_SECONDARIES number of ECUs to partial 
+      # verifying
+      if i == PV_SECONDARY1_INDICE:
+        partial_verifying_for_ecu = True
+        director_public_key_for_ecu = self.key_directortargets_pub
       # Try initializing each of three secondaries, expecting these calls to
       # work. Save the instances for future tests as elements in a module list
       # variable(secondary_instances) to save time and code.
@@ -371,9 +385,8 @@ class TestSecondary(unittest.TestCase):
           time=TestSecondary.initial_time,
           timeserver_public_key=TestSecondary.key_timeserver_pub,
           firmware_fileinfo=factory_firmware_fileinfo,
-          director_public_key=None,
-          partial_verifying=False)
-
+          director_public_key=director_public_key_for_ecu,
+          partial_verifying=partial_verifying_for_ecu)
       instance = secondary_instances[i]
 
       # Check the fields initialized in the instance to make sure they're correct.
@@ -390,8 +403,16 @@ class TestSecondary(unittest.TestCase):
           TestSecondary.initial_time, instance.all_valid_timeserver_times[1])
       self.assertEqual(
           TestSecondary.key_timeserver_pub, instance.timeserver_public_key)
-      self.assertTrue(None is instance.director_public_key)
-      self.assertFalse(instance.partial_verifying)
+      
+      
+      #Checks the number of secondaries for PV 
+      if i == PV_SECONDARY1_INDICE: 
+        self.assertTrue(instance.partial_verifying)
+        self.assertFalse(None is instance.director_public_key)
+      else:
+        self.assertFalse(instance.partial_verifying)
+        self.assertTrue(None is instance.director_public_key)
+
 
       # Fields initialized, but not directly with parameters
       self.assertTrue(None is instance.last_nonce_sent)
@@ -623,7 +644,8 @@ class TestSecondary(unittest.TestCase):
 
 
     # Continue set-up followed by the test, per client.
-    for i in range(0, len(TEMP_CLIENT_DIRS)):
+    # Only tests the full verification secondaries
+    for i in range(0, len(TEMP_CLIENT_DIRS)-NUM_PARTIAL_SECONDARIES):
       client_dir = TEMP_CLIENT_DIRS[i]
       instance = secondary_instances[i]
 
@@ -696,6 +718,61 @@ class TestSecondary(unittest.TestCase):
     # Clients 1 and 2 should have no validated targets.
     self.assertFalse(secondary_instances[1].validated_targets_for_this_ecu)
     self.assertFalse(secondary_instances[2].validated_targets_for_this_ecu)
+
+
+
+
+
+  def test_45_process_partial_metadata(self):
+    """
+    Tests uptane.clients.secondary.Secondary::process_partial_metadata()
+
+    Tests PV Secondary client.
+     - secondary_instances[3]: Director's targets metadata available with 
+       valid signatures
+     - secondary_instances[3]: Director's targets metadata available with 
+       invalid signatures
+    """
+    # --- Test this test module's setup (defensive)
+    # First, check the source directories, from which the temp dir is copied.
+    # This first part is testing this test module, since this setup was done
+    # above in setUpClass(), to maintain test integrity over time.
+    # We should see only root.(json or der).
+    for data_directory in [
+        TEST_DIRECTOR_METADATA_DIR, TEST_IMAGE_REPO_METADATA_DIR]:
+
+      self.assertEqual(
+          ['root.der', 'root.json'],
+          sorted(os.listdir(data_directory)))
+    
+    sample_working_metadata_path = os.path.join(uptane.WORKING_DIR, 'samples', 
+        'sample_pv_secondary_target_metadata.json')
+
+    sample_bad_sig_working_metadata_path = os.path.join(uptane.WORKING_DIR,
+        'samples', 'sample_pv_secondary_target_metadata_bad_sig.json')
+
+    pv_secondary_dir = TEMP_CLIENT_DIRS[PV_SECONDARY1_INDICE]
+    instance = secondary_instances[PV_SECONDARY1_INDICE]
+    director_targets_metadata_path = os.path.join(pv_secondary_dir, 
+        'metadata', 'director_targets.json')
+
+
+    # PV Secondary 1 with valid director public key and update
+    shutil.copy(sample_working_metadata_path, director_targets_metadata_path)
+    if not os.path.exists(director_targets_metadata_path):
+      raise("Director's targets not available")
+
+    instance.process_metadata(director_targets_metadata_path)
+
+    # PV Secondary 1 with valid director public key but update with
+    # invalid signature.
+    shutil.copy(sample_bad_sig_working_metadata_path, director_targets_metadata_path)
+    if not os.path.exists(director_targets_metadata_path):
+      raise("Director's targets not available")
+    with self.assertRaises(tuf.BadSignatureError):
+      instance.process_metadata(director_targets_metadata_path)
+
+
 
 
 

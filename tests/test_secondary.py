@@ -64,8 +64,8 @@ secondary_instances = [None] * len(TEMP_CLIENT_DIRS)
 # Changing these values would require producing new signed test data from the
 # Timeserver (in the case of nonce) or a Secondary (in the case of the others).
 nonce = 5
-vins = ['democar', 'democar', '000', '111', '111']
-ecu_serials = ['TCUdemocar', '00000', '00000', '20000', '30000']
+vins = ['democar', 'democar', '000', '111']
+ecu_serials = ['TCUdemocar', '00000', '00000', '20000']
 
 # Set starting firmware fileinfo (that this ECU had coming from the factory)
 # It will serve as the initial firmware state for the Secondary clients.

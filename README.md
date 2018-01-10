@@ -5,11 +5,15 @@ Reference Implementation and demonstration code
 [![Build Status](https://travis-ci.org/uptane/uptane.png)](https://travis-ci.org/uptane/uptane) [![Coverage Status](https://coveralls.io/repos/github/uptane/uptane/badge.svg)](https://coveralls.io/github/uptane/uptane?branch=develop)
 --------------------------------
 
+# Documentation
 Extensive documentation on design can be found in the following documents:
 
 * [Design Overview](https://docs.google.com/document/d/1pBK--40BCg_ofww4GES0weYFB6tZRedAjUy6PJ4Rgzk/edit?usp=sharing)
 * [Implementation Specification](https://docs.google.com/document/d/1wjg3hl0iDLNh7jIRaHl3IXhwm0ssOtDje5NemyTBcaw/edit?usp=sharing)
 * [Deployment Considerations](https://docs.google.com/document/d/17wOs-T7mugwte5_Dt-KLGMsp-3_yAARejpFmrAMefSE/edit?usp=sharing)
+
+The project's [maintainers, contribution policies, and how-tos for submitting
+issues, security audits, etc. are visible in PROJECT.md](PROJECT.md)
 
 
 # Instructions on use of the Uptane demonstration code

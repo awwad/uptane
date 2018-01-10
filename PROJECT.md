@@ -51,8 +51,9 @@ code)
 
 
 ## Security Audits
-We welcome security audits of the Uptane design. Please contact Justin Cappos
-and Sebastien Awwad via the contact information above. Uptane is defined in
+We welcome security audits of the Uptane design, or vulnerability reports of
+the design or the code in this repository. Please contact Justin Cappos and
+Sebastien Awwad via the contact information above. Uptane is defined in
 [the three documents listed here](README.md#design-documentation).
 
 Audits of TUF alone (which Uptane employs) should instead be submitted

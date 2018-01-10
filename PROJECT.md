@@ -56,6 +56,10 @@ the design or the code in this repository. Please contact Justin Cappos and
 Sebastien Awwad via the contact information above. Uptane is defined in
 [the three documents listed here](README.md#design-documentation).
 
+Should the information be highly sensitive, auditors / reporters may employ
+PGP encryption in an email to Justin Cappos using the public key whose PGP
+fingerprint is listed above.
+
 Audits of TUF alone (which Uptane employs) should instead be submitted
 [per these
 instructions](https://github.com/theupdateframework/tuf/blob/develop/GOVERNANCE.md).

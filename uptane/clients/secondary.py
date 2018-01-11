@@ -37,7 +37,8 @@ import tuf.repository_tool as rt
 
 import uptane.formats
 import uptane.common
-import uptane.encoding.asn1_codec as asn1_codec
+import uptane.encoding.asn1_codec as asn1_codec #Uptane name TODO
+import tuf.asn1_codec as tuf_asn1_codec
 
 
 from uptane import GREEN, RED, YELLOW, ENDCOLORS
@@ -580,20 +581,34 @@ class Secondary(object):
     tuf.formats.RELPATH_SCHEMA.check_match(director_targets_metadata)
     # Checks if the secondary holds the director's public key
     if self.director_public_key is None:
-      raise tuf.UnknownKeyError("Director public key not found for partial"
+      raise uptane.Error("Director public key not found for partial"
           " verification of secondary.")
     validated_targets_for_this_ecu = []
     target_metadata = {} 
     if not os.path.exists(director_targets_metadata):
       raise uptane.Error('Indicated metadata archive does not exist. '
           'Filename: ' + repr(director_targets_metadata))
+
+        
     metadata_file_object = tuf.util.load_file(director_targets_metadata)
 
-    valid = uptane.common.verify_signature_over_metadata(
-        self.director_public_key,
-        metadata_file_object['signatures'][0], # TODO: Fix single-signature assumption
-        metadata_file_object['signed'],
-        datatype='ecu_manifest')
+    data = metadata_file_object['signed']
+    signature = metadata_file_object['signatures'][0]
+
+    if director_targets_metadata.endswith('json'):
+      data = tuf.formats.encode_canonical(data).encode('utf-8')
+
+    elif director_targets_metadata.endswith('der'):
+      data = tuf_asn1_codec.convert_signed_metadata_to_der(
+          {'signed': data, 'signatures': []}, only_signed=True)
+      data = hashlib.sha256(data).digest()
+
+    else: # pragma: no cover
+      raise uptane.Error('Unsupported metadata format: ' + repr(metadata_format) +
+          '; the supported formats are: "der" and "json".')
+
+    valid = tuf.keys.verify_signature(self.director_public_key, 
+        signature, data)
 
     if not valid:
       log.info(

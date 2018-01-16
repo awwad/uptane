@@ -180,21 +180,34 @@ with information about the "firmware" that it is running, which we send to the
 Primary.
 
 Open a Python shell in a new terminal window and then run the following:
-
+- For full verification secondaries
 ```python
 >>> import demo.demo_secondary as ds
 >>> ds.clean_slate()
 >>> ds.update_cycle()
 ```
+- For partial verification secondaries
+```python
+>>> import demo.demo_secondary as ds
+>>> ds.clean_slate(partial_verifying=True)
+>>> ds.update_cycle()
+```
 
-Optionally, multiple windows with different Secondary clients can be run simultaneously. In each additional window, you can run the same calls as above to set up a new ECU in the same, default vehicle by modifying the clean_slate() call to include a distinct ECU Serial. e.g. `ds.clean_slate(ecu_serial='33333')`
+Optionally, multiple windows with different Secondary clients can be run simultaneously. In each additional window, you can run the same calls as above to set up a new ECU in the same, default vehicle by modifying the clean_slate() call to include a distinct ECU Serial. e.g. `ds.clean_slate(ecu_serial='33333')` for Full Verification Secondaries or `ds.clean_slate(partial_verifying=True, ecu_serial='33333')` for Partial Verifying Secondaries.
 
 If the Secondary is in a different vehicle from the default vehicle, this call should look like:
 `ds.clean_slate(vin='vehicle_id_here', ecu_serial='ecu_serial_here', primary_port=30702)`, providing a VIN for the new vehicle, a unique ECU Serial, and indicating the port listed by this Secondary's Primary when that Primary initialized (e.g. "Primary will now listen on port 30702").
 
-The Secondary's update_cycle() call:
+The Secondary's update_cycle() call for Full Verification Secondaries:
 - fetches and validates the signed metadata for the vehicle from the Primary
 - fetches any image that the Primary assigns to this ECU, validating that against the instructions of the Director in the Director's metadata, and against file info available in the Image Repository's metadata. If the image from the Primary does not match validated metadata, it is discarded.
+- fetches the latest Timeserver attestation from the Primary, checking for the nonce this Secondary last sent. If that nonce is included in the signed attestation from the Timeserver and the signature checks out, this time is saved as valid and reasonably recent.
+- generates an ECU Version Manifest that indicates the secure hash of the image currently installed on this Secondary, the latest validated times, and a string describing attacks detected (can also be called directly: `ds.generate_signed_ecu_manifest()`)
+- submits the ECU Version Manifest to the Primary (can also be called directly: `ds.submit_ecu_manifest_to_primary()`)
+
+The Secondary's update_cycle() call for Partial Verification Secondaries:
+- fetches and validates the signed director's targets metadata for the vehicle from the Primary
+- fetches any image that the Primary assigns to this ECU, validating that against the instructions of the Director in the Director's metadata. If the image from the Primary does not match validated metadata, it is discarded.
 - fetches the latest Timeserver attestation from the Primary, checking for the nonce this Secondary last sent. If that nonce is included in the signed attestation from the Timeserver and the signature checks out, this time is saved as valid and reasonably recent.
 - generates an ECU Version Manifest that indicates the secure hash of the image currently installed on this Secondary, the latest validated times, and a string describing attacks detected (can also be called directly: `ds.generate_signed_ecu_manifest()`)
 - submits the ECU Version Manifest to the Primary (can also be called directly: `ds.submit_ecu_manifest_to_primary()`)

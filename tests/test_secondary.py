@@ -50,10 +50,11 @@ TEMP_CLIENT_DIRS = [
     os.path.join(TEST_DATA_DIR, 'temp_test_secondary2'),
     os.path.join(TEST_DATA_DIR, 'temp_test_partial_secondary0')]
 
+# Assigns the last NUM_PARTIAL_SECONDARIES number of 
+# secondaries as partial verification
 NUM_PARTIAL_SECONDARIES = 1
 # Indices of PV Secondaries in the list of secondaries
 PV_SECONDARY1_INDICE = 3
-# Assigns the last X number of secondaries as partial verification
 
 # I'll initialize these in the __init__ test, and use this for the simple
 # non-damaging tests so as to avoid creating objects all over again.
@@ -727,7 +728,7 @@ class TestSecondary(unittest.TestCase):
     """
     Tests uptane.clients.secondary.Secondary::process_partial_metadata()
 
-    Tests PV Secondary client.
+    Tests PV Secondary client in 2 situations:
      - secondary_instances[3]: Director's targets metadata available with 
        valid signatures
      - secondary_instances[3]: Director's targets metadata available with 
@@ -761,7 +762,6 @@ class TestSecondary(unittest.TestCase):
     shutil.copy(sample_working_metadata_path, director_targets_metadata_path)
     if not os.path.exists(director_targets_metadata_path):
       raise("Director's targets not available")
-
     instance.process_metadata(director_targets_metadata_path)
 
     # PV Secondary 1 with valid director public key but update with
@@ -771,8 +771,6 @@ class TestSecondary(unittest.TestCase):
       raise("Director's targets not available")
     with self.assertRaises(tuf.BadSignatureError):
       instance.process_metadata(director_targets_metadata_path)
-
-
 
 
 

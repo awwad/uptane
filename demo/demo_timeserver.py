@@ -165,8 +165,10 @@ def test_demo_timeserver():
 
   # Validate that signature.
   for pydict_again in [
-      asn1_codec.convert_signed_der_to_dersigned_json(der_signed_time),
-      asn1_codec.convert_signed_der_to_dersigned_json(xb_der_signed_time.data)]:
+      asn1_codec.convert_signed_der_to_dersigned_json(
+          der_signed_time, datatype='time_attestation'),
+      asn1_codec.convert_signed_der_to_dersigned_json(
+          xb_der_signed_time.data, datatype='time_attestation')]:
 
     assert uptane.common.verify_signature_over_metadata(
         timeserver_key_pub,

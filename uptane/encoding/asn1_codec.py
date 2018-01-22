@@ -71,9 +71,8 @@ def ensure_valid_metadata_type_for_asn1(metadata_type):
 
 
 
-# TODO: Remove default datatype and update calling modules to add this
-# parameter.
-def convert_signed_der_to_dersigned_json(der_data, datatype='time_attestation'):
+
+def convert_signed_der_to_dersigned_json(der_data, datatype):
   """
   Convert the given der_data to a Python dictionary representation consistent
   with Uptane's typical JSON encoding.
@@ -218,11 +217,8 @@ def convert_signed_der_to_dersigned_json(der_data, datatype='time_attestation'):
 
 
 
-# TODO: Remove default datatype and update calling modules to add this
-# parameter.
-def convert_signed_metadata_to_der(
-    signed_metadata, private_key=None, resign=False, only_signed=False,
-    datatype='time_attestation'): # TODO: Remove default datatype.
+def convert_signed_metadata_to_der(signed_metadata, datatype,
+    private_key=None, resign=False, only_signed=False):
   """
   Normal behavior ("resign" (re-sign) parameter being False) converts the
   basic Python dictionary format of signed_metadata provided into ASN.1 and

@@ -101,9 +101,8 @@ def get_signed_time_der(nonces):
 
   # Convert it, re-signing over the hash of the DER encoding of the attestation.
   der_attestation = asn1_codec.convert_signed_metadata_to_der(
-      signable_time_attestation,
-      private_key=timeserver_key,
-      resign=True)
+      signable_time_attestation, datatype='time_attestation',
+      private_key=timeserver_key, resign=True)
 
 
   return der_attestation

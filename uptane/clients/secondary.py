@@ -391,7 +391,7 @@ class Secondary(object):
     # comprehensible (JSON-compatible dictionary) instead.
     if tuf.conf.METADATA_FORMAT == 'der':
       timeserver_attestation = asn1_codec.convert_signed_der_to_dersigned_json(
-          timeserver_attestation)
+          timeserver_attestation, datatype='time_attestation')
 
     # Check format.
     uptane.formats.SIGNABLE_TIMESERVER_ATTESTATION_SCHEMA.check_match(

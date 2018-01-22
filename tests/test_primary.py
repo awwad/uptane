@@ -570,7 +570,7 @@ class TestPrimary(unittest.TestCase):
     if tuf.conf.METADATA_FORMAT == 'der':
       # Convert this time attestation to the expected ASN.1/DER format.
       time_attestation = asn1_codec.convert_signed_metadata_to_der(
-          original_time_attestation,
+          original_time_attestation, datatype='time_attestation',
           private_key=TestPrimary.key_timeserver_pri, resign=True)
 
 
@@ -635,7 +635,7 @@ class TestPrimary(unittest.TestCase):
     if tuf.conf.METADATA_FORMAT == 'der':
       # Convert this time attestation to the expected ASN.1/DER format.
       time_attestation__wrongnonce = asn1_codec.convert_signed_metadata_to_der(
-          time_attestation__wrongnonce,
+          time_attestation__wrongnonce, datatype='time_attestation',
           private_key=TestPrimary.key_timeserver_pri, resign=True)
 
     with self.assertRaises(uptane.BadTimeAttestation):

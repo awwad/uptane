@@ -226,12 +226,12 @@ class TestASN1(unittest.TestCase):
 
     # Converts it, without re-signing (default for this method).
     der_attestation = asn1_codec.convert_signed_metadata_to_der(
-        signable_attestation)
+        signable_attestation, datatype='time_attestation')
 
     self.assertTrue(is_valid_nonempty_der(der_attestation))
 
     attestation_again = asn1_codec.convert_signed_der_to_dersigned_json(
-        der_attestation)
+        der_attestation, datatype='time_attestation')
 
     self.assertEqual(attestation_again, signable_attestation)
 
@@ -344,7 +344,7 @@ class TestASN1(unittest.TestCase):
     # signable_attestation. We produce it here so that we can check it against
     # the result of encoding, resigning, and decoding.
     der_signed = asn1_codec.convert_signed_metadata_to_der(
-        signable_attestation, only_signed=True)
+        signable_attestation, datatype='time_attestation', only_signed=True)
     der_signed_hash = hashlib.sha256(der_signed).digest()
 
 
@@ -354,14 +354,15 @@ class TestASN1(unittest.TestCase):
     # the hash of the DER encoding of the 'signed' ASN.1 data.
     # This is the final product to be distributed back to a Primary client.
     der_attestation = asn1_codec.convert_signed_metadata_to_der(
-        signable_attestation, private_key=timeserver_key, resign=True)
+        signable_attestation, datatype='time_attestation',
+        private_key=timeserver_key, resign=True)
 
 
     # Now, in order to test the final product, decode it back from DER into
     # pyasn1 ASN.1, and convert back into Uptane's standard Python dictionary
     # form.
     pydict_again = asn1_codec.convert_signed_der_to_dersigned_json(
-        der_attestation)
+        der_attestation, datatype='time_attestation')
 
     # Check the extracted signature against the hash we produced earlier.
     self.assertTrue(tuf.keys.verify_signature(
@@ -421,7 +422,7 @@ class TestASN1(unittest.TestCase):
 
     # Redundant tests. The above call should cover all of the following tests.
     der_ecu_manifest = asn1_codec.convert_signed_metadata_to_der(
-        SAMPLE_ECU_MANIFEST_SIGNABLE, only_signed=True, datatype='ecu_manifest')
+        SAMPLE_ECU_MANIFEST_SIGNABLE, datatype='ecu_manifest', only_signed=True)
 
     der_ecu_manifest = asn1_codec.convert_signed_metadata_to_der(
         SAMPLE_ECU_MANIFEST_SIGNABLE, datatype='ecu_manifest')
@@ -466,7 +467,7 @@ def conversion_tester(signable_pydict, datatype, cls): # cls: clunky
   # Convert and return only the 'signed' portion, the metadata payload itself,
   # without including any signatures.
   signed_der = asn1_codec.convert_signed_metadata_to_der(
-      signable_pydict, only_signed=True, datatype=datatype)
+      signable_pydict, datatype=datatype, only_signed=True)
 
   cls.assertTrue(is_valid_nonempty_der(signed_der))
 
@@ -496,8 +497,8 @@ def conversion_tester(signable_pydict, datatype, cls): # cls: clunky
   # original signatures and re-signing over, instead, the hash of the converted,
   # ASN.1/DER 'signed' element.
   resigned_der = asn1_codec.convert_signed_metadata_to_der(
-      signable_pydict, resign=True, private_key=test_signing_key,
-      datatype=datatype)
+      signable_pydict, datatype=datatype, resign=True,
+      private_key=test_signing_key)
   cls.assertTrue(is_valid_nonempty_der(resigned_der))
 
   # Convert the re-signed DER manifest back in order to split it up.

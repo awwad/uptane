@@ -693,6 +693,17 @@ class Secondary(object):
 
     elif director_targets_metadata.endswith('der'):
       data = tuf_asn1_codec.convert_signed_metadata_to_der(
+    # Check to see if the metadata is expired.
+    last_timeserver_time = tuf.formats.datetime_to_unix_timestamp(
+        self.all_valid_timeserver_times[-1])
+    expiration_time = tuf.formats.datetime_to_unix_timestamp(data['expires'])
+
+    if expiration_time < last_timeserver_time:
+      raise tuf.ExpiredMetadataError('Expired metadata provided to partial '
+          'verification Secondary; last valid timeserver time: ' +
+          self.all_valid_timeserver_times[-1] + '; expiration date on '
+          'metadata: ' + data['expires'])
+
 
     # Check to see if the metadata has a lower version number than expected.
     if data['version'] < self.last_valid_targets_metadata_version_number:

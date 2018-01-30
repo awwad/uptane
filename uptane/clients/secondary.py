@@ -556,7 +556,7 @@ class Secondary(object):
 
 
 
-  def process_metadata(self, metadata_archive_fname):
+  def process_metadata(self, metadata_fname):
     """
     Runs either partial or full metadata verification, based on the
     value of self.partial_verifying.
@@ -605,21 +605,20 @@ class Secondary(object):
       on this Secondary.
 
     """
-    tuf.formats.RELPATH_SCHEMA.check_match(metadata_archive_fname)
+    tuf.formats.RELPATH_SCHEMA.check_match(metadata_fname)
+
     if self.partial_verifying:
-      self.process_partial_metadata(metadata_archive_fname)
+      self.process_partial_metadata(metadata_fname)
 
     else:
-      self._expand_metadata_archive(metadata_archive_fname)
-
-      # This entails using the local metadata files as a repository.
+      self._expand_metadata_archive(metadata_fname)
       self.fully_validate_metadata()
 
 
 
 
 
-  def process_partial_metadata(self, director_targets_metadata):
+  def process_partial_metadata(self, director_targets_metadata_fname):
     """
     <Purpose>
       Given the filename of a file containing the Director's Targets role
@@ -668,18 +667,18 @@ class Secondary(object):
       May update self.validated_targets_for_this_ecu; see <Purpose>
 
     """
-    tuf.formats.RELPATH_SCHEMA.check_match(director_targets_metadata)
+    tuf.formats.RELPATH_SCHEMA.check_match(director_targets_metadata_fname)
     # Checks if the secondary holds the director's public key
     if self.director_public_key is None:
       raise uptane.Error("Director public key not found for partial"
           " verification of secondary.")
     validated_targets_for_this_ecu = []
-    target_metadata = {} 
-    if not os.path.exists(director_targets_metadata):
+    target_metadata = {}
+    if not os.path.exists(director_targets_metadata_fname):
       raise uptane.Error('Indicated metadata archive does not exist. '
-          'Filename: ' + repr(director_targets_metadata))
-        
-    metadata_file_object = tuf.util.load_file(director_targets_metadata)
+          'Filename: ' + repr(director_targets_metadata_fname))
+
+    metadata_file_object = tuf.util.load_file(director_targets_metadata_fname)
 
     data = metadata_file_object['signed']
     signature = metadata_file_object['signatures'][0]

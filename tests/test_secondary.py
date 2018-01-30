@@ -409,14 +409,14 @@ class TestSecondary(unittest.TestCase):
       #Checks the number of secondaries for PV
       if i == PV_SECONDARY1_INDICE:
         self.assertTrue(instance.partial_verifying)
-        self.assertFalse(None is instance.director_public_key)
+        self.assertIsNotNone(instance.director_public_key)
       else:
         self.assertFalse(instance.partial_verifying)
-        self.assertTrue(None is instance.director_public_key)
+        self.assertIsNone(instance.director_public_key)
 
 
       # Fields initialized, but not directly with parameters
-      self.assertTrue(None is instance.last_nonce_sent)
+      self.assertIsNone(instance.last_nonce_sent)
       self.assertTrue(instance.nonce_next) # Random value
       self.assertIsInstance(
           instance.updater, tuf.client.updater.Updater)

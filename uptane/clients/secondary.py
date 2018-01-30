@@ -686,13 +686,8 @@ class Secondary(object):
     metadata_file_object = tuf.util.load_file(director_targets_metadata_fname)
 
     data = metadata_file_object['signed']
-    signature = metadata_file_object['signatures'][0]
 
-    if director_targets_metadata.endswith('json'):
-      data = tuf.formats.encode_canonical(data).encode('utf-8')
 
-    elif director_targets_metadata.endswith('der'):
-      data = tuf_asn1_codec.convert_signed_metadata_to_der(
     # Check to see if the metadata is expired.
     last_timeserver_time = tuf.formats.datetime_to_unix_timestamp(
         self.all_valid_timeserver_times[-1])
@@ -711,17 +706,45 @@ class Secondary(object):
           'number than the metadata this partial verification Secondary has '
           'previously validated.')
 
+
+    # Make sure the data is in the exact format that it is expected to have
+    # been signed over in order to validate the signature over it.
+    if director_targets_metadata_fname.endswith('json'):
+      signed_data = tuf.formats.encode_canonical(data).encode('utf-8')
+
+    elif director_targets_metadata_fname.endswith('der'):
+      signed_data = tuf_asn1_codec.convert_signed_metadata_to_der(
           {'signed': data, 'signatures': []}, only_signed=True)
-      data = hashlib.sha256(data).digest()
+      signed_data = hashlib.sha256(data).digest()
 
     else: # pragma: no cover
       raise uptane.Error('Unsupported metadata format: ' + repr(metadata_format) +
           '; the supported formats are: "der" and "json".')
 
-    valid = tuf.keys.verify_signature(self.director_public_key, 
-        signature, data)
+    signatures = metadata_file_object['signatures']
 
-    if not valid:
+    # Look for a valid signature over the metadata from the expected key. The
+    # Director's Targets metadata may be signed by a variety of keys that the
+    # partial verification secondary client isn't concerned with. For example,
+    # there are edge cases in which after a compromise it may be necessary to
+    # sign with old and new keys, both, to clear both full verification and
+    # partial verification checks and reach a partial verification Secondary.)
+    found_valid_signature = False
+    for signature in signatures:
+
+      # Don't waste time checking the signature if the keyid (fingerprint)
+      # or key type (ed25519, rsa, etc.) don't match.
+      if self.director_public_key['keyid'] != signature['keyid']:
+        continue
+      elif self.director_public_key['keytype'] != signature['method']:
+        continue
+
+      elif tuf.keys.verify_signature(
+          self.director_public_key, signature, signed_data):
+        found_valid_signature = True
+        break
+
+    if not found_valid_signature:
       log.info(
           'Validation failed on an director targets: signature is not valid. '
           'It must be correctly signed by the expected key for that ECU.')

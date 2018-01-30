@@ -269,6 +269,11 @@ class Secondary(object):
           'key was not provided. Partial verification Secondaries validate '
           'only the ')
 
+    # Partial verification clients still have to track the last valid metadata
+    # version number. (For full verification clients, the TUF updater code
+    # handles this.)
+    if self.partial_verifying:
+      self.last_valid_targets_metadata_version_number = 0
 
     # Create a TAP-4-compliant updater object. This will read pinned.json
     # and create single-repository updaters within it to handle connections to
@@ -688,6 +693,13 @@ class Secondary(object):
 
     elif director_targets_metadata.endswith('der'):
       data = tuf_asn1_codec.convert_signed_metadata_to_der(
+
+    # Check to see if the metadata has a lower version number than expected.
+    if data['version'] < self.last_valid_targets_metadata_version_number:
+      raise tuf.ReplayedMetadataError('Provided metadata has lower version '
+          'number than the metadata this partial verification Secondary has '
+          'previously validated.')
+
           {'signed': data, 'signatures': []}, only_signed=True)
       data = hashlib.sha256(data).digest()
 
@@ -706,7 +718,10 @@ class Secondary(object):
           'Director targets metadata is unacceptable. If you see this '
           'persistently, it is possible that the Primary is compromised or '
           'that there is a man in the middle attack or misconfiguration.')
-    
+
+    # The metadata is valid, so we update the last validated version number
+    # and begin inspecting the targets listed in the metadata.
+    self.last_valid_targets_metadata_version_number = data['version']
     targets = metadata_file_object['signed']['targets']
 
     # Combs through the director's targets metadata to find the one assigned to

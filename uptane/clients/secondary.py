@@ -40,6 +40,7 @@ import shutil # For copyfile
 import random # for nonces
 import zipfile # to expand the metadata archive retrieved from the Primary
 import hashlib
+import iso8601 # to manipulate TUF's datetime format for expirations
 
 import tuf.formats
 import tuf.keys
@@ -688,12 +689,16 @@ class Secondary(object):
     data = metadata_file_object['signed']
 
 
-    # Check to see if the metadata is expired.
-    last_timeserver_time = tuf.formats.datetime_to_unix_timestamp(
-        self.all_valid_timeserver_times[-1])
-    expiration_time = tuf.formats.datetime_to_unix_timestamp(data['expires'])
+    # Check to see if the metadata is expired by comparing it against the
+    # last validated time provided by the timeserver. (This may be old, and
+    # we take it as a minimum time.)
+    minimum_time = tuf.formats.datetime_to_unix_timestamp(iso8601.parse_date(
+        self.all_valid_timeserver_times[-1]))
 
-    if expiration_time < last_timeserver_time:
+    expiration_time = tuf.formats.datetime_to_unix_timestamp(iso8601.parse_date(
+        data['expires']))
+
+    if expiration_time < minimum_time:
       raise tuf.ExpiredMetadataError('Expired metadata provided to partial '
           'verification Secondary; last valid timeserver time: ' +
           self.all_valid_timeserver_times[-1] + '; expiration date on '
@@ -709,13 +714,17 @@ class Secondary(object):
 
     # Make sure the data is in the exact format that it is expected to have
     # been signed over in order to validate the signature over it.
+    # - In the case of JSON, that means TUF's canonical JSON encoding.
+    # - In the case of ASN.1/DER, that means a hash taken over the ASN.1/DER
+    #   data (so it must be converted back, as the data was converted into a
+    #   dictionary for ease of use).
     if director_targets_metadata_fname.endswith('json'):
-      signed_data = tuf.formats.encode_canonical(data).encode('utf-8')
+      data_signed = tuf.formats.encode_canonical(data).encode('utf-8')
 
     elif director_targets_metadata_fname.endswith('der'):
-      signed_data = tuf_asn1_codec.convert_signed_metadata_to_der(
+      data_signed = tuf_asn1_codec.convert_signed_metadata_to_der(
           {'signed': data, 'signatures': []}, only_signed=True)
-      signed_data = hashlib.sha256(data).digest()
+      data_signed = hashlib.sha256(data_signed).digest()
 
     else: # pragma: no cover
       raise uptane.Error('Unsupported metadata format: ' + repr(metadata_format) +
@@ -740,7 +749,7 @@ class Secondary(object):
         continue
 
       elif tuf.keys.verify_signature(
-          self.director_public_key, signature, signed_data):
+          self.director_public_key, signature, data_signed):
         found_valid_signature = True
         break
 

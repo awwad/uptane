@@ -37,7 +37,7 @@ import tuf.repository_tool as rt
 
 import uptane.formats
 import uptane.common
-import uptane.encoding.asn1_codec as uptane_asn1_codec 
+import uptane.encoding.asn1_codec as uptane_asn1_codec
 import tuf.asn1_codec as tuf_asn1_codec
 
 

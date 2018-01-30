@@ -404,10 +404,10 @@ class TestSecondary(unittest.TestCase):
           TestSecondary.initial_time, instance.all_valid_timeserver_times[1])
       self.assertEqual(
           TestSecondary.key_timeserver_pub, instance.timeserver_public_key)
-      
-      
-      #Checks the number of secondaries for PV 
-      if i == PV_SECONDARY1_INDICE: 
+
+
+      #Checks the number of secondaries for PV
+      if i == PV_SECONDARY1_INDICE:
         self.assertTrue(instance.partial_verifying)
         self.assertFalse(None is instance.director_public_key)
       else:

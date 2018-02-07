@@ -526,8 +526,8 @@ class Secondary(object):
             ENDCOLORS)
         continue
 
-
-    self.validated_targets_for_this_ecu = validated_targets_for_this_ecu
+    if validated_targets_for_this_ecu:
+      self.validated_targets_for_this_ecu = validated_targets_for_this_ecu
 
 
 
@@ -775,7 +775,8 @@ class Secondary(object):
         target_metadata['fileinfo'] = targets[target]
         validated_targets_for_this_ecu.append(target_metadata)
 
-    self.validated_targets_for_this_ecu = validated_targets_for_this_ecu
+    if validated_targets_for_this_ecu:
+      self.validated_targets_for_this_ecu = validated_targets_for_this_ecu
 
 
 

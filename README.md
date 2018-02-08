@@ -156,8 +156,15 @@ Open a Python shell in a new terminal window and then run the following:
 
 The Primary's update_cycle() call:
 - fetches and validates all signed metadata for the vehicle, from the Director and Image repositories
-- fetches all images that the Director instructs this vehicle to install, excluding any that do not exactly match corresponding images on the Image repository. Any images fetched from the repositories that do not match validated metadata are discarded.
+- reads the Director's Targets metadata to determine what targets the Director
+has instructed this vehicle to install, storing the trustworthy target info for
+each (hash, length, etc.), and comparing it to similar info from the Image
+repository. A mismatch results in that installation instruction being ignored.
+- fetches the target images indicated and compares them to the trusted info
+(hash, length, etc.). Any images fetched
+from the repositories that do not match validated metadata are discarded.
 - queries the Timeserver for a signed attestation about the current time, including in it any nonces sent by Secondaries, so that Secondaries may trust that the time returned is at least as recent as their sent nonce
+- validates the Timeserver's time attestations for itself and updates its time
 - generates a Vehicle Version Manifest with some vehicle metadata and all ECU Version Manifests received from Secondaries, describing currently installed images, most recent times available to each ECU, and reports of any attacks observed by Secondaries (can also be called directly: `dp.generate_signed_vehicle_manifest()`)
 - sends that Vehicle Version Manifest to the Director (can also be called directly: `dp.submit_vehicle_manifest_to_director()`)
 
@@ -195,11 +202,17 @@ If the Secondary is in a different vehicle from the default vehicle, this call s
 
 The Secondary's update_cycle() call:
 - fetches and validates the signed metadata for the vehicle from the Primary
-- fetches any image that the Primary assigns to this ECU, validating that against the instructions of the Director in the Director's metadata, and against file info available in the Image Repository's metadata. If the image from the Primary does not match validated metadata, it is discarded.
-- fetches the latest Timeserver attestation from the Primary, checking for the nonce this Secondary last sent. If that nonce is included in the signed attestation from the Timeserver and the signature checks out, this time is saved as valid and reasonably recent.
-- generates an ECU Version Manifest that indicates the secure hash of the image currently installed on this Secondary, the latest validated times, and a string describing attacks detected (can also be called directly: `ds.generate_signed_ecu_manifest()`)
-- submits the ECU Version Manifest to the Primary (can also be called directly: `ds.submit_ecu_manifest_to_primary()`)
-
+- looks for target info (hash, length, etc.) in the now-validated Targets
+metadata that includes this Secondary's ECU identifier, indicating an
+instruction from the Director to install that target firmware
+- fetches any image that the Primary assigns to this ECU, validating that
+against the target info from the validated Director metadata. If the image from
+the Primary does not match validated metadata, it is discarded.
+- fetches the latest Timeserver attestation from the Primary, checking for the nonce this Secondary last sent. If that nonce is included in the signed attestation
+from the Timeserver, the signature is correct and by the expected key, and the
+time is more recent than the last validated time, this time is saved as valid,
+allowing this Secondary to disregard any metadata with an expiration date
+earlier than that time.
 - generates an ECU Version Manifest that indicates the secure hash of the image currently installed on this Secondary, the latest validated times, and a string describing attacks detected (can also be called directly: `ds.generate_signed_ecu_manifest()`)
 - submits the ECU Version Manifest to the Primary (can also be called directly: `ds.submit_ecu_manifest_to_primary()`)
 

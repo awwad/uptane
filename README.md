@@ -177,38 +177,29 @@ Example setting up a different Primary for a different vehicle:
 Primary have finished starting up and are hosting/listening.)
 Here, we start a single Secondary ECU and generate a signed ECU Manifest
 with information about the "firmware" that it is running, which we send to the
-Primary.
+Primary. Note that these instructions will demonstrate a full-verification
+Secondary; for partial-verification Secondaries, see
+[this section below](#partial-verification-secondaries).
 
 Open a Python shell in a new terminal window and then run the following:
-- For full verification secondaries
 ```python
 >>> import demo.demo_secondary as ds
 >>> ds.clean_slate()
 >>> ds.update_cycle()
 ```
-- For partial verification secondaries
-```python
->>> import demo.demo_secondary as ds
->>> ds.clean_slate(partial_verifying=True)
->>> ds.update_cycle()
-```
 
-Optionally, multiple windows with different Secondary clients can be run simultaneously. In each additional window, you can run the same calls as above to set up a new ECU in the same, default vehicle by modifying the clean_slate() call to include a distinct ECU Serial. e.g. `ds.clean_slate(ecu_serial='33333')` for Full Verification Secondaries or `ds.clean_slate(partial_verifying=True, ecu_serial='33333')` for Partial Verifying Secondaries.
+Optionally, multiple windows with different Secondary clients can be run simultaneously. In each additional window, you can run the same calls as above to set up a new ECU in the same, default vehicle by modifying the clean_slate() call to include a distinct ECU Serial. e.g. `ds.clean_slate(ecu_serial='33333')`
 
 If the Secondary is in a different vehicle from the default vehicle, this call should look like:
 `ds.clean_slate(vin='vehicle_id_here', ecu_serial='ecu_serial_here', primary_port=30702)`, providing a VIN for the new vehicle, a unique ECU Serial, and indicating the port listed by this Secondary's Primary when that Primary initialized (e.g. "Primary will now listen on port 30702").
 
-The Secondary's update_cycle() call for Full Verification Secondaries:
+The Secondary's update_cycle() call:
 - fetches and validates the signed metadata for the vehicle from the Primary
 - fetches any image that the Primary assigns to this ECU, validating that against the instructions of the Director in the Director's metadata, and against file info available in the Image Repository's metadata. If the image from the Primary does not match validated metadata, it is discarded.
 - fetches the latest Timeserver attestation from the Primary, checking for the nonce this Secondary last sent. If that nonce is included in the signed attestation from the Timeserver and the signature checks out, this time is saved as valid and reasonably recent.
 - generates an ECU Version Manifest that indicates the secure hash of the image currently installed on this Secondary, the latest validated times, and a string describing attacks detected (can also be called directly: `ds.generate_signed_ecu_manifest()`)
 - submits the ECU Version Manifest to the Primary (can also be called directly: `ds.submit_ecu_manifest_to_primary()`)
 
-The Secondary's update_cycle() call for Partial Verification Secondaries:
-- fetches and validates the signed director's targets metadata for the vehicle from the Primary
-- fetches any image that the Primary assigns to this ECU, validating that against the instructions of the Director in the Director's metadata. If the image from the Primary does not match validated metadata, it is discarded.
-- fetches the latest Timeserver attestation from the Primary, checking for the nonce this Secondary last sent. If that nonce is included in the signed attestation from the Timeserver and the signature checks out, this time is saved as valid and reasonably recent.
 - generates an ECU Version Manifest that indicates the secure hash of the image currently installed on this Secondary, the latest validated times, and a string describing attacks detected (can also be called directly: `ds.generate_signed_ecu_manifest()`)
 - submits the ECU Version Manifest to the Primary (can also be called directly: `ds.submit_ecu_manifest_to_primary()`)
 
@@ -620,6 +611,56 @@ have been saved by the Primary.
 # This call should indicate that the client is up-to-date.
 >>> dp.update_cycle()
 ```
+
+
+# Partial-Verification Secondaries
+The Secondaries described and employed above ran full verification, employing
+the full suite of TUF and Uptane security checks. Uptane provides for a
+less demanding alternative: partial-verification Secondaries. These perform
+a few checks instead of the full set, at a measured cost to security, allowing
+weaker ECUs to still operate as Uptane-conformant Secondaries.
+
+The distinction is defined
+[in Section 8.3 of the Implementation Specification](https://docs.google.com/document/d/1wjg3hl0iDLNh7jIRaHl3IXhwm0ssOtDje5NemyTBcaw/edit?pli=1#heading=h.22u629s8u37q).
+Briefly, partial verification entails one signature check to validate metadata,
+and one signature check whenever the minimum time is ratcheted forward (for
+metadata expiration purposes). Partial-verification Secondaries need to know
+the Director's Targets role public key and the Timeserver's public key.
+
+You can run a demo partial-verification Secondary like so:
+(Mind that you have [the Uptane services](#window-1-the-uptane-services) and
+[a Primary client](#window-2-the-primary-clients) both running).
+
+```python
+>>> import demo.demo_secondary as ds
+>>> ds.clean_slate(partial_verifying=True)
+>>> ds.update_cycle()
+```
+
+The same optional arguments apply for the demo partial-verification Secondary
+as for the full-verification version [above](#window-3-the-secondary-clients)
+(ECU id/serial, vehicle id/VIN, Primary port, etc.).
+
+
+The Secondary's update_cycle() call does the following:
+- fetches the signed Director's Targets role metadata for the vehicle from the
+Primary
+- checks for a valid signature over the Targets role metadata, from the key it
+knows to be the Director's Targets key.
+- looks for target info (hash, length, etc.) in the now-validated Targets
+metadata that includes this Secondary's ECU identifier, indicating an
+instruction from the Director to install that target firmware
+- fetches the image the Primary assigns to this ECU
+- validates that image against the target info from the validated Targets
+metadata. If the image from the Primary does not match validated metadata, it is discarded.
+- fetches the latest Timeserver attestation from the Primary, checking for the nonce this Secondary last sent. If that nonce is included in the signed attestation from the Timeserver, the signature is correct and by the expected key, and the time
+is more recent than the last validated time, this time is saved as valid,
+allowing this Secondary to disregard any metadata with an expiration date
+earlier than that time.
+- generates an ECU Version Manifest that indicates the secure hash of the image currently installed on this Secondary, the latest validated times, and a string describing attacks detected (can also be run directly: `ds.generate_signed_ecu_manifest()`)
+- submits the ECU Version Manifest to the Primary (can also be run directly: `ds.submit_ecu_manifest_to_primary()`)
+
+
 
 
 

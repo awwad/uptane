@@ -698,6 +698,12 @@ class TestSecondary(unittest.TestCase):
     self.assertFalse(secondary_instances[2].validated_targets_for_this_ecu)
 
 
+    # Finally, test behavior if the file we indicate does not exist.
+    instance = secondary_instances[0]
+    with self.assertRaises(uptane.Error):
+      instance.process_metadata('some_file_that_does_not_actually_exist.xyz')
+
+
 
 
 

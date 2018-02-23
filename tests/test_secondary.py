@@ -31,6 +31,9 @@ import uptane.clients.secondary as secondary
 import uptane.common # verify sigs, create client dir structure, convert key
 import uptane.encoding.asn1_codec as asn1_codec
 
+from uptane.encoding.asn1_codec import DATATYPE_TIME_ATTESTATION
+from uptane.encoding.asn1_codec import DATATYPE_ECU_MANIFEST
+
 # For temporary convenience:
 import demo # for generate_key, import_public_key, import_private_key
 
@@ -480,7 +483,7 @@ class TestSecondary(unittest.TestCase):
     if tuf.conf.METADATA_FORMAT == 'der':
       # Convert this time attestation to the expected ASN.1/DER format.
       time_attestation = asn1_codec.convert_signed_metadata_to_der(
-          original_time_attestation, datatype='time_attestation',
+          original_time_attestation, DATATYPE_TIME_ATTESTATION,
           private_key=TestSecondary.key_timeserver_pri, resign=True)
 
     # If the time_attestation is not deemed valid, an exception will be raised.
@@ -493,7 +496,7 @@ class TestSecondary(unittest.TestCase):
       # Fail to re-sign the DER, so that the signature is over JSON instead,
       # which results in a bad signature.
       time_attestation__badsig = asn1_codec.convert_signed_metadata_to_der(
-          original_time_attestation, resign=False, datatype='time_attestation')
+          original_time_attestation, DATATYPE_TIME_ATTESTATION, resign=False)
 
     else: # 'json' format
       # Rewrite the first 9 digits of the signature ('sig') to something
@@ -523,7 +526,7 @@ class TestSecondary(unittest.TestCase):
     if tuf.conf.METADATA_FORMAT == 'der':
       # Convert this time attestation to the expected ASN.1/DER format.
       time_attestation__wrongnonce = asn1_codec.convert_signed_metadata_to_der(
-          time_attestation__wrongnonce, datatype='time_attestation',
+          time_attestation__wrongnonce, DATATYPE_TIME_ATTESTATION,
           private_key=TestSecondary.key_timeserver_pri, resign=True)
 
     with self.assertRaises(uptane.BadTimeAttestation):
@@ -550,7 +553,7 @@ class TestSecondary(unittest.TestCase):
     if tuf.conf.METADATA_FORMAT == 'der':
       uptane.formats.DER_DATA_SCHEMA.check_match(ecu_manifest)
       ecu_manifest = asn1_codec.convert_signed_der_to_dersigned_json(
-          ecu_manifest, datatype='ecu_manifest')
+          ecu_manifest, DATATYPE_ECU_MANIFEST)
 
     # Now it's not in DER format, whether or not it started that way.
     # Check its format and inspect it.
@@ -570,7 +573,7 @@ class TestSecondary(unittest.TestCase):
         TestSecondary.secondary_ecu_key,
         ecu_manifest['signatures'][0], # TODO: Deal with 1-sig assumption?
         ecu_manifest['signed'],
-        datatype='ecu_manifest'))
+        DATATYPE_ECU_MANIFEST))
 
 
 

@@ -44,6 +44,10 @@ from uptane import GREEN, RED, YELLOW, ENDCOLORS
 import os
 import hashlib
 
+from uptane.encoding.asn1_codec import DATATYPE_TIME_ATTESTATION
+from uptane.encoding.asn1_codec import DATATYPE_ECU_MANIFEST
+from uptane.encoding.asn1_codec import DATATYPE_VEHICLE_MANIFEST
+
 log = uptane.logging.getLogger('director')
 log.addHandler(uptane.file_handler)
 log.addHandler(uptane.console_handler)
@@ -191,7 +195,7 @@ class Director:
         ecu_public_key,
         signed_ecu_manifest['signatures'][0], # TODO: Fix single-signature assumption
         signed_ecu_manifest['signed'],
-        datatype='ecu_manifest')
+        DATATYPE_ECU_MANIFEST)
 
     if not valid:
       log.info(
@@ -265,7 +269,7 @@ class Director:
       # Check format and convert back to expected vehicle manifest format.
       uptane.formats.DER_DATA_SCHEMA.check_match(signed_vehicle_manifest)
       signed_vehicle_manifest = asn1_codec.convert_signed_der_to_dersigned_json(
-          signed_vehicle_manifest, datatype='vehicle_manifest')
+          signed_vehicle_manifest, DATATYPE_VEHICLE_MANIFEST)
 
     uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
         signed_vehicle_manifest)
@@ -389,7 +393,7 @@ class Director:
       # *that* is what is signed, we perform that hashing as well and retrieve
       # the raw binary digest.
       data_to_check = asn1_codec.convert_signed_metadata_to_der(
-          vehicle_manifest, only_signed=True, datatype='vehicle_manifest')
+          vehicle_manifest, DATATYPE_VEHICLE_MANIFEST, only_signed=True)
       data_to_check = hashlib.sha256(data_to_check).digest()
 
     else:
@@ -400,7 +404,7 @@ class Director:
         ecu_public_key,
         vehicle_manifest['signatures'][0], # TODO: Fix assumptions.
         vehicle_manifest['signed'],
-        datatype='vehicle_manifest')
+        DATATYPE_VEHICLE_MANIFEST)
 
     if not valid:
       log.debug(

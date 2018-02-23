@@ -27,6 +27,10 @@ import hashlib
 
 logger = logging.getLogger('uptane.asn1_codec')
 
+DATATYPE_TIME_ATTESTATION = 'type__time_attestation'
+DATATYPE_ECU_MANIFEST = 'type__ecu_manifest'
+DATATYPE_VEHICLE_MANIFEST = 'type__vehicle_manifest'
+
 try:
   # pyasn1 modules
   import pyasn1.codec.der.encoder as p_der_encoder
@@ -44,9 +48,9 @@ try:
   # This maps metadata type to the module that lays out the
   # ASN.1 format for that type.
   SUPPORTED_ASN1_METADATA_MODULES = {
-      'time_attestation': timeserver_asn1_coder,
-      'ecu_manifest': ecu_manifest_asn1_coder,
-      'vehicle_manifest': vehicle_manifest_asn1_coder}
+      DATATYPE_TIME_ATTESTATION: timeserver_asn1_coder,
+      DATATYPE_ECU_MANIFEST: ecu_manifest_asn1_coder,
+      DATATYPE_VEHICLE_MANIFEST: vehicle_manifest_asn1_coder}
 
 
 except ImportError:
@@ -149,11 +153,11 @@ def convert_signed_der_to_dersigned_json(der_data, datatype):
   # component of SignedBody()? Anyway, this seems to work.......
   # Handle for the corresponding module.
   relevant_asn_module = SUPPORTED_ASN1_METADATA_MODULES[datatype]
-  if datatype == 'time_attestation':
+  if datatype == DATATYPE_TIME_ATTESTATION:
     exemplar_object = asn1_spec.TokensAndTimestampSignable()
-  elif datatype == 'ecu_manifest':
+  elif datatype == DATATYPE_ECU_MANIFEST:
     exemplar_object = asn1_spec.ECUVersionManifest()#.subtype(implicitTag=p_type_tag.Tag(p_type_tag.tagClassContext, p_type_tag.tagFormatSimple, 3)) # Does this need subtyping?
-  elif datatype == 'vehicle_manifest':
+  elif datatype == DATATYPE_VEHICLE_MANIFEST:
     exemplar_object = asn1_spec.VehicleVersionManifest() # Does this need subtyping?
 
   # exemplar_object = asn1_spec.TokensAndTimestamp().subtype(
@@ -381,11 +385,11 @@ def convert_signed_metadata_to_der(signed_metadata, datatype,
 
   # Now construct an ASN.1 representation of the signed/signatures-encapsulated
   # metadata, populating it.
-  if datatype == 'time_attestation':
+  if datatype == DATATYPE_TIME_ATTESTATION:
     metadata = asn1_spec.TokensAndTimestampSignable()
-  elif datatype == 'ecu_manifest':
+  elif datatype == DATATYPE_ECU_MANIFEST:
     metadata = asn1_spec.ECUVersionManifest()
-  elif datatype == 'vehicle_manifest':
+  elif datatype == DATATYPE_VEHICLE_MANIFEST:
     metadata = asn1_spec.VehicleVersionManifest()
   metadata['signed'] = asn_signed #considering using der_signed instead - requires changes
   metadata['signatures'] = asn_signatures_list # TODO: Support multiple sigs, or integrate with TUF.

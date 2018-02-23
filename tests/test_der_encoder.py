@@ -32,6 +32,10 @@ import time
 import copy
 import shutil
 
+from uptane.encoding.asn1_codec import DATATYPE_TIME_ATTESTATION
+from uptane.encoding.asn1_codec import DATATYPE_ECU_MANIFEST
+from uptane.encoding.asn1_codec import DATATYPE_VEHICLE_MANIFEST
+
 # For temporary convenience
 import demo # for generate_key, import_public_key, import_private_key
 
@@ -226,12 +230,12 @@ class TestASN1(unittest.TestCase):
 
     # Converts it, without re-signing (default for this method).
     der_attestation = asn1_codec.convert_signed_metadata_to_der(
-        signable_attestation, datatype='time_attestation')
+        signable_attestation, DATATYPE_TIME_ATTESTATION)
 
     self.assertTrue(is_valid_nonempty_der(der_attestation))
 
     attestation_again = asn1_codec.convert_signed_der_to_dersigned_json(
-        der_attestation, datatype='time_attestation')
+        der_attestation, DATATYPE_TIME_ATTESTATION)
 
     self.assertEqual(attestation_again, signable_attestation)
 
@@ -344,7 +348,7 @@ class TestASN1(unittest.TestCase):
     # signable_attestation. We produce it here so that we can check it against
     # the result of encoding, resigning, and decoding.
     der_signed = asn1_codec.convert_signed_metadata_to_der(
-        signable_attestation, datatype='time_attestation', only_signed=True)
+        signable_attestation, DATATYPE_TIME_ATTESTATION, only_signed=True)
     der_signed_hash = hashlib.sha256(der_signed).digest()
 
 
@@ -354,7 +358,7 @@ class TestASN1(unittest.TestCase):
     # the hash of the DER encoding of the 'signed' ASN.1 data.
     # This is the final product to be distributed back to a Primary client.
     der_attestation = asn1_codec.convert_signed_metadata_to_der(
-        signable_attestation, datatype='time_attestation',
+        signable_attestation, DATATYPE_TIME_ATTESTATION,
         private_key=timeserver_key, resign=True)
 
 
@@ -362,7 +366,7 @@ class TestASN1(unittest.TestCase):
     # pyasn1 ASN.1, and convert back into Uptane's standard Python dictionary
     # form.
     pydict_again = asn1_codec.convert_signed_der_to_dersigned_json(
-        der_attestation, datatype='time_attestation')
+        der_attestation, DATATYPE_TIME_ATTESTATION)
 
     # Check the extracted signature against the hash we produced earlier.
     self.assertTrue(tuf.keys.verify_signature(
@@ -389,7 +393,7 @@ class TestASN1(unittest.TestCase):
         str('signed'): {str('nonces'): [1],
         str('time'): str('2017-03-08T17:09:56Z')}}
     conversion_tester(
-        signable_attestation, 'time_attestation', self)
+        signable_attestation, DATATYPE_TIME_ATTESTATION, self)
 
 
 
@@ -417,18 +421,18 @@ class TestASN1(unittest.TestCase):
   def test_11_ecu_manifest_der_conversion(self):
 
     conversion_tester(
-        SAMPLE_ECU_MANIFEST_SIGNABLE, 'ecu_manifest', self)
+        SAMPLE_ECU_MANIFEST_SIGNABLE, DATATYPE_ECU_MANIFEST, self)
 
 
     # Redundant tests. The above call should cover all of the following tests.
     der_ecu_manifest = asn1_codec.convert_signed_metadata_to_der(
-        SAMPLE_ECU_MANIFEST_SIGNABLE, datatype='ecu_manifest', only_signed=True)
+        SAMPLE_ECU_MANIFEST_SIGNABLE, DATATYPE_ECU_MANIFEST, only_signed=True)
 
     der_ecu_manifest = asn1_codec.convert_signed_metadata_to_der(
-        SAMPLE_ECU_MANIFEST_SIGNABLE, datatype='ecu_manifest')
+        SAMPLE_ECU_MANIFEST_SIGNABLE, DATATYPE_ECU_MANIFEST)
 
     pydict_ecu_manifest = asn1_codec.convert_signed_der_to_dersigned_json(
-        der_ecu_manifest, datatype='ecu_manifest')
+        der_ecu_manifest, DATATYPE_ECU_MANIFEST)
 
     self.assertEqual(
         pydict_ecu_manifest, SAMPLE_ECU_MANIFEST_SIGNABLE)
@@ -441,7 +445,7 @@ class TestASN1(unittest.TestCase):
     uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
         SAMPLE_VEHICLE_MANIFEST_SIGNABLE)
     conversion_tester(
-        SAMPLE_VEHICLE_MANIFEST_SIGNABLE, 'vehicle_manifest', self)
+        SAMPLE_VEHICLE_MANIFEST_SIGNABLE, DATATYPE_VEHICLE_MANIFEST, self)
 
 
 
@@ -467,7 +471,7 @@ def conversion_tester(signable_pydict, datatype, cls): # cls: clunky
   # Convert and return only the 'signed' portion, the metadata payload itself,
   # without including any signatures.
   signed_der = asn1_codec.convert_signed_metadata_to_der(
-      signable_pydict, datatype=datatype, only_signed=True)
+      signable_pydict, datatype, only_signed=True)
 
   cls.assertTrue(is_valid_nonempty_der(signed_der))
 
@@ -480,12 +484,12 @@ def conversion_tester(signable_pydict, datatype, cls): # cls: clunky
   # Convert the full signable ('signed' and 'signatures'), maintaining the
   # existing signature in a new format and encoding.
   signable_der = asn1_codec.convert_signed_metadata_to_der(
-      signable_pydict, datatype=datatype)
+      signable_pydict, datatype)
   cls.assertTrue(is_valid_nonempty_der(signable_der))
 
   # Convert it back.
   signable_reverted = asn1_codec.convert_signed_der_to_dersigned_json(
-      signable_der, datatype=datatype)
+      signable_der, datatype)
 
   # Ensure the original is equal to what is converted back.
   cls.assertEqual(signable_pydict, signable_reverted)
@@ -497,13 +501,12 @@ def conversion_tester(signable_pydict, datatype, cls): # cls: clunky
   # original signatures and re-signing over, instead, the hash of the converted,
   # ASN.1/DER 'signed' element.
   resigned_der = asn1_codec.convert_signed_metadata_to_der(
-      signable_pydict, datatype=datatype, resign=True,
-      private_key=test_signing_key)
+      signable_pydict, datatype, resign=True, private_key=test_signing_key)
   cls.assertTrue(is_valid_nonempty_der(resigned_der))
 
   # Convert the re-signed DER manifest back in order to split it up.
   resigned_reverted = asn1_codec.convert_signed_der_to_dersigned_json(
-      resigned_der, datatype=datatype)
+      resigned_der, datatype)
   resigned_signature = resigned_reverted['signatures'][0]
 
   # Check the signature on the re-signed DER manifest:
@@ -511,7 +514,7 @@ def conversion_tester(signable_pydict, datatype, cls): # cls: clunky
       test_signing_key,
       resigned_signature,
       resigned_reverted['signed'],
-      datatype=datatype,
+      datatype,
       metadata_format='der'))
 
   # The signatures will not match, because a new signature was made, but the

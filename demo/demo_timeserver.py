@@ -34,6 +34,8 @@ import uptane.services.timeserver as timeserver
 import uptane.encoding.asn1_codec as asn1_codec
 import hashlib
 
+from uptane.encoding.asn1_codec import DATATYPE_TIME_ATTESTATION
+
 # Tell the reference implementation that we're in demo mode.
 # (Provided for consistency.) Currently, primary.py in the reference
 # implementation uses this to display banners for defenses that would otherwise
@@ -147,7 +149,7 @@ def test_demo_timeserver():
       timeserver_key_pub,
       signed_time['signatures'][0],
       signed_time['signed'],
-      datatype='time_attestation',
+      DATATYPE_TIME_ATTESTATION,
       metadata_format='json'
       ), 'Demo Timeserver self-test fail: unable to verify signature over JSON.'
 
@@ -166,15 +168,15 @@ def test_demo_timeserver():
   # Validate that signature.
   for pydict_again in [
       asn1_codec.convert_signed_der_to_dersigned_json(
-          der_signed_time, datatype='time_attestation'),
+          der_signed_time, DATATYPE_TIME_ATTESTATION),
       asn1_codec.convert_signed_der_to_dersigned_json(
-          xb_der_signed_time.data, datatype='time_attestation')]:
+          xb_der_signed_time.data, DATATYPE_TIME_ATTESTATION)]:
 
     assert uptane.common.verify_signature_over_metadata(
         timeserver_key_pub,
         pydict_again['signatures'][0],
         pydict_again['signed'],
-        datatype='time_attestation',
+        DATATYPE_TIME_ATTESTATION,
         metadata_format='der'
         ), 'Demo Timeserver self-test fail: unable to verify signature over DER'
 

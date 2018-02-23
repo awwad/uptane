@@ -25,6 +25,10 @@ import tuf.conf
 import uptane.common as common
 import uptane.encoding.asn1_codec as asn1_codec
 
+from uptane.encoding.asn1_codec import DATATYPE_TIME_ATTESTATION
+from uptane.encoding.asn1_codec import DATATYPE_ECU_MANIFEST
+from uptane.encoding.asn1_codec import DATATYPE_VEHICLE_MANIFEST
+
 import demo # for generate_key, import_public_key, import_private_key
 
 # The public and private keys to use during testing, including the Director
@@ -108,17 +112,17 @@ class TestCommon(unittest.TestCase):
       sample_time_attestation = \
           asn1_codec.convert_signed_der_to_dersigned_json(open(os.path.join(
           SAMPLES_DIR, 'sample_timeserver_attestation.der'), 'rb').read(),
-          datatype='time_attestation')
+          DATATYPE_TIME_ATTESTATION)
 
       sample_vehicle_manifest = \
           asn1_codec.convert_signed_der_to_dersigned_json(open(os.path.join(
           SAMPLES_DIR, 'sample_vehicle_version_manifest_democar.der'),
-          'rb').read(), datatype='vehicle_manifest')
+          'rb').read(), DATATYPE_VEHICLE_MANIFEST)
 
       sample_ecu_manifest = \
           asn1_codec.convert_signed_der_to_dersigned_json(open(os.path.join(
           SAMPLES_DIR, 'sample_ecu_manifest_TCUdemocar.der'), 'rb').read(),
-          datatype='ecu_manifest')
+          DATATYPE_ECU_MANIFEST)
 
       fresh_time_attestation = tuf.formats.make_signable(
           sample_time_attestation['signed'])
@@ -156,39 +160,39 @@ class TestCommon(unittest.TestCase):
 
     # Time Attestation
     sig_alone = common.sign_over_metadata(keys_pri['timeserver'],
-        fresh_time_attestation['signed'], datatype='time_attestation')
+        fresh_time_attestation['signed'], DATATYPE_TIME_ATTESTATION)
     common.sign_signable(fresh_time_attestation, [keys_pri['timeserver']],
-        datatype='time_attestation')
+        DATATYPE_TIME_ATTESTATION)
     self.assertEqual(sig_alone, fresh_time_attestation['signatures'][0])
     self.assertEqual(fresh_time_attestation['signatures'],
         sample_time_attestation['signatures'])
     self.assertTrue(common.verify_signature_over_metadata(
         keys_pub['timeserver'], fresh_time_attestation['signatures'][0],
-        fresh_time_attestation['signed'], datatype='time_attestation'))
+        fresh_time_attestation['signed'], DATATYPE_TIME_ATTESTATION))
 
     # Vehicle Manifest
     sig_alone = common.sign_over_metadata(keys_pri['primary'],
-        fresh_vehicle_manifest['signed'], datatype='vehicle_manifest')
+        fresh_vehicle_manifest['signed'], DATATYPE_VEHICLE_MANIFEST)
     common.sign_signable(fresh_vehicle_manifest, [keys_pri['primary']],
-        datatype='vehicle_manifest')
+        DATATYPE_VEHICLE_MANIFEST)
     self.assertEqual(sig_alone, fresh_vehicle_manifest['signatures'][0])
     self.assertEqual(fresh_vehicle_manifest['signatures'],
         sample_vehicle_manifest['signatures'])
     self.assertTrue(common.verify_signature_over_metadata(
         keys_pub['primary'], fresh_vehicle_manifest['signatures'][0],
-        fresh_vehicle_manifest['signed'], datatype='vehicle_manifest'))
+        fresh_vehicle_manifest['signed'], DATATYPE_VEHICLE_MANIFEST))
 
     # ECU Manifest
     sig_alone = common.sign_over_metadata(keys_pri['secondary'],
-        fresh_ecu_manifest['signed'], datatype='ecu_manifest')
+        fresh_ecu_manifest['signed'], DATATYPE_ECU_MANIFEST)
     common.sign_signable(
-        fresh_ecu_manifest, [keys_pri['secondary']], datatype='ecu_manifest')
+        fresh_ecu_manifest, [keys_pri['secondary']], DATATYPE_ECU_MANIFEST)
     self.assertEqual(sig_alone, fresh_ecu_manifest['signatures'][0])
     self.assertEqual(fresh_ecu_manifest['signatures'],
         sample_ecu_manifest['signatures'])
     self.assertTrue(common.verify_signature_over_metadata(
         keys_pub['secondary'], fresh_ecu_manifest['signatures'][0],
-        fresh_ecu_manifest['signed'], datatype='ecu_manifest'))
+        fresh_ecu_manifest['signed'], DATATYPE_ECU_MANIFEST))
 
 
 
@@ -196,20 +200,20 @@ class TestCommon(unittest.TestCase):
     # twice. Try only with ECU Manifests for brevity. (Shouldn't matter)
     common.sign_signable(
         fresh_ecu_manifest2, [keys_pri['secondary'], keys_pri['secondary']],
-        datatype='ecu_manifest')
+        DATATYPE_ECU_MANIFEST)
     self.assertEqual(1, len(fresh_ecu_manifest2['signatures']))
     self.assertEqual(fresh_ecu_manifest2['signatures'],
         sample_ecu_manifest['signatures'])
     self.assertTrue(common.verify_signature_over_metadata(
         keys_pub['secondary'], fresh_ecu_manifest2['signatures'][0],
-        fresh_ecu_manifest2['signed'], datatype='ecu_manifest'))
+        fresh_ecu_manifest2['signed'], DATATYPE_ECU_MANIFEST))
 
 
 
     # Try signing with two keys.
     common.sign_signable(
         fresh_ecu_manifest3, [keys_pri['secondary'], keys_pri['primary']],
-        datatype='ecu_manifest')
+        DATATYPE_ECU_MANIFEST)
     self.assertEqual(2, len(fresh_ecu_manifest3['signatures']))
     sigs = fresh_ecu_manifest3['signatures']
     if sigs[0]['keyid'] == keys_pri['primary']['keyid']:
@@ -230,9 +234,9 @@ class TestCommon(unittest.TestCase):
         sample_ecu_manifest['signatures'][0]['sig'], secondary_sig['sig'])
 
     self.assertTrue(common.verify_signature_over_metadata(keys_pub['secondary'],
-        secondary_sig, sample_ecu_manifest['signed'], datatype='ecu_manifest'))
+        secondary_sig, sample_ecu_manifest['signed'], DATATYPE_ECU_MANIFEST))
     self.assertTrue(common.verify_signature_over_metadata(keys_pub['primary'],
-        primary_sig, sample_ecu_manifest['signed'], datatype='ecu_manifest'))
+        primary_sig, sample_ecu_manifest['signed'], DATATYPE_ECU_MANIFEST))
 
 
 
@@ -241,7 +245,7 @@ class TestCommon(unittest.TestCase):
     # compare it to the original, expecting no change.
     duped_vehicle_manifest = copy.deepcopy(fresh_vehicle_manifest)
     common.sign_signable(duped_vehicle_manifest, [keys_pri['primary']],
-        datatype='vehicle_manifest')
+        DATATYPE_VEHICLE_MANIFEST)
 
     self.assertEqual(
         len(fresh_vehicle_manifest['signatures']),
@@ -259,7 +263,7 @@ class TestCommon(unittest.TestCase):
     # test, so I'll proceed as if we don't know the signature order in this
     # test.
     common.sign_signable(fresh_ecu_manifest, [keys_pri['primary']],
-        datatype='ecu_manifest')
+        DATATYPE_ECU_MANIFEST)
     self.assertEqual(2, len(fresh_ecu_manifest['signatures']))
     sigs = fresh_ecu_manifest['signatures']
     if sigs[0]['keyid'] == keys_pri['primary']['keyid']:
@@ -276,9 +280,9 @@ class TestCommon(unittest.TestCase):
         sample_ecu_manifest['signatures'][0]['sig'], secondary_sig['sig'])
 
     self.assertTrue(common.verify_signature_over_metadata(keys_pub['secondary'],
-        secondary_sig, sample_ecu_manifest['signed'], datatype='ecu_manifest'))
+        secondary_sig, sample_ecu_manifest['signed'], DATATYPE_ECU_MANIFEST))
     self.assertTrue(common.verify_signature_over_metadata(keys_pub['primary'],
-        primary_sig, sample_ecu_manifest['signed'], datatype='ecu_manifest'))
+        primary_sig, sample_ecu_manifest['signed'], DATATYPE_ECU_MANIFEST))
 
     # Paranoid: duplicates should have the same signed element.
     self.assertEqual(
@@ -291,7 +295,7 @@ class TestCommon(unittest.TestCase):
     # tuf.FormatError.
     with self.assertRaises(tuf.FormatError):
       common.sign_signable(fresh_time_attestation2, [keys_pub['secondary']],
-          datatype='time_attestation')
+          DATATYPE_TIME_ATTESTATION)
 
 
     # Consider performing this test. (Not likely to be useful.)
@@ -305,7 +309,7 @@ class TestCommon(unittest.TestCase):
     # key_badtype['keytype'] = 'nonsense_type'
     # with self.assertRaises(uptane.Error):
     #   common.sign_signable(fresh_ecu_manifest4, [key_badtype],
-    #       datatype='ecu_manifest')
+    #       DATATYPE_ECU_MANIFEST)
 
 
 

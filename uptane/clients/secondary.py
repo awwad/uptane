@@ -39,6 +39,9 @@ import uptane.formats
 import uptane.common
 import uptane.encoding.asn1_codec as asn1_codec
 
+from uptane.encoding.asn1_codec import DATATYPE_TIME_ATTESTATION
+from uptane.encoding.asn1_codec import DATATYPE_ECU_MANIFEST
+from uptane.encoding.asn1_codec import DATATYPE_VEHICLE_MANIFEST
 
 from uptane import GREEN, RED, YELLOW, ENDCOLORS
 
@@ -360,8 +363,8 @@ class Secondary(object):
 
     if tuf.conf.METADATA_FORMAT == 'der':
       der_signed_ecu_manifest = asn1_codec.convert_signed_metadata_to_der(
-          signable_ecu_manifest, resign=True,
-          private_key=self.ecu_key, datatype='ecu_manifest')
+          signable_ecu_manifest, DATATYPE_ECU_MANIFEST, resign=True,
+          private_key=self.ecu_key)
       # TODO: Consider verification of output here.
       return der_signed_ecu_manifest
 
@@ -369,7 +372,7 @@ class Secondary(object):
 
     # Now sign with that key.
     uptane.common.sign_signable(
-        signable_ecu_manifest, [self.ecu_key], datatype='ecu_manifest')
+        signable_ecu_manifest, [self.ecu_key], DATATYPE_ECU_MANIFEST)
     uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.check_match(
         signable_ecu_manifest)
 
@@ -391,7 +394,7 @@ class Secondary(object):
     # comprehensible (JSON-compatible dictionary) instead.
     if tuf.conf.METADATA_FORMAT == 'der':
       timeserver_attestation = asn1_codec.convert_signed_der_to_dersigned_json(
-          timeserver_attestation)
+          timeserver_attestation, DATATYPE_TIME_ATTESTATION)
 
     # Check format.
     uptane.formats.SIGNABLE_TIMESERVER_ATTESTATION_SCHEMA.check_match(
@@ -404,7 +407,7 @@ class Secondary(object):
         self.timeserver_public_key,
         timeserver_attestation['signatures'][0],
         timeserver_attestation['signed'],
-        datatype='time_attestation')
+        DATATYPE_TIME_ATTESTATION)
 
     if not valid:
       raise tuf.BadSignatureError('Timeserver returned an invalid signature. '

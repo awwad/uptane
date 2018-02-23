@@ -130,7 +130,7 @@ def sign_signable(
     # signature to the signatures list in the signable. Add the key used to the
     # list of keys that have already signed and continue to the next key.
     signable['signatures'].append(sign_over_metadata(
-        signing_key, signable['signed'], datatype=datatype,
+        signing_key, signable['signed'], datatype,
         metadata_format=metadata_format))
     keyids_that_already_signed.append(signing_key['keyid'])
 
@@ -232,7 +232,9 @@ def sign_over_metadata(
     tuf.UnsupportedLibraryError, if an unsupported or unavailable cryptography
     library is chosen.
 
-    uptane.Error, if the given metadata format is not 'json' or 'der'
+    uptane.Error, if the given metadata format is not 'json' or 'der' or if
+    the given datatype is not one of the accepted Uptane data types for
+    conversion (defined in constants asn1_codec.DATATYPE_*)
 
     TypeError, if 'key_dict' contains an invalid keytype.
 
@@ -261,7 +263,7 @@ def sign_over_metadata(
     # TODO: Have convert_signed_metadata_to_der take just the 'signed' element
     # so we don't have to do this silly wrapping in an empty signable.
     data = asn1_codec.convert_signed_metadata_to_der(
-        {'signed': data, 'signatures': []}, only_signed=True, datatype=datatype)
+        {'signed': data, 'signatures': []}, datatype, only_signed=True)
     data = hashlib.sha256(data).digest()
 
   else: # pragma: no cover
@@ -391,7 +393,7 @@ def verify_signature_over_metadata(
     # TODO: Have convert_signed_metadata_to_der take just the 'signed' element
     # so we don't have to do this silly wrapping in an empty signable.
     data = asn1_codec.convert_signed_metadata_to_der(
-        {'signed': data, 'signatures': []}, only_signed=True, datatype=datatype)
+        {'signed': data, 'signatures': []}, datatype, only_signed=True)
     data = hashlib.sha256(data).digest()
 
   else: # pragma: no cover

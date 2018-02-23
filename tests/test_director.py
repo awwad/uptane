@@ -27,7 +27,10 @@ import uptane.formats
 import uptane.services.director as director
 import uptane.services.inventorydb as inventory
 # import uptane.common # verify sigs, create client dir structure, convert key
-# import uptane.encoding.asn1_codec as asn1_codec
+
+from uptane.encoding.asn1_codec import DATATYPE_TIME_ATTESTATION
+from uptane.encoding.asn1_codec import DATATYPE_ECU_MANIFEST
+from uptane.encoding.asn1_codec import DATATYPE_VEHICLE_MANIFEST
 
 # For temporary convenience:
 import demo # for generate_key, import_public_key, import_private_key
@@ -383,7 +386,7 @@ class TestDirector(unittest.TestCase):
 
       # Use asn1_codec to convert to a JSON-compatible dictionary.
       sample_manifest = asn1_codec.convert_signed_der_to_dersigned_json(
-          der_data, datatype='ecu_manifest')
+          der_data, DATATYPE_ECU_MANIFEST)
 
     else:
       sample_manifest = tuf.util.load_file(os.path.join('samples',
@@ -590,7 +593,7 @@ class TestDirector(unittest.TestCase):
       # When using DER, we can convert JSON to DER and re-sign with the wrong
       # key to achieve a similar test.
       manifest_bad = asn1_codec.convert_signed_metadata_to_der(
-          manifest_json, resign=True, datatype='vehicle_manifest',
+          manifest_json, DATATYPE_VEHICLE_MANIFEST, resign=True,
           private_key=demo.import_private_key('directortimestamp'))
 
     # Try registering the bad-signature manifest.

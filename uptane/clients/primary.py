@@ -38,6 +38,10 @@ import uptane.services.director as director
 import uptane.services.timeserver as timeserver
 import uptane.encoding.asn1_codec as asn1_codec
 
+from uptane.encoding.asn1_codec import DATATYPE_TIME_ATTESTATION
+from uptane.encoding.asn1_codec import DATATYPE_ECU_MANIFEST
+from uptane.encoding.asn1_codec import DATATYPE_VEHICLE_MANIFEST
+
 from uptane import GREEN, RED, YELLOW, ENDCOLORS
 
 # The following two imports are only used for the Uptane demonstration, where
@@ -813,7 +817,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     # that form.
     if tuf.conf.METADATA_FORMAT == 'der':
       converted_attestation = asn1_codec.convert_signed_metadata_to_der(
-          most_recent_attestation, datatype='time_attestation')
+          most_recent_attestation, DATATYPE_TIME_ATTESTATION)
       uptane.formats.DER_DATA_SCHEMA.check_match(converted_attestation)
       return converted_attestation
 
@@ -864,15 +868,15 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     if tuf.conf.METADATA_FORMAT == 'der':
       # Convert to DER and sign, replacing the Python dictionary.
       signable_vehicle_manifest = asn1_codec.convert_signed_metadata_to_der(
-          signable_vehicle_manifest, private_key=self.primary_key,
-          resign=True, datatype='vehicle_manifest')
+          signable_vehicle_manifest, DATATYPE_VEHICLE_MANIFEST,
+          private_key=self.primary_key, resign=True)
 
     else:
       # If we're not using ASN.1, sign the Python dictionary in a JSON encoding.
       uptane.common.sign_signable(
           signable_vehicle_manifest,
           [self.primary_key],
-          datatype='vehicle_manifest')
+          DATATYPE_VEHICLE_MANIFEST)
 
       uptane.formats.SIGNABLE_VEHICLE_VERSION_MANIFEST_SCHEMA.check_match(
           signable_vehicle_manifest)
@@ -1025,7 +1029,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
       # If we're working with ASN.1/DER, convert it into the format specified in
       # uptane.formats.SIGNABLE_ECU_VERSION_MANIFEST_SCHEMA.
       signed_ecu_manifest = asn1_codec.convert_signed_der_to_dersigned_json(
-          signed_ecu_manifest, datatype='ecu_manifest')
+          signed_ecu_manifest, DATATYPE_ECU_MANIFEST)
 
     # Else, we're working with standard Python dictionaries and no conversion
     # is necessary, but we'll still validate the signed_ecu_manifest argument.
@@ -1109,7 +1113,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     # comprehensible instead.
     if tuf.conf.METADATA_FORMAT == 'der':
       timeserver_attestation = asn1_codec.convert_signed_der_to_dersigned_json(
-          timeserver_attestation)
+          timeserver_attestation, DATATYPE_TIME_ATTESTATION)
 
     # Check format.
     uptane.formats.SIGNABLE_TIMESERVER_ATTESTATION_SCHEMA.check_match(
@@ -1125,7 +1129,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
         self.timeserver_public_key,
         timeserver_attestation['signatures'][0],
         timeserver_attestation['signed'],
-        datatype='time_attestation')
+        DATATYPE_TIME_ATTESTATION)
 
     if not valid:
       raise tuf.BadSignatureError('Timeserver returned an invalid signature. '

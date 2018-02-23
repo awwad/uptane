@@ -31,6 +31,10 @@ import uptane.clients.primary as primary
 import uptane.common # verify sigs, create client dir structure, convert key
 import uptane.encoding.asn1_codec as asn1_codec
 
+from uptane.encoding.asn1_codec import DATATYPE_TIME_ATTESTATION
+from uptane.encoding.asn1_codec import DATATYPE_ECU_MANIFEST
+from uptane.encoding.asn1_codec import DATATYPE_VEHICLE_MANIFEST
+
 # For temporary convenience:
 import demo # for generate_key, import_public_key, import_private_key
 import json
@@ -363,25 +367,25 @@ class TestPrimary(unittest.TestCase):
           'em1_typical_ecu_manifest.der'), 'rb').read()
 
       manifest1_json = asn1_codec.convert_signed_der_to_dersigned_json(
-          manifest1, 'ecu_manifest')
+          manifest1, DATATYPE_ECU_MANIFEST)
 
       manifest2 = open(os.path.join(TEST_DATA_DIR, 'flawed_manifests',
           'em2_unknown_ecu_manifest.der'), 'rb').read()
 
       manifest2_json = asn1_codec.convert_signed_der_to_dersigned_json(
-          manifest2, 'ecu_manifest')
+          manifest2, DATATYPE_ECU_MANIFEST)
 
       manifest3 = open(os.path.join(TEST_DATA_DIR, 'flawed_manifests',
           'em3_ecu_manifest_signed_with_wrong_key.der'), 'rb').read()
 
       manifest3_json = asn1_codec.convert_signed_der_to_dersigned_json(
-          manifest3, 'ecu_manifest')
+          manifest3, DATATYPE_ECU_MANIFEST)
 
       manifest4 = open(os.path.join(TEST_DATA_DIR, 'flawed_manifests',
           'em4_attack_detected_in_ecu_manifest.der'), 'rb').read()
 
       manifest4_json = asn1_codec.convert_signed_der_to_dersigned_json(
-          manifest4, 'ecu_manifest')
+          manifest4, DATATYPE_ECU_MANIFEST)
 
 
     # Register two Secondaries with the Primary.
@@ -570,7 +574,7 @@ class TestPrimary(unittest.TestCase):
     if tuf.conf.METADATA_FORMAT == 'der':
       # Convert this time attestation to the expected ASN.1/DER format.
       time_attestation = asn1_codec.convert_signed_metadata_to_der(
-          original_time_attestation,
+          original_time_attestation, DATATYPE_TIME_ATTESTATION,
           private_key=TestPrimary.key_timeserver_pri, resign=True)
 
 
@@ -605,7 +609,7 @@ class TestPrimary(unittest.TestCase):
       # Fail to re-sign the DER, so that the signature is over JSON instead,
       # which results in a bad signature.
       time_attestation__badsig = asn1_codec.convert_signed_metadata_to_der(
-          original_time_attestation, resign=False, datatype='time_attestation')
+          original_time_attestation, DATATYPE_TIME_ATTESTATION, resign=False)
 
     else: # 'json' format
       # Rewrite the first 9 digits of the signature ('sig') to something
@@ -635,7 +639,7 @@ class TestPrimary(unittest.TestCase):
     if tuf.conf.METADATA_FORMAT == 'der':
       # Convert this time attestation to the expected ASN.1/DER format.
       time_attestation__wrongnonce = asn1_codec.convert_signed_metadata_to_der(
-          time_attestation__wrongnonce,
+          time_attestation__wrongnonce, DATATYPE_TIME_ATTESTATION,
           private_key=TestPrimary.key_timeserver_pri, resign=True)
 
     with self.assertRaises(uptane.BadTimeAttestation):
@@ -658,7 +662,7 @@ class TestPrimary(unittest.TestCase):
     if tuf.conf.METADATA_FORMAT == 'der':
       uptane.formats.DER_DATA_SCHEMA.check_match(vehicle_manifest)
       vehicle_manifest = asn1_codec.convert_signed_der_to_dersigned_json(
-          vehicle_manifest, datatype='vehicle_manifest')
+          vehicle_manifest, DATATYPE_VEHICLE_MANIFEST)
 
     # Now it's not in DER format, whether or not it started that way.
     # Check its format and inspect it.
@@ -681,7 +685,7 @@ class TestPrimary(unittest.TestCase):
         TestPrimary.ecu_key,
         vehicle_manifest['signatures'][0], # TODO: Deal with 1-sig assumption?
         vehicle_manifest['signed'],
-        datatype='vehicle_manifest'))
+        DATATYPE_VEHICLE_MANIFEST))
 
 
 

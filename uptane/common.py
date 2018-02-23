@@ -232,7 +232,9 @@ def sign_over_metadata(
     tuf.UnsupportedLibraryError, if an unsupported or unavailable cryptography
     library is chosen.
 
-    uptane.Error, if the given metadata format is not 'json' or 'der'
+    uptane.Error, if the given metadata format is not 'json' or 'der' or if
+    the given datatype is not one of the accepted Uptane data types for
+    conversion (defined in constants asn1_codec.DATATYPE_*)
 
     TypeError, if 'key_dict' contains an invalid keytype.
 

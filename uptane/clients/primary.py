@@ -243,8 +243,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
       timeserver_public_key See class docstring above.
 
-      my_secondaries        See class docstring above. (optional: will also be
-                            populated by communication from Secondaries)
+      my_secondaries        See class docstring above. (optional)
 
       time
         An initial time to set the Primary's "clock" to, conforming to

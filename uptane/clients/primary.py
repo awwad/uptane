@@ -227,7 +227,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     primary_key,
     time,
     timeserver_public_key,
-    my_secondaries=[]):
+    my_secondaries=None):
 
     """
     <Purpose>
@@ -286,6 +286,8 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     self.timeserver_public_key = timeserver_public_key
     self.primary_key = primary_key
     self.my_secondaries = my_secondaries
+    if self.my_secondaries is None:
+      self.my_secondaries = [] # (because must not use mutable as default value)
     self.director_repo_name = director_repo_name
 
     self.temp_full_metadata_archive_fname = os.path.join(

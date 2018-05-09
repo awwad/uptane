@@ -14,7 +14,6 @@ from six.moves import range
 
 # Values to plug in below as needed.
 LOCAL = 'localhost'
-REMOTE = 'repo.uptane.org'
 HOSTING = '0.0.0.0'
 
 METADATA_EXTENSION = '.' + tuf.conf.METADATA_FORMAT

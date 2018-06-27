@@ -32,15 +32,25 @@ import demo.demo_director as dd
 import demo.demo_image_repo as di
 import demo.demo_primary as dp
 import demo.demo_secondary as ds
-#from six.moves import xmlrpc_server
-import readline, rlcompleter # for tab completion in interactive Python shell
 import time # for brief pauses (since file movements are occurring)
+import atexit # to trigger cleanup on exit
+import shutil # to delete some directories when we're done
+import os # paths and individual file deletion
 
 from uptane import RED, GREEN, YELLOW, WHITE, ENDCOLORS
 
 
 def main():
   """This function runs all the demo instructions in README.md."""
+
+  # Trigger cleanup of associated files when this process is exited. We
+  # register a listener to run the cleanup when this process exits rather than
+  # just running the cleanup commands at the end of the script. This is because
+  # we want to support the use of an interactive shell. It would be bad to
+  # delete the repository files used right at the end of the README.md
+  # instructions because the user may want to try some more things out before
+  # exiting, so we just wait until the process exits.
+  atexit.register(cleanup)
 
   # Start demo Image Repo, including http server and xmlrpc listener (listener
   # is for webdemo)
@@ -173,6 +183,19 @@ def main():
 
 
 
+
+def cleanup():
+  if os.path.isdir('director'):
+    shutil.rmtree('director')
+
+  if os.path.isdir('imagerepo'):
+    shutil.rmtree('imagerepo')
+
+  if os.path.isfile('firmware.img'):
+    os.remove('firmware.img')
+
+
+
 def announce_expected_banner(banner_name):
   print(YELLOW + '\n\n\nThe preceding banner should be: ' + banner_name +
       '\n\n\n' + ENDCOLORS)
@@ -189,5 +212,4 @@ def brief_sleep():
 
 
 if __name__ == '__main__':
-  readline.parse_and_bind('tab: complete')
   main()

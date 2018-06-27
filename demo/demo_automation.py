@@ -13,11 +13,7 @@ demo_automation.py
 
   To run the demo this way, run the following from the main uptane directory
   (which contains, for example, setup.py).
-    python -i demo/demo_automation.py
-
-  That starts the demo in an interactive mode (with a prompt from which
-  you can manipulate commands for the demonstrations). The demo is run in full
-  before any commands can be entered.
+    python demo/demo_automation.py
 
   If 10 instructions in yellow text appear (e.g. "The preceding banner should
   be: NO UPDATE") and the banners indicated match, then the demo has run

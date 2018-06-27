@@ -1,5 +1,5 @@
 """
-demo_automation.py
+demo_single_command_run.py
 
 <Purpose>
   A simple script to execute the demo outlined in README.md, sequentially.
@@ -18,6 +18,9 @@ demo_automation.py
   If 10 instructions in yellow text appear (e.g. "The preceding banner should
   be: NO UPDATE") and the banners indicated match, then the demo has run
   correctly.
+
+  Note that this does not take the place of the test suite for the reference
+  implementation, which is in tests/.
 
   # TODO: Add checks after each step to make sure that things run as expected.
   # This can then be used as a test script.

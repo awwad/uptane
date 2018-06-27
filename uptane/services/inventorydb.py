@@ -306,12 +306,9 @@ def register_ecu(is_primary, vin, ecu_serial, public_key, overwrite=True):
       raise uptane.Spoofing('The given ECU Serial, ' + repr(ecu_serial) +
           ', is already associated with a public key.')
 
-
-  # Register the VIN if it is unknown.
-  # No VIN should ever be in only one or the other of ecus_by_vin or
-  # vehicle_manifests, or there is a bug.
-  if vin not in ecus_by_vin:
-    register_vehicle(vin, overwrite=overwrite)
+  # It is expected that the vehicle to which this ECU belongs is already
+  # registered.
+  check_vin_registered(vin)
 
 
   # Associate the ECU with the vehicle.

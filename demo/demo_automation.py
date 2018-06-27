@@ -4,13 +4,24 @@ demo_automation.py
 <Purpose>
   A simple script to execute the demo outlined in README.md, sequentially.
 
+  The primary purpose is for a fairly quick additional round of testing,
+  to make sure that any changes made don't break the demo. Currently, checking
+  to make sure everything ran correctly requires that you scan up through the
+  output and check the yellow instructions against the preceding banners.
+  More code is required to automate those checks, allowing this to be run
+  as a test script, but this is helpful for now.
+
   To run the demo this way, run the following from the main uptane directory
   (which contains, for example, setup.py).
     python -i demo/demo_automation.py
 
   That starts the demo in an interactive mode (with a prompt from which
-  you can manipulate them for the demonstrations). The demo is run in full
+  you can manipulate commands for the demonstrations). The demo is run in full
   before any commands can be entered.
+
+  If 10 instructions in yellow text appear (e.g. "The preceding banner should
+  be: NO UPDATE") and the banners indicated match, then the demo has run
+  correctly.
 
   # TODO: Add checks after each step to make sure that things run as expected.
   # This can then be used as a test script.
@@ -28,10 +39,12 @@ import time # for brief pauses (since file movements are occurring)
 
 from uptane import RED, GREEN, YELLOW, WHITE, ENDCOLORS
 
-def main():
 
-  # Start demo Image Repo, including http server and xmlrpc listener (for
-  # webdemo)
+def main():
+  """This function runs all the demo instructions in README.md."""
+
+  # Start demo Image Repo, including http server and xmlrpc listener (listener
+  # is for webdemo)
   di.clean_slate()
 
   # Start demo Director, including http server and xmlrpc listener (for
@@ -43,13 +56,16 @@ def main():
   dt.listen()
 
 
-  # Start demo clients
+  # Start demo Primary client and (full verification) Secondary client
   dp.clean_slate()
   ds.clean_slate()
 
-  # Run an update cycle on both clients.
+  # Run an update cycle on both clients, in order.
   dp.update_cycle()
   ds.update_cycle()
+
+  # Declare, in yellow text in the output, that the expected preceding banner
+  # indicates that no update was delivered.
   announce_expected_banner('NO UPDATE')
 
 
@@ -163,8 +179,14 @@ def announce_expected_banner(banner_name):
       '\n\n\n' + ENDCOLORS)
 
 
+
 def brief_sleep():
+  """
+  The demo code is written for manual use and file changes in the hosted
+  folders may introduce some lag, so some pauses are added for automated use.
+  """
   time.sleep(0.5)
+
 
 
 if __name__ == '__main__':

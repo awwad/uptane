@@ -40,6 +40,7 @@ import demo # for generate_key, import_public_key, import_private_key
 import json
 
 
+SAMPLE_DATA_DIR = os.path.join(uptane.WORKING_DIR, 'samples')
 TEST_DATA_DIR = os.path.join(uptane.WORKING_DIR, 'tests', 'test_data')
 TEST_DIRECTOR_METADATA_DIR = os.path.join(TEST_DATA_DIR, 'director_metadata')
 TEST_IMAGE_REPO_METADATA_DIR = os.path.join(
@@ -155,7 +156,7 @@ class TestPrimary(unittest.TestCase):
 
     # Note that there may be extra targets available here.
     shutil.copytree(
-    	SAMPLE_TARGETS, os.path.join(TEMP_CLIENT_DIR, 'director', 'targets'))
+    	SAMPLE_TARGETS, os.path.join(TEMP_CLIENT_DIR, 'imagerepo', 'targets'))
 
 
 
@@ -340,7 +341,7 @@ class TestPrimary(unittest.TestCase):
     # manifests, we'll convert them.
     # We'll always need the JSON encodings for testing, and we'll load the
     # ASN.1/DER manifests only if we're in DER mode.
-    # 1: Correctly signed ECU manifest from ECU TCUdemocar
+    # 1: Correctly signed ECU manifest from ECU TCUdemocar (good sample)
     # 2: Correctly signed ECU manifest from ECU unknown_ecu
     # 3: ECU Manifest from ECU TCUdemocar signed by the wrong key
     #    (demo's Image Repo timestamp key in particular, instead of demo's
@@ -348,8 +349,8 @@ class TestPrimary(unittest.TestCase):
     # 4: Correctly signed ECU manifest from TCUdemocar w/ attack report
 
     if tuf.conf.METADATA_FORMAT == 'json':
-      manifest1 = manifest1_json = json.load(open(os.path.join(TEST_DATA_DIR,
-          'flawed_manifests', 'em1_typical_ecu_manifest.json')))
+      manifest1 = manifest1_json = json.load(open(os.path.join(SAMPLE_DATA_DIR,
+          'sample_ecu_manifest_TCUdemocar.json')))
 
       manifest2 = manifest2_json = json.load(open(os.path.join(TEST_DATA_DIR,
           'flawed_manifests', 'em2_unknown_ecu_manifest.json')))
@@ -363,8 +364,8 @@ class TestPrimary(unittest.TestCase):
     else:
       assert tuf.conf.METADATA_FORMAT == 'der', 'Test code is flawed.'
 
-      manifest1 = open(os.path.join(TEST_DATA_DIR, 'flawed_manifests',
-          'em1_typical_ecu_manifest.der'), 'rb').read()
+      manifest1 = open(os.path.join(SAMPLE_DATA_DIR,
+          'sample_ecu_manifest_TCUdemocar.der'), 'rb').read()
 
       manifest1_json = asn1_codec.convert_signed_der_to_dersigned_json(
           manifest1, DATATYPE_ECU_MANIFEST)

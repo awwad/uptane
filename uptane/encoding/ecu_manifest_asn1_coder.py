@@ -16,7 +16,7 @@
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from pyasn1.type import univ, tag
+from pyasn1.type import tag
 
 from uptane.encoding.asn1_definitions import *
 
@@ -25,10 +25,7 @@ from datetime import datetime
 
 
 def get_asn_signed(json_signed):
-  signed = ECUVersionManifestSigned()\
-           .subtype(implicitTag=tag.Tag(tag.tagClassContext,
-                                        tag.tagFormatConstructed, 0))
-
+  signed = ECUVersionManifestSigned()
   signed['ecuIdentifier'] = json_signed['ecu_serial']
   signed['previousTime'] = calendar.timegm(datetime.strptime(
       json_signed['previous_timeserver_time'], "%Y-%m-%dT%H:%M:%SZ").timetuple())
@@ -38,19 +35,15 @@ def get_asn_signed(json_signed):
   # Optional bit.
   if 'attacks_detected' in json_signed and json_signed['attacks_detected']:
     attacks_detected = json_signed['attacks_detected']
-    assert len(attacks_detected) > 0,\
-           'attacks_detected cannot be an empty string!'
     signed['securityAttack'] = attacks_detected
 
-  target = Target().subtype(implicitTag=tag.Tag(tag.tagClassContext,
-                                                tag.tagFormatConstructed, 4))
+  target = Target()
   filename = json_signed['installed_image']['filepath']
   filemeta = json_signed['installed_image']['fileinfo']
   target['filename'] = filename
   target['length'] = filemeta['length']
 
-  hashes = Hashes().subtype(implicitTag=tag.Tag(tag.tagClassContext,
-                                                tag.tagFormatSimple, 3))
+  hashes = Hashes()
   numberOfHashes = 0
 
   # We're going to generate a list of hashes from the dictionary of hashes.
@@ -63,14 +56,7 @@ def get_asn_signed(json_signed):
     hash_value = filemeta['hashes'][hash_function]
     hash = Hash()
     hash['function'] = int(HashFunction(hash_function))
-    digest = BinaryData()\
-             .subtype(explicitTag=tag.Tag(tag.tagClassContext,
-                                          tag.tagFormatConstructed, 1))
-    octetString = univ.OctetString(hexValue=hash_value)\
-                  .subtype(implicitTag=tag.Tag(tag.tagClassContext,
-                                               tag.tagFormatSimple, 1))
-    digest['octetString'] = octetString
-    hash['digest'] = digest
+    hash['digest'] = OctetString(hexValue=hash_value)
     hashes[numberOfHashes] = hash
     numberOfHashes += 1
 
@@ -107,7 +93,7 @@ def get_json_signed(asn_metadata):
   for j in range(numberOfHashes):
     hash = hashes[j]
     hash_function = hashenum_to_hashfunction[int(hash['function'])]
-    hash_value = hash['digest']['octetString'].prettyPrint()
+    hash_value = hash['digest'].prettyPrint()
     assert hash_value.startswith('0x')
     hash_value = hash_value[2:]
     json_hashes[hash_function] = hash_value
@@ -127,7 +113,7 @@ def get_json_signed(asn_metadata):
   }
 
   # Optional bit.
-  if asn_signed['securityAttack']:
+  if 'securityAttack' in asn_signed and asn_signed['securityAttack'].hasValue():
     json_signed['attacks_detected'] = str(asn_signed['securityAttack'])
 
   return json_signed

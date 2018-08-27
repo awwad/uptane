@@ -22,6 +22,7 @@ import uptane.encoding.ecu_manifest_asn1_coder as ecu_manifest_asn1_coder
 import uptane.encoding.asn1_definitions as asn1_spec
 import pyasn1.codec.der.encoder as p_der_encoder
 import pyasn1.codec.der.decoder as p_der_decoder
+import pyasn1.error
 from pyasn1.type import tag, univ
 
 import sys # to test Python version 2 vs 3, for byte string behavior
@@ -61,8 +62,6 @@ def setUpModule():
   Director Server, and Time Server. Currently, it requires them to be already
   running.
   """
-  global primary_ecu_key
-
   destroy_temp_dir()
 
   private_key_fname = os.path.join(
@@ -92,6 +91,17 @@ class TestASN1(unittest.TestCase):
   Several of them build on the results of previous tests. This is an unusual
   pattern but saves code and works at least for now.
   """
+
+  def test_ensure_valid_metadata_type_for_asn1(self):
+    for metadata_type in asn1_codec.SUPPORTED_ASN1_METADATA_MODULES:
+      asn1_codec.ensure_valid_metadata_type_for_asn1(metadata_type)
+
+    with self.assertRaises(uptane.Error):
+      asn1_codec.ensure_valid_metadata_type_for_asn1('not_a_metadata_type')
+
+
+
+
 
   def test_01_encode_token(self):
 
@@ -234,6 +244,53 @@ class TestASN1(unittest.TestCase):
 
 
 
+    # Make sure that convert_signed_metadata_to_der() accepts/rejects
+    # parameters appropriately.
+    # Pass incoherent value as metadata.
+    with self.assertRaises(tuf.FormatError):
+      asn1_codec.convert_signed_metadata_to_der(5, DATATYPE_TIME_ATTESTATION)
+    # Pass incoherent value as datatype.
+    with self.assertRaises(uptane.Error):
+      asn1_codec.convert_signed_metadata_to_der(
+          signable_attestation, 'nonsense')
+    # Pass inconsistent resign/privatekey/only_signed args
+    with self.assertRaises(uptane.Error):
+      asn1_codec.convert_signed_metadata_to_der(
+          signable_attestation, DATATYPE_TIME_ATTESTATION, resign=True)
+    with self.assertRaises(uptane.Error):
+      asn1_codec.convert_signed_metadata_to_der(
+          signable_attestation, DATATYPE_TIME_ATTESTATION,
+          private_key=None, resign=True)
+    with self.assertRaises(uptane.Error):
+      asn1_codec.convert_signed_metadata_to_der(
+          signable_attestation, DATATYPE_TIME_ATTESTATION,
+          private_key=test_signing_key, resign=False)
+    with self.assertRaises(uptane.Error):
+      asn1_codec.convert_signed_metadata_to_der(
+          signable_attestation, DATATYPE_TIME_ATTESTATION,
+          private_key=test_signing_key, resign=True, only_signed=True)
+    with self.assertRaises(uptane.Error):
+      asn1_codec.convert_signed_metadata_to_der(
+          signable_attestation, DATATYPE_TIME_ATTESTATION,
+          private_key=test_signing_key, resign=False, only_signed=True)
+    with self.assertRaises(uptane.Error):
+      asn1_codec.convert_signed_metadata_to_der(
+          signable_attestation, DATATYPE_TIME_ATTESTATION,
+          private_key=None, resign=True, only_signed=True)
+    with self.assertRaises(uptane.Error): # either that or tuf.FormatError....
+      asn1_codec.convert_signed_metadata_to_der(
+          signable_attestation, DATATYPE_TIME_ATTESTATION,
+          private_key='nonsense', resign=True, only_signed=True)
+
+
+    # Make sure that uptane.FailedToEncodeASN1DER is raised if nonsense is
+    # provided as DER.
+    with self.assertRaises(uptane.FailedToDecodeASN1DER):
+      asn1_codec.convert_signed_der_to_dersigned_json(
+          b'nonsense', DATATYPE_TIME_ATTESTATION)
+
+
+
 
 
   def test_05_encode_full_signable_attestation_manual(self):
@@ -294,6 +351,21 @@ class TestASN1(unittest.TestCase):
     # TODO: Test rest of the way back: ASN1 to Python dictionary.
     # (This is in addition to the next test, which does that with the higher
     # level code in asn1_codec.)
+
+
+    # No, for some reason, pyasn1 raises a KeyError....
+    # # Try again with nonsense to ensure that a PyAsn1Error is raised.
+    # # with self.assertRaises(pyasn1.error.PyAsn1Error):
+    # #   asn_signable['numberOfSignatures'] = 'a'
+
+    # Not sure how to get convert_signed_metadata_to_der to raise
+    # pyasn1.error.PyAsn1Error, since I don't think we can get that far into
+    # the function with a value that wouldn't encode: we'd have to be following
+    # the spec already to convert to a pyasn1 ASN.1 dictionary. We could change
+    # the definitions midway somehow, maybe? That'll be a one-line coverage gap
+    # until I can figure it out.
+    # with self.assertRaises(uptane.FailedToEncodeASN1DER):
+    #   der_attestation = p_der_encoder.encode(5)
 
 
 
@@ -523,8 +595,6 @@ def is_valid_nonempty_der(der_string):
   if not der_string:
     return False
   elif sys.version_info.major < 3:
-    if '\\x' not in repr(der_string): # TODO: <~> TEMPORARY FOR DEBUG. DELETE
-      print(repr(der_string)) # TODO: <~> TEMPORARY FOR DEBUG. DELETE
     return '\\x' in repr(der_string)
   else:
     return isinstance(der_string, bytes)

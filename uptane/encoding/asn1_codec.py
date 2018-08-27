@@ -53,7 +53,11 @@ try:
       DATATYPE_VEHICLE_MANIFEST: vehicle_manifest_asn1_coder}
 
 
-except ImportError:
+# This warning is provided in order to be helpful; behavior is not prescribed
+# when a dependency is missing, so this clause is not tested (which would
+# entail tests running after a separate installation with missing
+# dependencies), so this clause is not included in coverage metrics.
+except ImportError: # pragma: no cover
   logger.warning('Minor: pyasn1 library not found. Proceeding using JSON only.')
   PYASN1_EXISTS = False
 
@@ -124,7 +128,13 @@ def convert_signed_der_to_dersigned_json(der_data, datatype):
   """
 
   if not PYASN1_EXISTS:
-    raise uptane.Error('Request was made to load a DER file, but the required '
+    # This error message is provided in order to be helpful; behavior is not
+    # prescribed when a dependency is missing, so this clause is not tested
+    # (which would entail tests running after a separate installation with
+    # missing dependencies), so this clause is not included in coverage
+    # metrics.
+    raise uptane.Error( # pragma: no cover
+        'Request was made to load a DER file, but the required '
         'pyasn1 library failed to import.')
 
   uptane.formats.DER_DATA_SCHEMA.check_match(der_data)

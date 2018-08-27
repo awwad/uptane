@@ -197,6 +197,14 @@ class TestCommon(unittest.TestCase):
         fresh_ecu_manifest['signed'], DATATYPE_ECU_MANIFEST))
 
 
+    # Try providing metadata types that aren't known to sign_over_metadata.
+    with self.assertRaises(uptane.Error):
+      common.sign_over_metadata(keys_pri['primary'],
+          fresh_vehicle_manifest['signed'], 'nonsense_type')
+    with self.assertRaises(uptane.Error):
+      common.sign_over_metadata(keys_pri['primary'],
+          fresh_vehicle_manifest['signed'], 513)
+
 
     # Expect the signatures to come out the same even if a key is specified
     # twice. Try only with ECU Manifests for brevity. (Shouldn't matter)

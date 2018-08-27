@@ -10,8 +10,8 @@
   translation from and to ASN.1/DER-encoded metadata that is specific to TUF.
 
   # TODO: NOTE ALSO THAT MUCH OF THIS CODE IS COPIED FROM
-  tuf/encoding/asn1_codec.py. These two files be refactored in a sensible way
-  to eliminate duplicated code!
+  tuf/encoding/asn1_codec.py. These two files should be refactored to eliminate
+  duplicated code!
 
 """
 from __future__ import print_function
@@ -35,8 +35,6 @@ try:
   # pyasn1 modules
   import pyasn1.codec.der.encoder as p_der_encoder
   import pyasn1.codec.der.decoder as p_der_decoder
-  import pyasn1.type.tag as p_type_tag
-  import pyasn1.type.univ as p_type_univ
   import pyasn1.error
 
   # ASN.1 data specification modules that convert ASN.1 to JSON and back.
@@ -166,14 +164,10 @@ def convert_signed_der_to_dersigned_json(der_data, datatype):
   if datatype == DATATYPE_TIME_ATTESTATION:
     exemplar_object = asn1_spec.TokensAndTimestampSignable()
   elif datatype == DATATYPE_ECU_MANIFEST:
-    exemplar_object = asn1_spec.ECUVersionManifest()#.subtype(implicitTag=p_type_tag.Tag(p_type_tag.tagClassContext, p_type_tag.tagFormatSimple, 3)) # Does this need subtyping?
+    exemplar_object = asn1_spec.ECUVersionManifest()
   elif datatype == DATATYPE_VEHICLE_MANIFEST:
-    exemplar_object = asn1_spec.VehicleVersionManifest() # Does this need subtyping?
+    exemplar_object = asn1_spec.VehicleVersionManifest()
 
-  # exemplar_object = asn1_spec.TokensAndTimestamp().subtype(
-  #     implicitTag=p_type_tag.Tag(p_type_tag.tagClassContext,
-  #     p_type_tag.tagFormatConstructed,
-  #     0))
   # TODO: Determine if there are any other error types to add to the except
   # clause below to cover whatever errors we expect pyasn1 to raise when trying
   # to convert data. That error class covers ValueConstraintError and
@@ -461,13 +455,7 @@ def convert_signatures_to_asn(pydict_signatures):
   input to this function. Also vice versa.
   """
 
-  # Create a pyASN.1 object of custom class Signatures, containing some
-  # unknown pyasn1 sorcery to specify types.
-  # Because this Signatures() object is going to be a member of the Metadata()
-  # object below, subtype() must be called on it to make its tags match the tags
-  # expected by the parent object that must contain it.
-  # The following documents tagging in pyasn1:
-  #   http://www.red-bean.com/doc/python-pyasn1/pyasn1-tutorial.html#1.2
+  # Create a pyASN.1 object of custom class Signatures
   asn_signatures_list = asn1_spec.Signatures()
 
   # Now convert each Python dictionary-style signature into an ASN.1 signature

@@ -8,12 +8,15 @@ Reference Implementation and demonstration code
 # Documentation
 Extensive documentation on design can be found in the following documents:
 
-* [Design Overview](https://docs.google.com/document/d/1pBK--40BCg_ofww4GES0weYFB6tZRedAjUy6PJ4Rgzk/edit?usp=sharing)
-* [Implementation Specification](https://docs.google.com/document/d/1wjg3hl0iDLNh7jIRaHl3IXhwm0ssOtDje5NemyTBcaw/edit?usp=sharing)
+* [Uptane Standard](https://uptane.github.io/uptane-standard/uptane-standard.html)
 * [Deployment Considerations](https://docs.google.com/document/d/17wOs-T7mugwte5_Dt-KLGMsp-3_yAARejpFmrAMefSE/edit?usp=sharing)
 
 The project's [maintainers, contribution policies, and how-tos for submitting
 issues, security audits, etc. are visible in PROJECT.md](PROJECT.md)
+
+Note that the [Uptane Standard](https://uptane.github.io/uptane-standard/uptane-standard.html) is the definitive guide for how to implement Uptane.  If the reference implementation and the standard disagree, the standard is authoritative.  Any mismatches should be filed as issues in the issue tracker.
+
+The reference implementation will describe which version of the standard it implements, once official standards releases have occurred.  
 
 
 # Instructions on use of the Uptane demonstration code

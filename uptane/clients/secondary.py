@@ -440,8 +440,17 @@ class Secondary(object):
     # Extract actual time from the timeserver's signed attestation.
     new_timeserver_time = timeserver_attestation['signed']['time']
 
+    # Make sure the format is understandable to us before saving the
+    # time.  Convert to a UNIX timestamp.
+    new_timeserver_time_unix = int(tuf.formats.unix_timestamp_to_datetime(
+        new_timeserver_time))
+    tuf.formats.UNIX_TIMESTAMP_SCHEMA.check_match(new_timeserver_time_unix)
+
     # Save validated time.
     self.all_valid_timeserver_times.append(new_timeserver_time)
+
+    # Set the client's clock.  This will be used instead of system time by TUF.
+    tuf.conf.CLOCK_OVERRIDE = new_timeserver_time_unix
 
     # Use a new nonce next time, since the nonce we were using has now been
     # used to successfully validate a timeserver attestation.

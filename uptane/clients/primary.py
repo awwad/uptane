@@ -140,6 +140,8 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
       have already sent to the Timeserver. Will be checked against the
       Timeserver's response.
 
+    # TODO: Rename these two variables, valid -> verified, along with the
+    #       verification functions.  Do likewise in Secondary.
     self.all_valid_timeserver_attestations:
       A list of all attestations received from Timeservers that have been
       validated by validate_time_attestation.
@@ -281,6 +283,8 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     self.vin = vin
     self.ecu_serial = ecu_serial
     self.full_client_dir = full_client_dir
+    # TODO: Consider removing time from [time] here and starting with an empty
+    #       list, or setting time to 0 to start by default.
     self.all_valid_timeserver_times = [time]
     self.all_valid_timeserver_attestations = []
     self.timeserver_public_key = timeserver_public_key
@@ -1154,12 +1158,21 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     # Extract actual time from the timeserver's signed attestation.
     new_timeserver_time = timeserver_attestation['signed']['time']
 
+    # Make sure the format is understandable to us before saving the
+    # attestation and time.  Convert to a UNIX timestamp.
+    new_timeserver_time_unix = int(tuf.formats.unix_timestamp_to_datetime(
+        new_timeserver_time))
+    tuf.formats.UNIX_TIMESTAMP_SCHEMA.check_match(new_timeserver_time_unix)
+
     # Save validated time.
     self.all_valid_timeserver_times.append(new_timeserver_time)
 
     # Save the attestation itself as well, to provide to Secondaries (who need
     # not trust us).
     self.all_valid_timeserver_attestations.append(timeserver_attestation)
+
+    # Set the client's clock.  This will be used instead of system time by TUF.
+    tuf.conf.CLOCK_OVERRIDE = new_timeserver_time_unix
 
 
 

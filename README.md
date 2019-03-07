@@ -2,7 +2,7 @@
 
 Reference Implementation and demonstration code
 
-[![Build Status](https://travis-ci.org/uptane/uptane.png)](https://travis-ci.org/uptane/uptane) [![Coverage Status](https://coveralls.io/repos/github/uptane/uptane/badge.svg)](https://coveralls.io/github/uptane/uptane?branch=develop)
+[![Build Status](https://travis-ci.org/uptane/uptane.png)](https://travis-ci.org/uptane/uptane?branch=develop) [![Coverage Status](https://coveralls.io/repos/github/uptane/uptane/badge.svg)](https://coveralls.io/github/uptane/uptane?branch=develop)
 --------------------------------
 
 # Documentation

@@ -25,6 +25,7 @@ import shutil # For copyfile
 import random # for nonces
 import zipfile
 import hashlib # if we're using DER encoding
+import iso8601
 
 import tuf.formats
 import tuf.conf
@@ -1160,8 +1161,8 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
     # Make sure the format is understandable to us before saving the
     # attestation and time.  Convert to a UNIX timestamp.
-    new_timeserver_time_unix = int(tuf.formats.unix_timestamp_to_datetime(
-        new_timeserver_time))
+    new_timeserver_time_unix = int(tuf.formats.datetime_to_unix_timestamp(
+        iso8601.parse_date(new_timeserver_time)))
     tuf.formats.UNIX_TIMESTAMP_SCHEMA.check_match(new_timeserver_time_unix)
 
     # Save validated time.

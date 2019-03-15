@@ -254,9 +254,10 @@ def update_cycle():
   # a DER-encoded ASN.1 representation of one.
 
   # This validates the attestation and also saves the time therein (if the
-  # attestation was valid). Secondaries can request this from the Primary at
-  # will.
-  primary_ecu.validate_time_attestation(time_attestation)
+  # attestation was valid), causing this client to use that time for future
+  # metadata expiration checks. Secondaries can request this from the Primary
+  # at will.
+  primary_ecu.update_time(time_attestation)
 
   print('Time attestation validated. New time registered.')
 

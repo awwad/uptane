@@ -304,10 +304,11 @@ def update_cycle():
   # returns the binary data that we need to write to file.
   metadata_archive = pserver.get_metadata(secondary_ecu.ecu_serial)
 
-  # Validate the time attestation and internalize the time. Continue
-  # regardless.
+  # Verify the time attestation and internalize the time (if verified, the time
+  # will be used in place of system time to perform future metadata expiration
+  # checks).  Continue regardless.
   try:
-    secondary_ecu.validate_time_attestation(time_attestation)
+    secondary_ecu.update_time(time_attestation)
   except uptane.BadTimeAttestation as e:
     print("Timeserver attestation from Primary does not check out: "
         "This Secondary's nonce was not found. Not updating this Secondary's "

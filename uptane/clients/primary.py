@@ -25,6 +25,7 @@ import shutil # For copyfile
 import random # for nonces
 import zipfile
 import hashlib # if we're using DER encoding
+import iso8601
 
 import tuf.formats
 import tuf.conf
@@ -140,14 +141,16 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
       have already sent to the Timeserver. Will be checked against the
       Timeserver's response.
 
+    # TODO: Rename these two variables, valid -> verified, along with the
+    #       verification functions.  Do likewise in Secondary.
     self.all_valid_timeserver_attestations:
       A list of all attestations received from Timeservers that have been
-      validated by validate_time_attestation.
+      verified by update_time().
       Items are appended to the end.
 
     self.all_valid_timeserver_times:
       A list of all times extracted from all Timeserver attestations that have
-      been validated by validate_time_attestation.
+      been verified by update_time().
       Items are appended to the end.
 
     self.distributable_full_metadata_archive_fname:
@@ -170,7 +173,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
       generate_signed_vehicle_manifest()
       get_nonces_to_send_and_rotate()
       save_distributable_metadata_files()
-      validate_time_attestation(timeserver_attestation)
+      update_time(timeserver_attestation)
 
     Lower-level methods called by primary_update_cycle() to perform retrieval
     and validation of metadata and data from central services:
@@ -207,7 +210,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
     <submit the nonces to the Timeserver and save the returned time attestation>
 
-    p.validate_time_attestation(<the returned time attestation>)
+    p.update_time(<the returned time attestation>)
 
     <metadata> = p.get_metadata_for_ecu(ecu_serial)
     <secondary firmware> = p.get_image_for_ecu(ecu_serial)
@@ -281,6 +284,8 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     self.vin = vin
     self.ecu_serial = ecu_serial
     self.full_client_dir = full_client_dir
+    # TODO: Consider removing time from [time] here and starting with an empty
+    #       list, or setting time to 0 to start by default.
     self.all_valid_timeserver_times = [time]
     self.all_valid_timeserver_attestations = []
     self.timeserver_public_key = timeserver_public_key
@@ -1090,20 +1095,20 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
 
 
-  def validate_time_attestation(self, timeserver_attestation):
+  def update_time(self, timeserver_attestation):
     """
     This should be called after get_nonces_to_send_and_rotate has been called
     and the nonces returned from that have been sent in a request for a time
     attestation from the Timeserver.
 
-    The response from the Timeserver should then be provided to this function
-    to be validated.
-
+    The response from the Timeserver should then be provided to this function.
+    This function attempts to verify the given attestation.
     If timeserver_attestation is correctly signed by the expected Timeserver
     key, and it lists all the nonces we expected it to list (those returned
     by the previous call to get_nonces_to_send_and_rotate), then the Primary's
-    time is updated and the attestation will be saved so that it can be provided
-    to Secondaries.
+    time is updated and the attestation will be saved so that it can be
+    provided to Secondaries.  The new time will be used by this client (via
+    TUF) in in place of system time when checking metadata for expiration.
 
     If the Primary is using ASN.1/DER metadata, then timeserver_attestation is
     expected to be in that format, as a byte string.
@@ -1154,12 +1159,21 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
     # Extract actual time from the timeserver's signed attestation.
     new_timeserver_time = timeserver_attestation['signed']['time']
 
+    # Make sure the format is understandable to us before saving the
+    # attestation and time.  Convert to a UNIX timestamp.
+    new_timeserver_time_unix = int(tuf.formats.datetime_to_unix_timestamp(
+        iso8601.parse_date(new_timeserver_time)))
+    tuf.formats.UNIX_TIMESTAMP_SCHEMA.check_match(new_timeserver_time_unix)
+
     # Save validated time.
     self.all_valid_timeserver_times.append(new_timeserver_time)
 
     # Save the attestation itself as well, to provide to Secondaries (who need
     # not trust us).
     self.all_valid_timeserver_attestations.append(timeserver_attestation)
+
+    # Set the client's clock.  This will be used instead of system time by TUF.
+    tuf.conf.CLOCK_OVERRIDE = new_timeserver_time_unix
 
 
 

@@ -29,6 +29,7 @@ import shutil # For copyfile
 import random # for nonces
 import zipfile # to expand the metadata archive retrieved from the Primary
 import hashlib
+import iso8601
 
 import tuf.formats
 import tuf.keys
@@ -133,7 +134,7 @@ class Secondary(object):
 
     self.all_valid_timeserver_times:
       A list of all times extracted from all Timeserver attestations that have
-      been validated by validate_time_attestation.
+      been verified by update_time.
       Items are appended to the end.
 
     self.validated_targets_for_this_ecu:
@@ -155,8 +156,8 @@ class Secondary(object):
     Manifest handling:
       generate_signed_ecu_manifest()
 
-    Metadata handling and validation of metadata and data
-      validate_time_attestation(timeserver_attestation)
+    Metadata handling and verification of metadata and data
+      update_time(timeserver_attestation)
       process_metadata(metadata_archive_fname)
       _expand_metadata_archive(metadata_archive_fname)
       fully_validate_metadata()
@@ -297,7 +298,7 @@ class Secondary(object):
 
   def change_nonce(self):
     """
-    This should generally be called only by validate_time_attestation.
+    This should generally be called only by update_time.
 
     To be called only when this Secondary has validated a timeserver
     attestation that lists the current nonce, when we know that nonce has been
@@ -382,13 +383,22 @@ class Secondary(object):
 
 
 
-  def validate_time_attestation(self, timeserver_attestation):
+  def update_time(self, timeserver_attestation):
     """
-    Given a timeserver attestation, validate it (checking that the signature is
-    valid and from the expected key) and ensure that the nonce we expect the
-    attestation to contain is included.
+    The function attemps to verify the time attestation from the Time Server,
+    distributed to us by the Primary.
+    If timeserver_attestation is correctly signed by the expected Timeserver
+    key, and it lists the nonce we expected it to list (the one we last used
+    in a request for the time), then this Secondary's time is updated.
+    The new time will be used by this client (via TUF) in in place of system
+    time when checking metadata for expiration.
 
-    If validation is successful, switch to a new nonce for next time.
+    If the Secondary is using ASN.1/DER metadata, then timeserver_attestation
+    is expected to be in that format, as a byte string.
+    Otherwise, we're using simple Python dictionaries and timeserver_attestation
+    conforms to uptane.formats.SIGNABLE_TIMESERVER_ATTESTATION_SCHEMA.
+
+    If verification is successful, switch to a new nonce for next time.
     """
     # If we're using ASN.1/DER format, convert the attestation into something
     # comprehensible (JSON-compatible dictionary) instead.
@@ -403,13 +413,13 @@ class Secondary(object):
     # Assume there's only one signature.
     assert len(timeserver_attestation['signatures']) == 1
 
-    valid = uptane.common.verify_signature_over_metadata(
+    verified = uptane.common.verify_signature_over_metadata(
         self.timeserver_public_key,
         timeserver_attestation['signatures'][0],
         timeserver_attestation['signed'],
         DATATYPE_TIME_ATTESTATION)
 
-    if not valid:
+    if not verified:
       raise tuf.BadSignatureError('Timeserver returned an invalid signature. '
           'Time is questionable, so not saved. If you see this persistently, '
           'it is possible that there is a Man in the Middle attack underway.')
@@ -420,7 +430,7 @@ class Secondary(object):
     if self.last_nonce_sent is None:
       # This ECU is fresh and hasn't actually ever sent a nonce to the Primary
       # yet. It would be impossible to validate a timeserver attestation.
-      log.warning(YELLOW + 'Cannot validate a timeserver attestation yet: '
+      log.warning(YELLOW + 'Cannot verify a timeserver attestation yet: '
           'this fresh Secondary ECU has never communicated a nonce and ECU '
           'Version Manifest to the Primary.' + ENDCOLORS)
       return
@@ -440,11 +450,20 @@ class Secondary(object):
     # Extract actual time from the timeserver's signed attestation.
     new_timeserver_time = timeserver_attestation['signed']['time']
 
-    # Save validated time.
+    # Make sure the format is understandable to us before saving the
+    # time.  Convert to a UNIX timestamp.
+    new_timeserver_time_unix = int(tuf.formats.datetime_to_unix_timestamp(
+        iso8601.parse_date(new_timeserver_time)))
+    tuf.formats.UNIX_TIMESTAMP_SCHEMA.check_match(new_timeserver_time_unix)
+
+    # Save verified time.
     self.all_valid_timeserver_times.append(new_timeserver_time)
 
+    # Set the client's clock.  This will be used instead of system time by TUF.
+    tuf.conf.CLOCK_OVERRIDE = new_timeserver_time_unix
+
     # Use a new nonce next time, since the nonce we were using has now been
-    # used to successfully validate a timeserver attestation.
+    # used to successfully verify a timeserver attestation.
     self.change_nonce()
 
 

@@ -18,6 +18,7 @@ import os.path
 import time
 import shutil
 import hashlib
+import iso8601
 
 from six.moves.urllib.error import URLError
 
@@ -462,16 +463,16 @@ class TestSecondary(unittest.TestCase):
 
 
 
-  def test_20_validate_time_attestation(self):
+  def test_20_update_time(self):
     """
-    Tests uptane.clients.secondary.Secondary::validate_time_attestation()
+    Tests uptane.clients.secondary.Secondary::update_time()
     """
 
     # We'll just test one of the three client instances, since it shouldn't
     # make a difference.
     instance = secondary_instances[0]
 
-    # Try a valid time attestation first, signed by an expected timeserver key,
+    # Try a good time attestation first, signed by an expected timeserver key,
     # with an expected nonce (previously "received" from a Secondary)
     original_time_attestation = time_attestation = {
         'signed': {'nonces': [nonce], 'time': '2016-11-02T21:06:05Z'},
@@ -490,8 +491,23 @@ class TestSecondary(unittest.TestCase):
           original_time_attestation, DATATYPE_TIME_ATTESTATION,
           private_key=TestSecondary.key_timeserver_pri, resign=True)
 
+    # Check expected base conditions before updating time:
+    # The only timeserver times registered should be two "now"s added during
+    # initialization.  Because the clock override is a module variable in TUF,
+    # its value (whether None or already set) depends on whether or not other
+    # tests resulting in time attestation verification have occurred (e.g.
+    # those for the Primary).
+    self.assertEqual(2, len(instance.all_valid_timeserver_times))
+
     # If the time_attestation is not deemed valid, an exception will be raised.
-    instance.validate_time_attestation(time_attestation)
+    instance.update_time(time_attestation)
+
+    # Check results.
+    self.assertEqual(3, len(instance.all_valid_timeserver_times))
+    # self.assertIsNotNone(tuf.conf.CLOCK_OVERRIDE)
+    self.assertEqual(
+        int(tuf.formats.datetime_to_unix_timestamp(iso8601.parse_date(
+        '2016-11-02T21:06:05Z'))), tuf.conf.CLOCK_OVERRIDE)
 
 
     # Prepare to try again with a bad signature.
@@ -514,7 +530,14 @@ class TestSecondary(unittest.TestCase):
 
     # Now actually perform the bad signature test.
     with self.assertRaises(tuf.BadSignatureError):
-      instance.validate_time_attestation(time_attestation__badsig)
+      instance.update_time(time_attestation__badsig)
+
+    # Check results.  The bad attestation should change none of these.
+    self.assertEqual(3, len(instance.all_valid_timeserver_times))
+    # self.assertIsNotNone(tuf.conf.CLOCK_OVERRIDE)
+    self.assertEqual(
+        int(tuf.formats.datetime_to_unix_timestamp(iso8601.parse_date(
+        '2016-11-02T21:06:05Z'))), tuf.conf.CLOCK_OVERRIDE)
 
 
     self.assertNotEqual(500, nonce, msg='Programming error: bad and good '
@@ -534,7 +557,7 @@ class TestSecondary(unittest.TestCase):
           private_key=TestSecondary.key_timeserver_pri, resign=True)
 
     with self.assertRaises(uptane.BadTimeAttestation):
-      instance.validate_time_attestation(time_attestation__wrongnonce)
+      instance.update_time(time_attestation__wrongnonce)
 
 
     # TODO: Consider other tests here.

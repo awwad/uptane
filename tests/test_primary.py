@@ -18,6 +18,7 @@ import time
 import copy
 import shutil
 import hashlib
+import iso8601
 
 from six.moves.urllib.error import URLError
 
@@ -556,14 +557,14 @@ class TestPrimary(unittest.TestCase):
 
 
 
-  def test_20_validate_time_attestation(self):
+  def test_20_update_time(self):
 
-    # First, confirm that we've never validated a timeserver attestation, and/or
+    # First, confirm that we've never verified a timeserver attestation, and/or
     # that that results in get_last_timeserver_attestation returning None.
     self.assertIsNone(TestPrimary.instance.get_last_timeserver_attestation())
 
 
-    # Try a valid time attestation first, signed by an expected timeserver key,
+    # Try a good time attestation first, signed by an expected timeserver key,
     # with an expected nonce (previously "received" from a Secondary)
     original_time_attestation = time_attestation = {
         'signed': {'nonces': [NONCE], 'time': '2016-11-02T21:06:05Z'},
@@ -578,30 +579,46 @@ class TestPrimary(unittest.TestCase):
           original_time_attestation, DATATYPE_TIME_ATTESTATION,
           private_key=TestPrimary.key_timeserver_pri, resign=True)
 
+    # Check expected base conditions before updating time:
+    # The only timeserver times registered should be two "now"s added during
+    # initialization.  Because the clock override is a module variable in TUF,
+    # its value (whether None or already set) depends on whether or not other
+    # tests resulting in time attestation verification have occurred (e.g.
+    # those for the Primary).
+    self.assertEqual(1, len(TestPrimary.instance.all_valid_timeserver_times))
+    initial_clock_override = tuf.conf.CLOCK_OVERRIDE
 
     # In the previous functions, we added a variety of nonces in the nonce
-    # rotation. Validation of a time attestation confirms that the time
+    # rotation. Verification of a time attestation confirms that the time
     # attestation contains the nonces we've most recently sent to the
     # timeserver. The sample attestation we have here does not have the nonces
-    # we've indicated to the Primary that we've sent, so this validation
+    # we've indicated to the Primary that we've sent, so this verification
     # should fail:
     with self.assertRaises(uptane.BadTimeAttestation):
-      TestPrimary.instance.validate_time_attestation(time_attestation)
+      TestPrimary.instance.update_time(time_attestation)
+
+    # Check results.  The bad attestation should change none of these.
+    self.assertEqual(1, len(TestPrimary.instance.all_valid_timeserver_times))
+    self.assertEqual(initial_clock_override, tuf.conf.CLOCK_OVERRIDE)
 
     # Now we adjust the Primary's notion of what nonces we sent to the
-    # timeserver most recently, and then try the validation again, expecting
+    # timeserver most recently, and then try the verification again, expecting
     # it to succeed.
     TestPrimary.instance.get_nonces_to_send_and_rotate()
     TestPrimary.instance.nonces_to_send = [NONCE]
     TestPrimary.instance.get_nonces_to_send_and_rotate()
-    TestPrimary.instance.validate_time_attestation(time_attestation)
+    TestPrimary.instance.update_time(time_attestation)
 
-    # Since the validation succeeded, get_last_timeserver_attestation should
-    # return the attestation we just provided.
+    # Check results.  Among other things, since the verification succeeded,
+    # get_last_timeserver_attestation should return the attestation we just
+    # provided.
     self.assertEqual(
         time_attestation,
         TestPrimary.instance.get_last_timeserver_attestation())
-
+    self.assertEqual(2, len(TestPrimary.instance.all_valid_timeserver_times))
+    self.assertEqual(
+        int(tuf.formats.datetime_to_unix_timestamp(iso8601.parse_date(
+        '2016-11-02T21:06:05Z'))), tuf.conf.CLOCK_OVERRIDE)
 
 
     # Prepare to try again with a bad signature.
@@ -624,7 +641,7 @@ class TestPrimary(unittest.TestCase):
 
     # Now actually perform the bad signature test.
     with self.assertRaises(tuf.BadSignatureError):
-      TestPrimary.instance.validate_time_attestation(time_attestation__badsig)
+      TestPrimary.instance.update_time(time_attestation__badsig)
 
 
     assert 500 not in original_time_attestation['signed']['nonces'], \
@@ -644,7 +661,7 @@ class TestPrimary(unittest.TestCase):
           private_key=TestPrimary.key_timeserver_pri, resign=True)
 
     with self.assertRaises(uptane.BadTimeAttestation):
-      TestPrimary.instance.validate_time_attestation(
+      TestPrimary.instance.update_time(
           time_attestation__wrongnonce)
 
 

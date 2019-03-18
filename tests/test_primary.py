@@ -580,7 +580,7 @@ class TestPrimary(unittest.TestCase):
           private_key=TestPrimary.key_timeserver_pri, resign=True)
 
     # Check expected base conditions before updating time:
-    # The only timeserver times registered should be two "now"s added during
+    # The only timeserver times registered should be one added during
     # initialization.  Because the clock override is a module variable in TUF,
     # its value (whether None or already set) depends on whether or not other
     # tests resulting in time attestation verification have occurred (e.g.
@@ -906,11 +906,11 @@ class TestPrimary(unittest.TestCase):
   def test_70_get_last_timeserver_attestation(self):
 
     # get_last_timeserver_attestation is tested in more detail in a previous
-    # test, test_20_validate_time_attestation.
+    # test, test_20_update_time.
 
     attestation = TestPrimary.instance.get_last_timeserver_attestation()
 
-    # We expect to have validated an attestation in previous tests.
+    # We expect to have verified an attestation in previous tests.
     self.assertIsNotNone(attestation)
 
     if tuf.conf.METADATA_FORMAT == 'der':

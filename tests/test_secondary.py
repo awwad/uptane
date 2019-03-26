@@ -262,6 +262,7 @@ class TestSecondary(unittest.TestCase):
           partial_verifying=False)
 
     # Invalid ECU Key
+    with self.assertRaises(tuf.FormatError):
       secondary.Secondary(
           full_client_dir=TEMP_CLIENT_DIRS[0],
           director_repo_name=demo.DIRECTOR_REPO_NAME,
@@ -270,7 +271,7 @@ class TestSecondary(unittest.TestCase):
           ecu_key={''},
           time=TestSecondary.initial_time,
           timeserver_public_key=TestSecondary.key_timeserver_pub,
-          firmware_fileinfo=firmware_fileinfo,
+          firmware_fileinfo=factory_firmware_fileinfo,
           director_public_key=None,
           partial_verifying=False)
 

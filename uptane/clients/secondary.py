@@ -470,6 +470,40 @@ class Secondary(object):
 
 
 
+  def refresh_toplevel_metadata(self):
+    """
+    Refreshes client's metadata for the top-level roles:
+      root, targets, snapshot, and timestamp
+
+    See tuf.client.updater.Updater.refresh() for details, or the
+    Uptane Standard, section 5.4.4.2 (Full Verification).
+
+    # TODO: This function is duplicated in primary.py and secondary.py. It must
+    #       be moved to a general client.py as part of a fix to issue #14
+    #       (github.com/uptane/uptane/issues/14).
+     This can raise TUF update exceptions like
+      - tuf.ExpiredMetadataError:
+          if after attempts to update the Root metadata succeeded or failed,
+          whatever currently trusted Root metadata we ended up with was expired.
+      - tuf.NoWorkingMirrorError:
+          if we could not obtain and verify all necessary metadata
+    """
+
+    # Refresh the Director first, per the Uptane Standard.
+    self.updater.refresh(repo_name=self.director_repo_name)
+
+    # Now that we've dealt with the Director repository, deal with any and all
+    # other repositories, presumably Image Repositories.
+    for repository_name in self.updater.repositories:
+      if repository_name == self.director_repo_name:
+        continue
+
+      self.updater.refresh(repo_name=repository_name)
+
+
+
+
+
   def fully_validate_metadata(self):
     """
     Treats the unvalidated metadata obtained from the Primary (which the
@@ -504,7 +538,7 @@ class Secondary(object):
     """
 
     # Refresh the top-level metadata first (all repositories).
-    self.updater.refresh()
+    self.refresh_toplevel_metadata()
 
     validated_targets_for_this_ecu = []
 

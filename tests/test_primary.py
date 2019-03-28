@@ -709,14 +709,6 @@ class TestPrimary(unittest.TestCase):
 
 
   def test_30_refresh_toplevel_metadata_from_repositories(self):
-    # Testing this requires that we have an OEM Repository and Director server
-    # running, with particulars (e.g. address and port) specified in
-    # demo/pinned.json.
-    #
-    # TODO: Write this in a way that draws on saved sample metadata.
-    #       Don't expect an actual server to be running.
-    #       This will probably entail modification to the pinned.json file to
-    #       point it to a local directory instead of a remote server.
 
     # Check that in the fresh temp directory for this test Primary client,
     # there aren't any metadata files except root.json yet.

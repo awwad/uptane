@@ -708,7 +708,7 @@ class TestPrimary(unittest.TestCase):
 
 
 
-  def test_30_refresh_toplevel_metadata_from_repositories(self):
+  def test_30_refresh_toplevel_metadata(self):
 
     # Check that in the fresh temp directory for this test Primary client,
     # there aren't any metadata files except root.json yet.
@@ -720,7 +720,7 @@ class TestPrimary(unittest.TestCase):
         sorted(os.listdir(TEST_IMAGE_REPO_METADATA_DIR)))
 
     try:
-      TestPrimary.instance.refresh_toplevel_metadata_from_repositories()
+      TestPrimary.instance.refresh_toplevel_metadata()
     except (URLError, tuf.NoWorkingMirrorError) as e:
       pass
     else:

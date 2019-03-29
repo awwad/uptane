@@ -177,7 +177,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
     Lower-level methods called by primary_update_cycle() to perform retrieval
     and validation of metadata and data from central services:
-      refresh_toplevel_metadata_from_repositories()
+      refresh_toplevel_metadata()
       get_target_list_from_director()
       get_validated_target_info()
 
@@ -332,16 +332,35 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
 
 
 
-  def refresh_toplevel_metadata_from_repositories(self):
+  def refresh_toplevel_metadata(self):
     """
     Refreshes client's metadata for the top-level roles:
       root, targets, snapshot, and timestamp
 
     See tuf.client.updater.Updater.refresh() for details, or the
-    Uptane Implementation Specification, section 8.3.2 (Full Verification of
-    Metadata).
+    Uptane Standard, section 5.4.4.2 (Full Verification).
+
+    # TODO: This function is duplicated in primary.py and secondary.py. It must
+    #       be moved to a general client.py as part of a fix to issue #14
+    #       (github.com/uptane/uptane/issues/14).
+     This can raise TUF update exceptions like
+      - tuf.ExpiredMetadataError:
+          if after attempts to update the Root metadata succeeded or failed,
+          whatever currently trusted Root metadata we ended up with was expired.
+      - tuf.NoWorkingMirrorError:
+          if we could not obtain and verify all necessary metadata
     """
-    self.updater.refresh()
+
+    # Refresh the Director first, per the Uptane Standard.
+    self.updater.refresh(repo_name=self.director_repo_name)
+
+    # Now that we've dealt with the Director repository, deal with any and all
+    # other repositories, presumably Image Repositories.
+    for repository_name in self.updater.repositories:
+      if repository_name == self.director_repo_name:
+        continue
+
+      self.updater.refresh(repo_name=repository_name)
 
 
 
@@ -492,7 +511,7 @@ class Primary(object): # Consider inheriting from Secondary and refactoring.
           file of type tuf.conf.METADATA_FORMAT.
     """
     log.debug('Refreshing top level metadata from all repositories.')
-    self.refresh_toplevel_metadata_from_repositories()
+    self.refresh_toplevel_metadata()
 
     # Get the list of targets the director expects us to download and update to.
     # Note that at this line, this target info is not yet validated with the
